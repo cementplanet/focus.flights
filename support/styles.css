@@ -1,0 +1,37 @@
+@font-face {
+    font-family: 'Didact Gothic';
+    src: url('../DidactGothic-Regular.ttf') format('truetype');
+}
+
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Didact Gothic', sans-serif; /* Default font for the page */
+    background-color: black; /* Set background to black */
+    color: white; /* Set default text color to white */
+}
+
+.container {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.email {
+    text-decoration: none;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.email img {
+    fill: white;
+    width: 20px;
+    height: 20px;
+    padding-right: 6px;
+}
