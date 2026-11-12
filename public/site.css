@@ -7,4 +7,6 @@
 
 html {
   font-family: "Nunito", system-ui, sans-serif;
+  background-image: url("print-grain.png");
+  background-size: 144px 144px;
 }
