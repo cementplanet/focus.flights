@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FocusFlights - 天空预览</title>
+  <link rel="stylesheet" href="typography.css">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #0b1931;
+    }
+
+    .sky {
+      position: fixed;
+      inset: 0;
+      overflow: clip;
+      touch-action: pinch-zoom;
+      background: linear-gradient(#223c61, #7391ac 40%, #efcbb3 57%, #8394a8);
+      background: linear-gradient(in srgb, var(--zenith, #223c61), var(--sky, #7391ac) 38%,
+        var(--horizon, #efcbb3) 58%, var(--shadow, #8394a8));
+    }
+
+    .stars {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: var(--stars, 0);
+    }
+
+    .aircraft {
+      position: absolute;
+      left: 50%;
+      translate: -50% -50%;
+      pointer-events: none;
+      isolation: isolate;
+    }
+
+    .aircraft img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .aircraft-night {
+      opacity: var(--stars, 0);
+    }
+
+    @supports (mix-blend-mode: plus-lighter) {
+      .aircraft-day { opacity: calc(1 - var(--stars, 0)); }
+      .aircraft-night { mix-blend-mode: plus-lighter; }
+    }
+
+    .aircraft-lights {
+      position: absolute;
+      inset: 0;
+      opacity: var(--stars, 0);
+    }
+
+    .aircraft-light {
+      position: absolute;
+      width: clamp(1px, .6%, 3px);
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      border-radius: 50%;
+      background: var(--light);
+      box-shadow: 0 0 4px 1px var(--glow);
+    }
+
+    /* The baked camera sees the starboard wingtip and the top of the fuselage. */
+    .aircraft-light--navigation {
+      left: 36.07%;
+      top: 53.77%;
+      --light: #aaffdc;
+      --glow: #2aff88a0;
+    }
+
+    .aircraft-light--strobe {
+      left: 35.77%;
+      top: 53.77%;
+      --light: #fff;
+      --glow: #d9ebffb0;
+      animation: aircraft-strobe 1.8s linear infinite;
+    }
+
+    .aircraft-light--beacon {
+      left: 55.65%;
+      top: 43.56%;
+      --light: #ff867a;
+      --glow: #ff3939a0;
+      animation: aircraft-beacon 1.45s linear infinite;
+    }
+
+    @keyframes aircraft-strobe {
+      0%, 2% { opacity: 1; }
+      4%, 100% { opacity: 0; }
+    }
+
+    @keyframes aircraft-beacon {
+      0%, 5% { opacity: 1; }
+      13%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .aircraft-light--strobe, .aircraft-light--beacon { display: none; }
+    }
+
+    .clouds {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sky-header {
+      position: absolute;
+      inset: max(clamp(22px, 4.3vh, 64px), calc(env(safe-area-inset-top) + 12px))
+        max(env(safe-area-inset-right), clamp(20px, 3.2vw, 80px)) auto
+        max(env(safe-area-inset-left), clamp(20px, 3.2vw, 80px));
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 20px;
+      color: #eaf0f7;
+      color: color-mix(in srgb, #f7fbff calc(94% - 17% * var(--stars, 0)), var(--zenith, #223c61));
+    }
+
+    .sky-brand {
+      width: clamp(122px, 13.8vw, 276px);
+      margin: 0;
+      pointer-events: none;
+      background: currentColor;
+      mask: url("brand/focusflight-logo.png") center / contain no-repeat;
+    }
+
+    .sky-brand img {
+      display: block;
+      width: 100%;
+      height: auto;
+      opacity: 0;
+    }
+
+    .sky-nav {
+      display: flex;
+      gap: clamp(12px, 1.65vw, 28px);
+      margin-inline-start: auto;
+      font-size: clamp(14px, 1.05vw, 16px);
+      line-height: 1.2;
+      text-shadow: 0 1px 3px rgb(11 25 49 / 55%);
+    }
+
+    .sky-nav label {
+      display: grid;
+      min-height: 44px;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .sky-nav input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      clip-path: inset(50%);
+    }
+
+    .sky-nav span {
+      white-space: nowrap;
+      /* Align the text with the visible center of the logo. */
+      translate: 0 1px;
+    }
+
+    .sky-nav input:checked + span { font-weight: 600; }
+    .sky-nav label:hover span,
+    .sky-nav input:focus-visible + span {
+      text-decoration: underline;
+      text-underline-offset: .25em;
+    }
+
+  </style>
+  <link rel="stylesheet" href="flight.css?v=clear-sky">
+  <script src="sky.js?v=airport-glass" type="module"></script>
+  <script src="flight.js?v=clear-sky" type="module"></script>
+</head>
+<body>
+  <main class="sky" aria-label="飞机飞越随本地时间变化的云海">
+    <canvas class="stars" aria-hidden="true"></canvas>
+    <div class="flight-clock" role="timer">
+      <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true">
+        <span class="flight-clock__digit"></span>
+        <span class="flight-clock__digit"></span>
+        <span class="flight-clock__separator">:</span>
+        <span class="flight-clock__digit"></span>
+        <span class="flight-clock__digit"></span>
+        <span class="flight-clock__separator">:</span>
+        <span class="flight-clock__digit"></span>
+        <span class="flight-clock__digit"></span>
+      </div>
+    </div>
+    <canvas class="clouds" aria-hidden="true"></canvas>
+    <div class="aircraft" aria-hidden="true">
+      <img class="aircraft-day" src="aircraft/day.webp?v=airliner-clay-2" alt="" width="1024" height="512">
+      <img class="aircraft-night" src="aircraft/night.webp?v=airliner-clay-2" alt="" width="1024" height="512">
+      <div class="aircraft-lights">
+        <span class="aircraft-light aircraft-light--navigation"></span>
+        <span class="aircraft-light aircraft-light--strobe"></span>
+        <span class="aircraft-light aircraft-light--beacon"></span>
+      </div>
+    </div>
+    <div class="flight-route" role="group" aria-label="航线" hidden>
+      <button type="button" class="flight-airport flight-airport--departure"><span class="flight-airport__material"><span class="flight-airport__label"></span></span></button>
+      <button type="button" class="flight-airport flight-airport--arrival"><span class="flight-airport__material"><span class="flight-airport__label"></span></span></button>
+    </div>
+    <header class="sky-header">
+      <h1 class="sky-brand"><img src="brand/focusflight-logo.png" alt="FocusFlight" width="669" height="127"></h1>
+      <div class="sky-nav" role="group" aria-label="Homepage sections" lang="en">
+        <label><input type="radio" name="sky-section" checked><span>Features</span></label>
+        <label><input type="radio" name="sky-section"><span>How it works</span></label>
+        <label><input type="radio" name="sky-section"><span>Creators</span></label>
+        <label><input type="radio" name="sky-section"><span>FAQ</span></label>
+      </div>
+    </header>
+  </main>
+</body>
+</html>
