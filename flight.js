@@ -37,41 +37,8 @@ for (const depth of ["soft", "far"]) {
   clock.append(face);
   faces.push(face);
 }
-const slots = Array.from(sharpFace.children, (_, index) => faces.map(face => face.children[index]));
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const flight = chooseFlight();
-const route = document.querySelector(".flight-route");
-const [departure, arrival] = route.querySelectorAll(".flight-airport");
-departure.querySelector(".flight-airport__label").textContent = flight.from[0];
-arrival.querySelector(".flight-airport__label").textContent = flight.to[0];
-departure.setAttribute("aria-label", `出发机场 ${flight.from[0]}`);
-arrival.setAttribute("aria-label", `抵达机场 ${flight.to[0]}`);
-route.hidden = false;
-
-for (const badge of [departure, arrival]) {
-  const release = () => badge.removeAttribute("data-pressed");
-  const isActivationKey = (key) => key === " " || key === "Enter";
-
-  badge.addEventListener("pointerdown", (event) => {
-    if (!event.isPrimary || event.button !== 0) return;
-    const { left, top, width, height } = badge.getBoundingClientRect();
-    badge.style.setProperty("--press-x", `${100 * (event.clientX - left) / width}%`);
-    badge.style.setProperty("--press-y", `${100 * (event.clientY - top) / height}%`);
-    badge.setAttribute("data-pressed", "");
-  });
-  for (const event of ["pointerup", "pointercancel", "pointerleave", "blur"]) {
-    badge.addEventListener(event, release);
-  }
-  badge.addEventListener("keydown", (event) => {
-    if (!isActivationKey(event.key) || event.repeat) return;
-    badge.style.removeProperty("--press-x");
-    badge.style.removeProperty("--press-y");
-    badge.setAttribute("data-pressed", "");
-  });
-  badge.addEventListener("keyup", (event) => {
-    if (isActivationKey(event.key)) release();
-  });
-}
 
 // A representative cruise speed and allowance for climb, descent and routing.
 const duration = (Math.ceil(flight.distance / 800 * 60) + 20) * 60;
@@ -101,47 +68,150 @@ function updateDigit(slot, digit, animated) {
   }
 
   slot.append(next);
-  const leaving = previous.animate([
-    { "--digit-shift": "0px", opacity: 1 },
-    { "--digit-shift": "min(0.14em, 46px)", opacity: 0 },
-  ], { duration: 180, easing: "cubic-bezier(0.37, 0, 0.55, 1)", fill: "forwards" });
-  leaving.onfinish = () => previous.remove();
-
-  next.animate([
-    { "--digit-shift": "max(-0.17em, -50px)" },
-    { "--digit-shift": "0px" },
-  ], { duration: 600, easing: digitEasing });
-  next.animate([
-    { opacity: 0 },
-    { opacity: 1 },
-  ], { duration: 270, delay: 12, easing: "cubic-bezier(0.32, 0, 0.27, 1)", fill: "backwards" });
+  rollOut(previous).onfinish = () => previous.remove();
+  rollIn(next);
 }
 
-let previousSeconds;
-let timer;
+function rollOut(glyph, delay = 0) {
+  return glyph.animate([
+    { "--digit-shift": "0px", opacity: 1 },
+    { "--digit-shift": "min(0.14em, 46px)", opacity: 0 },
+  ], { duration: 180, delay, easing: "cubic-bezier(0.37, 0, 0.55, 1)", fill: "forwards" });
+}
 
-function updateCountdown() {
+function rollIn(glyph, delay = 0) {
+  const spring = glyph.animate([
+    { "--digit-shift": "max(-0.17em, -50px)" },
+    { "--digit-shift": "0px" },
+  ], { duration: 600, delay, easing: digitEasing, fill: "backwards" });
+  glyph.animate([
+    { opacity: 0 },
+    { opacity: 1 },
+  ], { duration: 270, delay: delay + 12, easing: "cubic-bezier(0.32, 0, 0.27, 1)", fill: "backwards" });
+  return spring;
+}
+
+const runway = '<path d="M3 31h30"/>';
+const routeIcons = {
+  "↗": `<path d="m3 19 6 7c1.2 1.2 2.7 1.3 4.3.3l17-11c2-1.3 3.1-3.3 1.9-4.8s-3.7-1.4-5.6 0L22 13 11 2 8 4l7.5 13-5 3L6 17.3Z"/>${runway}`,
+  "→": '<path d="M2 16h23M12 2l13 14-13 14"/>',
+  "↘": `<path d="m4 8 2.8 8.4c.6 1.9 1.9 3.1 3.8 3.8L28 27c2.2.9 4.4.5 5.1-1.3.6-1.7-.8-3.4-3-4.3l-6-2.4L16 4l-3.5-1.4 4.5 13-6-2.4L7 8.7Z"/>${runway}`,
+};
+const route = `↗${flight.from[0]}→${flight.to[0]}↘`;
+const focusScenes = ["Writing", "Reading", "Coding", "Sketching", "Studying"];
+let focusIndex = 0;
+const modes = ["countdown", "route", "focus"];
+let modeIndex = 0;
+let slots = [];
+let previousSeconds;
+let countdownTimer;
+let rotationTimer;
+let switching = false;
+
+function render(mode, text) {
+  clock.dataset.mode = mode;
+  clock.setAttribute("role", mode === "countdown" ? "timer" : "img");
+  slots = Array.from(text, (character) => faces.map(() => {
+    const slot = document.createElement("span");
+    slot.className = "flight-clock__slot";
+    if (character === ":") slot.classList.add("flight-clock__slot--colon");
+    if (routeIcons[character]) {
+      slot.classList.add("flight-clock__slot--icon");
+      if (character === "→") slot.classList.add("flight-clock__slot--arrow");
+      slot.innerHTML = `<span><svg viewBox="0 0 ${character === "→" ? 27 : 36} 32" fill="none" stroke="currentColor"
+        stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">${routeIcons[character]}</svg></span>`;
+    } else {
+      updateDigit(slot, character, false);
+    }
+    return slot;
+  }));
+  faces.forEach((face, index) => {
+    const glyphs = slots.map(group => group[index]);
+    if (mode !== "route") {
+      face.replaceChildren(...glyphs);
+      return;
+    }
+    const code = (letters) => {
+      const group = document.createElement("span");
+      group.className = "flight-clock__code";
+      group.append(...letters);
+      return group;
+    };
+    face.replaceChildren(glyphs[0], code(glyphs.slice(1, 4)), glyphs[4], code(glyphs.slice(5, 8)), glyphs[8]);
+  });
+}
+
+function updateCountdown(entering = false) {
   const milliseconds = Math.max(0, arrivalAt - Date.now());
   const seconds = Math.ceil(milliseconds / 1000);
 
-  if (seconds !== previousSeconds) {
-    const animated = seconds === previousSeconds - 1 && !reducedMotion.matches && !document.hidden;
+  if (entering || seconds !== previousSeconds) {
     const text = formatTime(seconds);
+    if (entering) render("countdown", text);
+    const animated = !entering && seconds === previousSeconds - 1 && !reducedMotion.matches;
     clock.setAttribute("aria-label", `预计剩余飞行时间 ${text}`);
-    for (const [index, digitSlots] of slots.entries()) {
-      if (text[index] === ":") continue;
-      for (const slot of digitSlots) updateDigit(slot, text[index], animated);
+    if (!entering) {
+      for (const [index, digitSlots] of slots.entries()) {
+        for (const slot of digitSlots) updateDigit(slot, text[index], animated);
+      }
     }
     previousSeconds = seconds;
   }
 
-  if (seconds > 0 && !document.hidden) {
-    timer = setTimeout(updateCountdown, (milliseconds % 1000 || 1000) + 12);
+  if (seconds > 0 && !document.hidden && !switching) {
+    countdownTimer = setTimeout(updateCountdown, (milliseconds % 1000 || 1000) + 12);
   }
 }
 
+function showMode() {
+  const mode = modes[modeIndex];
+  if (mode === "countdown") {
+    updateCountdown(true);
+  } else if (mode === "route") {
+    render(mode, route);
+    clock.setAttribute("aria-label", `从 ${flight.from[0]} 飞往 ${flight.to[0]}`);
+  } else {
+    const focus = focusScenes[focusIndex];
+    render(mode, focus.toUpperCase());
+    clock.setAttribute("aria-label", `专注内容：${focus}`);
+    focusIndex = (focusIndex + 1) % focusScenes.length;
+  }
+}
+
+function animateSlots(animate, reverse = false) {
+  const groups = reverse ? [...slots].reverse() : slots;
+  const stagger = reverse ? 32 : 40;
+  return Promise.all(groups.flatMap((group, index) => group.map(slot =>
+    animate(slot.lastElementChild, index * stagger).finished
+  )));
+}
+
+function scheduleRotation() {
+  if (!document.hidden && !switching) {
+    rotationTimer = setTimeout(rotate, modeIndex === 0 ? 6000 : 5000);
+  }
+}
+
+async function rotate() {
+  switching = true;
+  clearTimeout(countdownTimer);
+  if (!reducedMotion.matches) await animateSlots(rollOut, true);
+  modeIndex = (modeIndex + 1) % modes.length;
+  showMode();
+  if (!reducedMotion.matches) await animateSlots(rollIn);
+  switching = false;
+  if (modeIndex === 0 && !document.hidden) updateCountdown();
+  scheduleRotation();
+}
+
 document.addEventListener("visibilitychange", () => {
-  clearTimeout(timer);
-  if (!document.hidden) updateCountdown();
+  clearTimeout(countdownTimer);
+  clearTimeout(rotationTimer);
+  if (!document.hidden && !switching) {
+    if (modeIndex === 0) updateCountdown();
+    scheduleRotation();
+  }
 });
-updateCountdown();
+
+showMode();
+scheduleRotation();

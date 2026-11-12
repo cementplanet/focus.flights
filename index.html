@@ -182,24 +182,15 @@
     }
 
   </style>
-  <link rel="stylesheet" href="flight.css?v=clear-sky">
+  <link rel="stylesheet" href="flight.css?v=aligned-display">
   <script src="sky.js?v=airport-glass" type="module"></script>
-  <script src="flight.js?v=clear-sky" type="module"></script>
+  <script src="flight.js?v=aligned-display" type="module"></script>
 </head>
 <body>
   <main class="sky" aria-label="飞机飞越随本地时间变化的云海">
     <canvas class="stars" aria-hidden="true"></canvas>
     <div class="flight-clock" role="timer">
-      <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true">
-        <span class="flight-clock__digit"></span>
-        <span class="flight-clock__digit"></span>
-        <span class="flight-clock__separator">:</span>
-        <span class="flight-clock__digit"></span>
-        <span class="flight-clock__digit"></span>
-        <span class="flight-clock__separator">:</span>
-        <span class="flight-clock__digit"></span>
-        <span class="flight-clock__digit"></span>
-      </div>
+      <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
     </div>
     <canvas class="clouds" aria-hidden="true"></canvas>
     <div class="aircraft" aria-hidden="true">
@@ -210,10 +201,6 @@
         <span class="aircraft-light aircraft-light--strobe"></span>
         <span class="aircraft-light aircraft-light--beacon"></span>
       </div>
-    </div>
-    <div class="flight-route" role="group" aria-label="航线" hidden>
-      <button type="button" class="flight-airport flight-airport--departure"><span class="flight-airport__material"><span class="flight-airport__label"></span></span></button>
-      <button type="button" class="flight-airport flight-airport--arrival"><span class="flight-airport__material"><span class="flight-airport__label"></span></span></button>
     </div>
     <header class="sky-header">
       <h1 class="sky-brand"><img src="brand/focusflight-logo.png" alt="FocusFlight" width="669" height="127"></h1>
