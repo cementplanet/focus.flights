@@ -6,22 +6,27 @@
   <title>FocusFlights - 天空预览</title>
   <link rel="stylesheet" href="typography.css">
   <style>
+    :root {
+      /* Align left-side copy with the visible edge of the wordmark. */
+      --content-left: max(clamp(28px, 5.625vw, 112px), env(safe-area-inset-left));
+    }
+
     html, body {
       margin: 0;
-      height: 100%;
       overflow: hidden;
       overscroll-behavior: none;
       background: #0b1931;
     }
 
     .sky {
-      position: fixed;
-      inset: 0;
-      overflow: clip;
+      position: relative;
       touch-action: pinch-zoom;
+      height: 100dvh;
+      overflow: clip;
       background: linear-gradient(#223c61, #7391ac 40%, #efcbb3 57%, #8394a8);
       background: linear-gradient(in srgb, var(--zenith, #223c61), var(--sky, #7391ac) 38%,
-        var(--horizon, #efcbb3) 58%, var(--shadow, #8394a8));
+        color-mix(in srgb, var(--horizon, #efcbb3), var(--sky, #7391ac) var(--sky-horizon-soften, 0%)) 58%,
+        color-mix(in srgb, var(--shadow, #8394a8), var(--sky, #7391ac) var(--sky-horizon-soften, 0%)));
     }
 
     .stars {
@@ -110,6 +115,50 @@
       .aircraft-light--strobe, .aircraft-light--beacon { display: none; }
     }
 
+    .sky-award {
+      --award-width: min(clamp(126px, 13vw, 224px), 30vh);
+      --award-height: calc(var(--award-width) * 88 / 305);
+      position: absolute;
+      /* Keep the title above the cloud horizon when the viewport gets short. */
+      top: min(
+        calc(var(--flight-clock-center)
+          + (var(--flight-clock-size) + var(--flight-telemetry-size)) * var(--flight-line-height) / 2
+          + var(--flight-telemetry-gap) - clamp(5px, .85vh, 9px)),
+        calc(55.5% - var(--award-height) * .31)
+      );
+      left: 50%;
+      width: var(--award-width);
+      translate: -50% -50%;
+      mix-blend-mode: screen;
+      opacity: .58;
+      pointer-events: none;
+    }
+
+    .sky-award img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .sky-award__sharp {
+      mask-image: linear-gradient(#000 55%, transparent);
+    }
+
+    .sky-award__soft {
+      position: absolute;
+      inset: 0;
+      filter: blur(clamp(.55px, .09vw, 1.5px));
+      mask-image: linear-gradient(transparent 55%, #000);
+      mix-blend-mode: plus-lighter;
+    }
+
+    @media (max-width: 640px) {
+      .sky-award {
+        --award-width: clamp(104px, 28vw, 126px);
+        top: calc(55.2% - var(--award-height) * .24);
+      }
+    }
+
     .clouds {
       position: absolute;
       inset: 0;
@@ -119,19 +168,18 @@
 
     .sky-header {
       position: absolute;
-      inset: max(clamp(22px, 4.3vh, 64px), calc(env(safe-area-inset-top) + 12px))
-        max(env(safe-area-inset-right), clamp(20px, 3.2vw, 80px)) auto
-        max(env(safe-area-inset-left), clamp(20px, 3.2vw, 80px));
+      top: max(clamp(32px, 6vh, 76px), calc(env(safe-area-inset-top) + 16px));
+      left: var(--content-left);
+      right: max(clamp(28px, 5.625vw, 112px), env(safe-area-inset-right));
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 4px 20px;
+      justify-content: space-between;
       color: #eaf0f7;
       color: color-mix(in srgb, #f7fbff calc(94% - 17% * var(--stars, 0)), var(--zenith, #223c61));
     }
 
     .sky-brand {
-      width: clamp(122px, 13.8vw, 276px);
+      width: clamp(112px, 11.25vw, 224px);
       margin: 0;
       pointer-events: none;
       background: currentColor;
@@ -148,10 +196,9 @@
     .sky-nav {
       display: flex;
       gap: clamp(12px, 1.65vw, 28px);
-      margin-inline-start: auto;
+      margin-block: -22px;
       font-size: clamp(14px, 1.05vw, 16px);
       line-height: 1.2;
-      text-shadow: 0 1px 3px rgb(11 25 49 / 55%);
     }
 
     .sky-nav label {
@@ -170,7 +217,6 @@
 
     .sky-nav span {
       white-space: nowrap;
-      /* Align the text with the visible center of the logo. */
       translate: 0 1px;
     }
 
@@ -181,36 +227,116 @@
       text-underline-offset: .25em;
     }
 
+    @media (max-width: 540px) {
+      .sky-header {
+        flex-wrap: wrap;
+        column-gap: 20px;
+      }
+
+      .sky-nav {
+        margin-block: 0;
+        margin-inline-start: auto;
+        font-size: clamp(12px, 3.6vw, 14px);
+      }
+    }
+
   </style>
-  <link rel="stylesheet" href="flight.css?v=aligned-display">
-  <script src="sky.js?v=airport-glass" type="module"></script>
-  <script src="flight.js?v=aligned-display" type="module"></script>
+  <link rel="stylesheet" href="flight.css?v=cloud-glide-11">
+  <link rel="stylesheet" href="earth.css?v=viewport-render">
+  <link rel="stylesheet" href="departures.css?v=aligned-sign">
+  <script src="sky.js?v=crisp-globe" type="module"></script>
+  <script src="flight.js?v=cloud-glide-11" type="module"></script>
 </head>
 <body>
-  <main class="sky" aria-label="飞机飞越随本地时间变化的云海">
-    <canvas class="stars" aria-hidden="true"></canvas>
-    <div class="flight-clock" role="timer">
-      <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
-    </div>
-    <canvas class="clouds" aria-hidden="true"></canvas>
-    <div class="aircraft" aria-hidden="true">
-      <img class="aircraft-day" src="aircraft/day.webp?v=airliner-clay-2" alt="" width="1024" height="512">
-      <img class="aircraft-night" src="aircraft/night.webp?v=airliner-clay-2" alt="" width="1024" height="512">
-      <div class="aircraft-lights">
-        <span class="aircraft-light aircraft-light--navigation"></span>
-        <span class="aircraft-light aircraft-light--strobe"></span>
-        <span class="aircraft-light aircraft-light--beacon"></span>
+  <main class="flight-sequence" id="flight-sequence" tabindex="-1" aria-label="FocusFlight">
+    <div class="sky">
+      <canvas class="stars" aria-hidden="true"></canvas>
+      <div class="sky-award" role="img" aria-label="App Store Editors’ Choice">
+        <img class="sky-award__sharp" src="brand/editors-choice.png" alt="" width="305" height="88">
+        <img class="sky-award__soft" src="brand/editors-choice.png" alt="" width="305" height="88">
       </div>
-    </div>
-    <header class="sky-header">
-      <h1 class="sky-brand"><img src="brand/focusflight-logo.png" alt="FocusFlight" width="669" height="127"></h1>
-      <div class="sky-nav" role="group" aria-label="Homepage sections" lang="en">
-        <label><input type="radio" name="sky-section" checked><span>Features</span></label>
-        <label><input type="radio" name="sky-section"><span>How it works</span></label>
-        <label><input type="radio" name="sky-section"><span>Creators</span></label>
-        <label><input type="radio" name="sky-section"><span>FAQ</span></label>
+      <section class="earth" id="flight-map" aria-labelledby="earth-title" tabindex="-1" inert>
+        <svg class="earth-map" aria-hidden="true" viewBox="-.5 -.5 126 71" preserveAspectRatio="xMidYMid slice"></svg>
+        <div class="earth-visual">
+          <canvas class="earth-sphere" aria-hidden="true"></canvas>
+          <svg class="earth-routes" role="img" aria-label="从东京羽田出发并返回的环球航线" viewBox="0 0 600 600">
+            <defs>
+              <radialGradient id="earth-route-fade" gradientUnits="userSpaceOnUse" cx="300" cy="300" r="276">
+                <stop offset="86%" stop-color="var(--ink)"/>
+                <stop offset="94%" stop-color="var(--ink)" stop-opacity=".65"/>
+                <stop offset="98%" stop-color="var(--ink)" stop-opacity=".12"/>
+                <stop offset="100%" stop-color="var(--ink)" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <path id="earth-route-shape" class="earth-arc"/>
+          </svg>
+        </div>
+        <div class="earth-copy">
+          <h2 id="earth-title">记录专注<br>飞遍世界</h2>
+          <p>让每段航线跃然眼前</p>
+        </div>
+      </section>
+      <section class="departures" id="focus-scenarios" aria-label="专注场景" tabindex="-1" inert>
+        <div class="departures__layout">
+          <div class="departures__title-slot">
+            <h2 class="departure-sign" lang="zh-CN">
+              <svg class="departure-sign__arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3 12h17M12 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="miter"/>
+              </svg>
+              <svg class="departure-sign__plane" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect width="24" height="24" rx="1" fill="#171713"/>
+                <path d="m18.5 4.5-4.1 3.3-8.8-2-1.3 1.3 7 3.8-4 4-3-.6-1 1 4 2 2 4 1-1-.6-3 4-4 3.8 7 1.3-1.3-2-8.8 3.3-4.1c1.1-1.5-.1-2.7-1.6-1.6Z"/>
+              </svg>
+              <span>任何场景，皆可专注</span>
+            </h2>
+          </div>
+          <table class="departure-board" lang="en">
+            <thead><tr>
+              <th scope="col">Duration</th>
+              <th scope="col">Focus</th>
+              <th scope="col">Destination</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>25:00</td><td>READING</td><td>KYOTO</td></tr>
+              <tr><td>45:00</td><td>STUDYING</td><td>HELSINKI</td></tr>
+              <tr><td>50:00</td><td>WRITING</td><td>PARIS</td></tr>
+              <tr><td>60:00</td><td>DEEP WORK</td><td>NEW YORK</td></tr>
+              <tr><td>40:00</td><td>DESIGNING</td><td>COPENHAGEN</td></tr>
+              <tr><td>30:00</td><td>PRACTICE</td><td>VIENNA</td></tr>
+              <tr><td>35:00</td><td>CODING</td><td>TOKYO</td></tr>
+              <tr><td>20:00</td><td>REVIEWING</td><td>OSLO</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <canvas class="clouds" aria-hidden="true"></canvas>
+      <div class="flight-display">
+        <div class="flight-clock" role="time">
+          <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
+        </div>
+        <div class="flight-telemetry" lang="en" role="img">
+          <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
+        </div>
       </div>
-    </header>
+      <div class="aircraft" aria-hidden="true">
+        <img class="aircraft-day" src="aircraft/day.webp?v=airliner-clay-2" alt="" width="1024" height="512">
+        <img class="aircraft-night" src="aircraft/night.webp?v=airliner-clay-2" alt="" width="1024" height="512">
+        <div class="aircraft-lights">
+          <span class="aircraft-light aircraft-light--navigation"></span>
+          <span class="aircraft-light aircraft-light--strobe"></span>
+          <span class="aircraft-light aircraft-light--beacon"></span>
+        </div>
+      </div>
+      <header class="sky-header">
+        <h1 class="sky-brand"><img src="brand/focusflight-logo.png" alt="FocusFlight" width="669" height="127"></h1>
+        <div class="sky-nav" role="group" aria-label="Homepage sections" lang="en">
+          <label><input type="radio" name="sky-section" checked><span>Features</span></label>
+          <label><input type="radio" name="sky-section"><span>How it works</span></label>
+          <label><input type="radio" name="sky-section"><span>Creators</span></label>
+          <label><input type="radio" name="sky-section"><span>FAQ</span></label>
+        </div>
+      </header>
+    </div>
   </main>
 </body>
 </html>

@@ -12,13 +12,25 @@
   initial-value: 0px;
 }
 
-.flight-clock {
+.sky {
+  --flight-clock-center: clamp(36%, calc(57.5% - 11.8vw), 54%);
+  --flight-clock-size: min(12.3vw, 25vh);
+  --flight-telemetry-gap: clamp(22px, 3.3vh, 44px);
+  --flight-telemetry-size: min(clamp(24px, 2.4vw, 42px), 5.8vw, 12vh);
+  --flight-line-height: 1.04;
+}
+
+.flight-display {
+  --digit-width: .80em;
+  --colon-width: .21em;
   position: absolute;
-  inset: clamp(36%, calc(57.5% - 11.8vw), 54%) 0 auto;
+  inset: var(--flight-clock-center) 0 auto;
   translate: 0 -50%;
   font-family: "Poiret One", sans-serif;
-  font-size: min(12.3vw, 25vh);
-  height: 1.04em;
+  font-size: var(--flight-clock-size);
+  width: calc(6 * var(--digit-width) + 2 * var(--colon-width));
+  height: calc(var(--flight-line-height) * 1em);
+  margin-inline: auto;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -27,11 +39,17 @@
     color-mix(in srgb, #4c638e calc(var(--stars, 0) * 100%), #4d4c50) 76%,
     var(--sky, #87a0bb));
   mix-blend-mode: screen;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flight-clock,
+.flight-telemetry {
+  position: relative;
+  height: calc(var(--flight-line-height) * 1em);
   mask-image: linear-gradient(to bottom,
     rgb(0 0 0 / 86%) 15%, rgb(0 0 0 / 68%) 46%, rgb(0 0 0 / 34%) 68%,
     rgb(0 0 0 / 12%) 80%, transparent 96%);
-  pointer-events: none;
-  user-select: none;
 }
 
 .flight-clock__face {
@@ -62,14 +80,6 @@
   mask-image: linear-gradient(transparent 70%, #000 97%);
 }
 
-/* Equal code columns keep the full route and its arrow centered. */
-.flight-clock__code {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.32em;
-}
-
 .flight-clock__slot {
   display: grid;
   place-items: center;
@@ -81,37 +91,109 @@
   translate: 0 var(--digit-shift);
 }
 
-.flight-clock__slot--icon {
-  width: .88em;
-  margin-inline: .07em;
-}
-
-.flight-clock__slot--icon > span,
-.flight-clock__slot--icon svg {
-  display: block;
-  width: 100%;
-}
-
-.flight-clock__slot--icon svg { translate: 0 -.018em; }
-
-.flight-clock__slot--arrow {
-  width: .66em;
-  margin-inline: .13em;
-}
-
-.flight-clock[data-mode="countdown"] .flight-clock__slot {
+.flight-clock .flight-clock__slot {
   height: 1.04em;
-  width: .80em;
+  width: var(--digit-width);
 }
 
-.flight-clock[data-mode="countdown"] .flight-clock__slot > span {
+.flight-clock .flight-clock__slot > span {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  translate: 0 calc(-1 * var(--digit-shift));
 }
 
-.flight-clock[data-mode="countdown"] .flight-clock__slot--colon {
-  width: .21em;
+.flight-clock .flight-clock__slot--colon {
+  width: var(--colon-width);
   translate: 0 -.028em;
+}
+
+/* The mask needs a wider box than the centered digit slots. */
+.flight-clock { margin-inline: -.16em; }
+
+.flight-clock .flight-clock__face--soft { filter: blur(clamp(.75px, .23vw, 4.2px)); }
+.flight-clock .flight-clock__face--far { filter: blur(clamp(1.4px, .48vw, 7.5px)); }
+
+.flight-telemetry {
+  margin-top: var(--flight-telemetry-gap);
+  font-size: var(--flight-telemetry-size);
+  color: color-mix(in srgb, currentColor 67%, #dbe8ff);
+  mask-image: linear-gradient(#000 45%, rgb(0 0 0 / 76%) 78%, rgb(0 0 0 / 52%) 91%, transparent);
+}
+
+.flight-telemetry .flight-clock__face {
+  justify-content: space-between;
+  gap: .32em;
+  padding-inline: .1em;
+}
+
+.flight-telemetry .flight-clock__face--sharp {
+  mask-image: linear-gradient(#000 55%, transparent 94%);
+}
+
+.flight-telemetry .flight-clock__face--soft {
+  filter: blur(.03em);
+  mask-image: linear-gradient(transparent 49%, #000 82%, transparent);
+}
+
+.flight-telemetry .flight-clock__face--far {
+  filter: blur(.065em);
+  mask-image: linear-gradient(transparent 69%, #000);
+}
+
+.flight-telemetry__caption,
+.flight-telemetry__label,
+.flight-telemetry__value {
+  display: flex;
+  align-items: center;
+  white-space: pre;
+}
+
+.flight-telemetry__caption { gap: .28em; }
+
+.flight-telemetry__icon {
+  display: block;
+  width: .88em;
+  height: .88em;
+  color: color-mix(in srgb, currentColor 82%, #ffe4c9);
+}
+
+.flight-telemetry__glyph { translate: 0 var(--digit-shift); }
+
+@media (max-width: 480px) {
+  .flight-telemetry__label,
+  .flight-telemetry__value { letter-spacing: -.035em; }
+
+  .flight-telemetry__caption { gap: .14em; }
+}
+
+/* The soft edge travels through each glyph as the projection slips out of focus. */
+.flight-clock .flight-clock__slot {
+  --exit: clamp(0, (var(--clock-phase, 0) - var(--digit-delay)) * 1.45, 1);
+  --wipe: calc(var(--exit) * 140% - 5%);
+  mask-image: linear-gradient(to bottom, transparent calc(var(--wipe) - 31%), #000 calc(var(--wipe) + 5%));
+  /* Poiret's wider digits and the rolling blur extend past the fixed clock slots. */
+  mask-size: calc(100% + .44em) calc(100% + .58em);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-clip: no-clip;
+  transform: translateY(calc(var(--exit) * -.13em)) scale(calc(1 - var(--exit) * .08));
+}
+
+.flight-clock .flight-clock__face--sharp .flight-clock__slot {
+  filter: blur(calc(var(--exit) * min(.072em, 13px)));
+}
+
+.flight-display .flight-telemetry {
+  --exit: var(--telemetry-exit, 0);
+  --wipe: calc(var(--exit) * 139% - 5%);
+  mask-image:
+    linear-gradient(to bottom, transparent calc(var(--wipe) - 32%), #000 calc(var(--wipe) + 5%)),
+    linear-gradient(#000 45%, rgb(0 0 0 / 76%) 78%, rgb(0 0 0 / 52%) 91%, transparent);
+  mask-composite: intersect;
+  filter: blur(calc(var(--exit) * min(.39em, 12px)));
+  translate: 0 calc(var(--exit) * -.52em);
+  scale: calc(1 - var(--exit) * .035);
 }

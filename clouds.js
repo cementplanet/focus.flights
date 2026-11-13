@@ -1,5 +1,5 @@
 // Noise volumes generated from Leonxlnx/halo-above-the-clouds at 1d08819 (MIT, see LICENSE-halo).
-export async function startClouds(canvas, sky, aircraft) {
+export async function startClouds(canvas, sky, aircraft, camera) {
   const gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: true });
   if (!gl) return;
 
@@ -20,7 +20,7 @@ export async function startClouds(canvas, sky, aircraft) {
   }
 
   const [fragment, shadow, shape, detail, weather] = await Promise.all([
-    asset("clouds.glsl?v=flight-motion").then((response) => response.text()),
+    asset("clouds.glsl?v=cloud-perf").then((response) => response.text()),
     asset("aircraft/shadow.bin?v=airliner-clay-2").then((response) => response.arrayBuffer()),
     ...["shape64", "detail32", "weather512"].map((name) =>
       asset(`data/noise/${name}.bin`).then((response) => response.arrayBuffer())),
@@ -45,7 +45,7 @@ export async function startClouds(canvas, sky, aircraft) {
 
   const uniforms = Object.fromEntries([
     "shapeNoise", "detailNoise", "weatherNoise", "aircraftShadow", "aircraftDistance", "aircraftOffset", "resolution",
-    "elapsed", "night", "shadowColor", "lightColor", "skyMid", "skyHorizon",
+    "elapsed", "cameraHeight", "deckDepth", "night", "shadowColor", "lightColor", "skyMid", "skyHorizon",
   ].map((name) => [name, gl.getUniformLocation(program, name)]));
 
   function upload(name, unit, size, data, volume, format = gl.RGBA) {
@@ -80,6 +80,7 @@ export async function startClouds(canvas, sky, aircraft) {
   const epoch = performance.now();
   let frameAt = -Infinity;
   let lastPalette;
+  let lastCamera;
   let elapsed = 0;
   let flightTime = 0;
   let previousAnimationAt;
@@ -103,19 +104,25 @@ export async function startClouds(canvas, sky, aircraft) {
       aircraftOffset = aircraft.animate(motion);
       previousMotion = motion;
     }
-    if (!motionPreferenceChanged && now - frameAt < (reduce ? 1000 : 65)) return;
+    const view = camera();
+    const moved = view.height !== lastCamera?.height;
+    if (view.height <= -560 && lastCamera?.height <= -560) return;
+    // During camera travel submit on every display callback. Throttle only ambient drift.
+    if (!view.travel && !moved && !motionPreferenceChanged && now - frameAt < (reduce ? 1000 : 65)) return;
     if (pendingFrame) {
-      if (gl.clientWaitSync(pendingFrame, 0, 0) === gl.TIMEOUT_EXPIRED) return;
+      if (!view.travel && !moved && gl.clientWaitSync(pendingFrame, 0, 0) === gl.TIMEOUT_EXPIRED) return;
       gl.deleteSync(pendingFrame);
       pendingFrame = null;
     }
 
-    const scale = Math.min(1, 960 / canvas.clientWidth, 540 / canvas.clientHeight);
-    const width = Math.max(1, Math.round(canvas.clientWidth * scale));
-    const height = Math.max(1, Math.round(canvas.clientHeight * scale));
+    const cssWidth = canvas.clientWidth;
+    const cssHeight = canvas.clientHeight;
+    const scale = Math.min(1, 864 / cssWidth, 486 / cssHeight);
+    const width = Math.max(1, Math.round(cssWidth * scale));
+    const height = Math.max(1, Math.round(cssHeight * scale));
     const palette = sky();
     const resized = canvas.width !== width || canvas.height !== height;
-    if (reduce && !motionPreferenceChanged && !resized && palette === lastPalette) return;
+    if (reduce && !moved && !motionPreferenceChanged && !resized && palette === lastPalette) return;
 
     if (!reduce) elapsed += Math.min(now - Math.max(frameAt, epoch), 125) / 1000;
     frameAt = now;
@@ -124,7 +131,6 @@ export async function startClouds(canvas, sky, aircraft) {
       canvas.width = width;
       canvas.height = height;
       gl.viewport(0, 0, width, height);
-      gl.scissor(0, 0, width, Math.ceil(height * 0.46));
       gl.uniform2f(uniforms.resolution, width, height);
     }
 
@@ -138,15 +144,30 @@ export async function startClouds(canvas, sky, aircraft) {
       gl.uniform3fv(uniforms.lightColor, colors[4].map((channel) => channel / 255));
     }
 
+    const cleared = view.height <= -560;
+    const aboveDeck = view.height >= 1120;
+    if (resized || cleared || aboveDeck !== (lastCamera?.height >= 1120)) {
+      gl.scissor(0, 0, width, height);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      // Above the deck, the shader produces no mist or cloud above the ray horizon.
+      if (aboveDeck) gl.scissor(0, 0, width, Math.ceil(height * 0.452));
+    }
+    lastCamera = view;
+    if (cleared) return;
+    gl.uniform1f(uniforms.cameraHeight, view.height);
+    const deckDepth = Math.max(0, Math.min(1, (1120 - view.height) / 180));
+    gl.uniform1f(uniforms.deckDepth, deckDepth);
+
     gl.uniform1f(uniforms.elapsed, elapsed);
     gl.uniform1f(uniforms.aircraftDistance, aircraft.distance());
     gl.uniform2fv(uniforms.aircraftOffset, aircraftOffset);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    pendingFrame = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-    gl.flush();
+    if (!view.travel) {
+      pendingFrame = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+    }
   }
 
-  gl.scissor(0, 0, canvas.width, Math.ceil(canvas.height * 0.46));
   gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
   requestAnimationFrame(render);
 }

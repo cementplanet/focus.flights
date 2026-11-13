@@ -1,0 +1,220 @@
+@font-face {
+  font-family: "Board Barlow";
+  src: url("fonts/barlow-semi-condensed-600-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+
+.sky-header {
+  --scene-ink: color-mix(in srgb, var(--ink), #eeeae1 calc(100% * var(--departure-header, 0)));
+  color: color-mix(in srgb,
+    color-mix(in srgb, #f7fbff calc(94% - 17% * var(--stars, 0)), var(--zenith, #223c61)),
+    var(--scene-ink) var(--ground-light, 0%));
+}
+
+.departures {
+  --flap-width: 3.38vw;
+  --row-height: calc(var(--flap-height) + var(--flap-gap) * 1.18);
+  --flap-height: calc(var(--flap-width) * 1.51);
+  --flap-gap: calc(var(--flap-width) * .16);
+  --flap-radius: max(1px, calc(var(--flap-width) * .076));
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  visibility: hidden;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  outline: none;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 47% 26%, #41403d 0%, #353430 51%, #292826 100%);
+}
+
+.departures[data-visible] { visibility: visible; }
+
+.departures::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  height: clamp(86px, 24svh, 240px);
+  pointer-events: none;
+  background: linear-gradient(transparent, #110f0e66);
+}
+
+.departures::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  height: clamp(86px, 24svh, 240px);
+  pointer-events: none;
+  backdrop-filter: blur(7px);
+  mask-image: linear-gradient(transparent 10%, #000);
+}
+
+.departure-animation {
+  position: absolute;
+  pointer-events: none;
+}
+
+.departures__title-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-top: clamp(72px, 10svh, 96px);
+  height: calc(min(
+    calc(20svh + max(33svh, 100svh - 7.75 * var(--row-height) + clamp(34px, 9svh, 112px))),
+    max(53svh, calc(100svh - 4.5 * var(--row-height)))
+  ) - clamp(48px, 8svh, 80px));
+}
+
+.departure-sign {
+  display: flex;
+  align-items: center;
+  gap: .34em;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: .27em .38em;
+  color: #171713;
+  background: #ffd500;
+  box-shadow: inset 0 1px 0 #fff4, 0 2px 3px #0003;
+  font: 600 clamp(28px, 4.8vw, 72px) / 1.1 "Board Barlow", "Hiragino Sans GB", "PingFang SC", sans-serif;
+  white-space: nowrap;
+}
+
+.departure-sign svg {
+  width: .9em;
+  height: .9em;
+  flex: none;
+  fill: #ffd500;
+}
+
+.departure-sign .departure-sign__arrow {
+  width: 1.02em;
+  height: 1.12em;
+}
+
+.departure-sign span { translate: 0 -.015em; }
+
+.departure-board {
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.departure-board :is(th, td) {
+  padding: 0 calc(var(--flap-width) * .64) calc(var(--flap-gap) * 1.18) 0;
+  text-align: left;
+}
+
+.departure-board :is(th, td):last-child { padding-right: 0; }
+.departure-board tr:last-child td { padding-bottom: 0; }
+
+.departure-board th {
+  padding-bottom: calc(var(--flap-gap) + 4px);
+  color: #eac77a;
+  font: 600 clamp(12px, 1.55vw, 26px) / 1.15 "Board Barlow", "Arial Narrow", sans-serif;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 1px #17120c;
+}
+
+.departure-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.flap-strip {
+  display: flex;
+  gap: var(--flap-gap);
+}
+
+.flap {
+  position: relative;
+  display: block;
+  width: var(--flap-width);
+  height: var(--flap-height);
+  contain: layout style;
+  border-radius: var(--flap-radius);
+  background: #171716;
+  box-shadow:
+    0 1px 1px #ffffff28,
+    0 -1px 1px #10100fec,
+    inset 0 0 0 1px #1c1b1a,
+    inset 0 2px 3px #070706c9;
+}
+
+/* The axle pins sit above the two leaves and stay put during the flip. */
+.flap::before, .flap::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  width: max(1px, 6.4%);
+  height: 19%;
+  translate: 0 -50%;
+  border-radius: 1px;
+  background: linear-gradient(#31312f 1%, #92908a 11%, #555451 28%, #242423 48%, #4d4c47 65%, #292927 79%, #171716 96%);
+  box-shadow: 0 0 0 1px #141413aa, 1px 0 1px #11111095;
+}
+.flap::before { left: 2%; }
+.flap::after { right: 2%; }
+
+.flap-face {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  color: #f5f4ed;
+  text-shadow: 0 1px 1px #100f0f80;
+}
+
+.flap > .flap-face { left: 5%; right: 5%; }
+.flap > .flap-face { height: 46%; }
+
+.flap-face--top {
+  top: 0;
+  border-radius: calc(var(--flap-radius) * .75) calc(var(--flap-radius) * .75) 0 0;
+  background: linear-gradient(#222221 0%, #2c2c2b 20%, #3a3a39 83%, #383837 100%);
+  box-shadow: inset 0 1px 0 #ffffff34, inset 1px 0 #ffffff0c, inset -1px 0 #00000026, inset 0 -1px #0a0a0a9e;
+}
+.flap > .flap-face--top { top: 3%; }
+
+.flap-face--bottom {
+  bottom: 0;
+  border-radius: 0 0 calc(var(--flap-radius) * .75) calc(var(--flap-radius) * .75);
+  background: linear-gradient(#282827 0%, #353534 16%, #424241 81%, #454544 100%);
+  box-shadow: inset 0 1px 0 #ffffff23, inset 1px 0 #ffffff0b, inset -1px 0 #00000024, inset 0 -1px #16161595;
+}
+.flap > .flap-face--bottom { bottom: 3%; }
+
+.flap-face span {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - var(--flap-height) * .035)) scaleX(.84);
+  font: 600 calc(var(--flap-height) * .84) / 1 "Board Barlow", "Arial Narrow", sans-serif;
+}
+.flap-face--bottom span { top: 0; }
+
+@media (max-width: 660px) {
+  .departures {
+    --flap-width: 3.53vw;
+    --flap-gap: calc(var(--flap-width) * .115);
+  }
+}
+
+@media (orientation: portrait) {
+  .departures::before, .departures::after {
+    height: clamp(64px, 14svh, 160px);
+  }
+}
+
+.departures[data-baked] .flap-strip { visibility: hidden; }
