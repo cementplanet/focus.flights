@@ -1,0 +1,142 @@
+:root {
+  --button-press: cubic-bezier(.22, 1, .36, 1);
+  --button-release: cubic-bezier(.2, .8, .3, 1);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    /* EasingWizard Glide and the quieter 1 / 38 / 77 rebound. */
+    --button-press: linear(0, .013 1%, .051 2.2%, .404 9.8%, .51 12.6%, .602 15.5%, .683 18.7%, .754 22.2%, .813 26%, .861 30.2%, .9 34.8%, .931 40%, .972 52.7%, .992 70.2%, 1);
+    --button-release: linear(0, .027 1.2%, .103 2.5%, .589 8.1%, .801 11.2%, .943 14.6%, .986 16.4%, 1.015 18.4%, 1.028 20.3%, 1.032 22.6%, 1.007 33.5%, 1 40.2%, 1);
+  }
+}
+
+:is(.hero-actions a, .showcase-controls button) {
+  --button-time: 520ms;
+  --button-curve: var(--button-release);
+  --button-scale: 1;
+  --button-lift: 0px;
+  border-radius: 10px;
+  touch-action: manipulation;
+  transform: translateY(var(--button-lift)) scale(var(--button-scale));
+  transition: transform var(--button-time) var(--button-curve),
+    background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.hero-actions a { border-radius: calc(var(--badge-height) * .17); }
+
+@keyframes hero-button-reveal {
+  from {
+    opacity: 0;
+    filter: blur(7px);
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-ready .hero-actions a {
+    animation: hero-button-reveal 520ms cubic-bezier(.22, .7, .25, 1) 360ms backwards;
+  }
+
+  .motion-ready .hero-actions a + a { animation-delay: 420ms; }
+}
+
+.hero-explore span {
+  transform: translateX(var(--arrow-travel, 0px));
+  transition: transform var(--button-time) var(--button-curve);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-actions a:hover {
+    --button-scale: 1.014;
+    --button-lift: -1px;
+  }
+
+  .hero-explore:hover { --arrow-travel: 3px; }
+
+  .showcase-controls button:hover {
+    --button-scale: 1.012;
+    --button-lift: -1px;
+    background-color: rgb(29 29 31 / .055);
+    color: #1d1d1f;
+  }
+}
+
+:is(.hero-actions a, .showcase-controls button):is(:active, [data-touch-pressed]) {
+  --button-time: 145ms;
+  --button-curve: var(--button-press);
+  --button-scale: .968;
+  --button-lift: 0px;
+}
+
+.hero-explore:is(:active, [data-touch-pressed]) { --arrow-travel: 1px; }
+.showcase-controls button:is(:active, [data-touch-pressed]) { background-color: rgb(29 29 31 / .09); color: #1d1d1f; }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.hero-actions a, .showcase-controls button), .hero-explore span {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Aqua material and Easing Wizard 1 / 50 / 65 recoil. */
+a.aqua-button {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  touch-action: manipulation;
+  transform: none;
+  scale: 1;
+  transition: scale 900ms linear(0, .029 1%, .124 2.2%, .901 9%, 1.042 11.3%, 1.086 12.6%, 1.108 13.9%, 1.114 15.1%, 1.108 16.4%, 1.014 23.8%, .996 26.2%, .988 28.9%, 1.001 43.8%, 1);
+}
+
+.aqua-button-surface {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.aqua-button-surface rect {
+  x: 1px;
+  y: 1px;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
+  rx: var(--aqua-radius);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (pointer: fine) {
+    .aqua-button:hover { scale: 1.035; }
+  }
+  .aqua-button:is(:active, [data-touch-pressed]) { scale: .9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  a.aqua-button { transition: none; }
+}
+
+.contact-material {
+  --contact-edge-width: .5px;
+  --contact-edge: #e0dede;
+  --contact-highlight: #fcfcfb;
+  --contact-tone: #f5f5f4;
+  --contact-lowlight: #f0efee;
+  --contact-border: var(--contact-edge-width) solid var(--contact-edge);
+  --contact-background: linear-gradient(
+    var(--contact-highlight), var(--contact-tone) 3px,
+    var(--contact-tone) calc(100% - 2.5px), var(--contact-lowlight)
+  ) padding-box;
+}
+
+.contact-surface {
+  border: var(--contact-border);
+  background: var(--contact-background);
+}
+
+.contact-face { fill: url(#contact-face); }
+.contact-ink {
+  stroke: var(--contact-edge);
+  stroke-width: var(--contact-edge-width);
+}

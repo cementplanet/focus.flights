@@ -1,0 +1,410 @@
+.flight-feature {
+  padding: clamp(55px, 7vw, 112px) 0 clamp(64px, 8vw, 116px);
+  color: #1d1d1f;
+  background: #f4f4f6;
+}
+.flight-feature-inner { width: min(1280px, 82vw); margin-inline: auto; }
+.flight-feature-title {
+  margin: 0 0 clamp(23px, 2.7vw, 42px);
+  font-size: clamp(34px, 4.2vw, 66px);
+  letter-spacing: -.052em;
+  line-height: 1.045;
+}
+.flight-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  height: clamp(415px, 40vw, 625px);
+  border-radius: clamp(18px, 2vw, 30px);
+  background: radial-gradient(ellipse at 72% 28%, #21262f 0%, #151920 48%, #101216 100%);
+  --paper: #11141a;
+  --ink: #f5f5f2;
+  --content-left: clamp(24px, 6cqw, 86px);
+  --map-opacity: .135;
+  container-type: size;
+}
+.flight-stage:focus-visible { outline: 2px solid #376598; outline-offset: 4px; }
+.flight-stage .earth-map { inset: 0; width: 100%; height: 100%; translate: none; opacity: calc(var(--map-opacity) * var(--globe-dots, 1)); }
+.flight-stage .earth-map path { opacity: 1; stroke-width: .26; }
+.flight-stage .earth-visual {
+  width: min(92cqw, 134cqh);
+  right: -15cqw;
+  top: auto;
+  bottom: -40cqh;
+}
+.flight-stage .earth-copy {
+  width: 58%;
+  top: 46%;
+  translate: 0 -50%;
+}
+.flight-stage .earth-copy h2 { font-size: clamp(28px, 5cqw, 64px); }
+.flight-stage .earth-copy p { font-size: clamp(14px, 1.45cqw, 18px); }
+.flight-stage .earth:not([inert]) .earth-visual { touch-action: pinch-zoom; }
+.flight-controls {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  padding-top: 24px;
+  gap: 12px;
+}
+.flight-steps {
+  display: flex;
+  align-items: center;
+  padding-inline: 5px;
+  border-radius: 100px;
+  background: #e7e7eb;
+}
+.flight-steps button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: #727279;
+  cursor: pointer;
+  transition: width 340ms cubic-bezier(.22,.72,.22,1);
+}
+.flight-steps button::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background: currentColor;
+  transition: width 340ms cubic-bezier(.22,.72,.22,1), color 170ms ease-out;
+}
+.flight-steps button[aria-current] { width: 47px; color: #303035; }
+.flight-steps button[aria-current]::before { width: 24px; }
+.flight-steps button:focus-visible { outline: 2px solid #376598; outline-offset: -2px; }
+.flight-next { min-height: 64svh; background: #fff; }
+
+@property --type-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+@keyframes flight-type {
+  from { --type-progress: 0; }
+  to { --type-progress: 1; }
+}
+.motion-ready h1, .motion-ready p, .flight-feature-title, .flight-stage .earth-copy { --type-progress: 0; }
+.motion-ready h1 { animation: flight-type 720ms linear 90ms both; }
+.motion-ready p { animation: flight-type 660ms linear 220ms both; }
+.flight-feature-visible .flight-feature-title { animation: flight-type 670ms linear both; }
+.motion-readable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.motion-word { display: inline-block; }
+.motion-glyph {
+  display: inline-block;
+  --glyph-t: clamp(0, (min(var(--type-progress), var(--hero-title-progress, 1)) - var(--glyph-delay)) * 2.12, 1);
+  --glyph-focus: calc(1 - (1 - var(--glyph-t)) * (1 - var(--glyph-t)) * (1 - var(--glyph-t)));
+  opacity: var(--glyph-focus);
+  filter: blur(calc((1 - var(--glyph-focus)) * min(.16em, 8px)));
+  translate: 0 calc((1 - var(--glyph-focus)) * .16em);
+}
+
+
+.journey {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  color: #191b19;
+  --map-water: color-mix(in srgb, #f4f3ef, #acd3e4 var(--map-color, 0%));
+  --map-land: color-mix(in srgb, #dadbd6, #dbe7b9 var(--map-color, 0%));
+  --journey-yellow: #f7d34d;
+}
+
+.journey-map, .journey-track, .journey-markers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.journey-map {
+  opacity: var(--map-opacity, 0);
+  mask-image: radial-gradient(circle at var(--map-origin), #000 var(--map-reveal), transparent calc(var(--map-reveal) + 140px));
+  filter: blur(var(--map-blur, 0px));
+  scale: var(--map-scale, 1);
+  translate: var(--camera-pan, 0px) 0;
+  transform-origin: var(--map-origin);
+}
+
+.journey-water { fill: var(--map-water); }
+.journey-land { fill: var(--map-land); }
+.journey-place { fill: #42473e; text-anchor: middle; font-size: 11px; opacity: .65; }
+.journey-sea { font-style: italic; letter-spacing: .11em; }
+.journey-country { font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+
+.journey-track, .journey-markers {
+  scale: var(--camera-scale, 1);
+  translate: var(--camera-pan, 0px) 0;
+  transform-origin: var(--map-origin);
+}
+.journey-airport, .journey-route, .journey-trail { opacity: var(--track-opacity, 0); }
+.journey-tag { opacity: var(--track-opacity, 0); }
+.journey-tag:nth-child(2) { opacity: var(--arrival-tag, 0); }
+.journey-runway { fill: none; stroke: #343932; stroke-width: 5; stroke-linecap: square; }
+.origin-runway { opacity: var(--origin-runway, 0); }
+.destination-runway { opacity: var(--destination-runway, 0); }
+.journey-route, .journey-trail { fill: none; stroke-linecap: round; }
+.journey-route { stroke: #222720; stroke-opacity: .46; stroke-width: 1; }
+.journey-trail { stroke: #222720; stroke-width: 1.75; stroke-dasharray: 1; stroke-dashoffset: var(--trail-offset, 1); }
+.journey-airport { r: 3; fill: #fff9dd; stroke: #222720; stroke-width: 1; }
+
+.journey-tag, .journey-plane {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #171914;
+  background: var(--journey-yellow);
+  border: 1px solid #22231c;
+  border-radius: 5px;
+}
+.journey-tag {
+  height: 20px;
+  padding: 0 6px;
+  translate: 10px -50%;
+  font: 700 11px/1 ui-monospace, monospace;
+}
+.journey-tag img { width: 12px; }
+.journey-plane {
+  width: 25px;
+  height: 25px;
+  translate: -50% -50%;
+  opacity: var(--plane-opacity, 0);
+}
+.journey-plane img { width: 15px; }
+
+.journey-plan, .journey-flight, .journey-arrival {
+  position: absolute;
+  left: var(--content-left);
+  top: 46%;
+  width: min(340px, 40vw);
+  translate: 0 calc(-50% + var(--lift, 0px));
+  opacity: 0;
+}
+.journey-plan { opacity: var(--plan-opacity, 0); --type-progress: var(--plan-type, 0); }
+.journey-flight { opacity: var(--flight-opacity, 0); }
+.journey-arrival { opacity: var(--arrival-opacity, 0); --type-progress: var(--arrival-type, 0); }
+.journey h2 {
+  margin: 0;
+  font-size: clamp(29px, 4.5cqw, 60px);
+  line-height: 1.05;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.journey p { margin: 12px 0 0; font-size: clamp(14px, 1.2vw, 18px); }
+.journey-ruler { margin-top: 30px; }
+.journey-ticks {
+  position: relative;
+  height: 18px;
+  background:
+    repeating-linear-gradient(to right, transparent 0 calc(2.5% - 1px), #1b201b40 calc(2.5% - 1px) 2.5%) bottom / 100% 6px no-repeat,
+    repeating-linear-gradient(to right, transparent 0 calc(12.5% - 1px), #1b201b75 calc(12.5% - 1px) 12.5%) bottom / 100% 11px no-repeat;
+}
+.journey-ticks::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  height: 100%;
+  background: #1b201b;
+  translate: -50% 0;
+}
+.journey-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  color: #555a52;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.journey-times strong { color: #151a13; }
+
+.journey-flight h2 { font-size: clamp(16px, 1.6vw, 23px); letter-spacing: -.028em; }
+.journey-flight p.journey-distance {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 6px 0 0;
+  font-size: clamp(53px, 6.4vw, 104px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.055em;
+  font-variant-numeric: tabular-nums;
+}
+.journey-unit { font-size: .28em; letter-spacing: 0; }
+.journey-digits { display: flex; }
+.journey-digits > span { position: relative; width: .59em; height: 1.06em; overflow: clip; }
+.journey-digits > span > span { position: absolute; inset: 0; text-align: right; }
+.journey-remaining { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.journey-ticket {
+  position: absolute;
+  left: 50%;
+  top: 53%;
+  width: min(390px, calc(100% - 42px));
+  translate: -50% calc(-50% + var(--ticket-drop, 0px));
+  opacity: var(--ticket-opacity, 0);
+  filter: blur(var(--ticket-focus, 0px));
+  --type-progress: var(--ticket-type, 0);
+  color: #171916;
+}
+.journey-ticket-main, .journey-stub {
+  box-sizing: border-box;
+  padding: 20px 23px;
+  background: #fefdf8;
+}
+.journey-ticket-main {
+  position: relative;
+  border-radius: 11px 11px 0 0;
+  box-shadow: 0 12px 34px #17211923;
+}
+.journey-ticket-main::after {
+  position: absolute;
+  inset: auto 0 -4px;
+  height: 5px;
+  content: "";
+  background: radial-gradient(circle at 3px 0, #fefdf8 3px, transparent 3.5px) 0 0 / 6px 5px repeat-x;
+}
+.journey-ticket-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 12px; font-weight: 650; }
+.journey-ticket-state { font-size: 11px; font-weight: 600; color: #50594d; }
+.journey-ticket-route { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-top: 19px; }
+.journey-ticket-route > div { display: grid; gap: 2px; }
+.journey-ticket-route > div:last-child { text-align: right; }
+.journey-ticket-route strong { font-size: clamp(34px, 5vw, 48px); line-height: 1; letter-spacing: -.045em; }
+.journey-ticket-route span { font-size: 12px; }
+.journey-ticket-leg { justify-items: center; }
+.journey-ticket-leg img { width: 21px; }
+.journey-ticket dl { display: flex; justify-content: space-between; margin: 19px 0 0; font-size: 12px; }
+.journey-ticket dl > div:last-child { text-align: right; }
+.journey-ticket dt { color: #596052; }
+.journey-ticket dd { margin: 3px 0 0; font-weight: 650; }
+.journey-stub {
+  position: relative;
+  border-top: 1px dashed #242a1f66;
+  border-radius: 0 0 11px 11px;
+  padding-top: 12px;
+  padding-bottom: 14px;
+  translate: var(--stub-x, 0) var(--stub-y, 0);
+  rotate: var(--stub-angle, 0);
+  opacity: var(--stub-opacity, 1);
+}
+.journey-stub::before, .journey-stub::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 18px;
+  top: -10px;
+  background: #d9ddd3;
+}
+.journey-stub::before { left: 0; border-radius: 0 10px 10px 0; }
+.journey-stub::after { right: 0; border-radius: 10px 0 0 10px; }
+.journey-barcode { display: block; width: 100%; height: 32px; fill: currentColor; }
+
+.journey-profile {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: min(252px, 100%);
+  gap: 10px;
+  margin-top: 20px;
+}
+.journey-profile svg { width: min(170px, 60%); height: 31px; overflow: visible; }
+.journey-profile path { fill: none; stroke: #262d24; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.journey-profile-track { opacity: .25; }
+.journey-profile-progress { stroke-dasharray: 1; stroke-dashoffset: var(--profile-offset, 1); }
+.journey-profile-dot { fill: #262d24; }
+.journey-altitude { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.journey-flight-label { color: #384036; }
+.journey-hint {
+  margin: 0;
+  color: #515157;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+.journey-hint span { display: inline-block; margin-left: 4px; }
+
+@media (max-width: 720px) {
+  .flight-feature-inner { width: calc(100% - 32px); }
+  .flight-stage { height: clamp(420px, 62svh, 520px); }
+  .flight-stage .earth-copy { top: 15%; width: calc(100% - 2 * var(--content-left)); translate: none; }
+  .flight-stage .earth-copy p { max-width: 230px; }
+  .flight-stage .earth-visual { width: min(148cqw, 112cqh); right: -47cqw; bottom: -42cqh; }
+  .flight-stage .earth-map { inset: 50% auto auto 50%; width: 190%; height: auto; translate: -50% -50%; }
+  .journey-plan, .journey-flight, .journey-arrival {
+    top: auto;
+    bottom: 11%;
+    width: calc(100% - 2 * var(--content-left));
+    translate: 0 var(--lift, 0px);
+  }
+  .journey-ruler { max-width: 350px; margin-top: 17px; }
+  .journey-ticket { top: 53%; }
+  .journey-ticket-main, .journey-stub { padding-inline: 17px; }
+  .journey-profile { margin-top: 12px; }
+  .flight-steps button { width: 44px; }
+  .flight-steps button[aria-current] { width: 47px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-glyph { opacity: 1; filter: none; translate: none; }
+  .hero-copy :is(h1, p) { opacity: var(--hero-title-progress, 1); }
+  .flight-steps button, .flight-steps button::before { transition: none; }
+}
+
+@media (max-height: 485px) and (orientation: landscape) {
+  .journey-ticket { top: 52%; }
+  .journey-ticket-main, .journey-stub { padding-block: 10px; }
+  .journey-ticket-route, .journey-ticket dl { margin-top: 9px; }
+}
+
+/* Both copies share the same view box and crop so dots line up at the frame edges. */
+.flight-feature { overflow: clip; padding-top: clamp(48px, 5.1vw, 86px); }
+.flight-feature-title { margin-bottom: clamp(23px, 2.3vw, 35px); }
+.flight-frame { position: relative; }
+.flight-frame .earth-map, .flight-world-outside {
+  position: absolute;
+  inset: -42px auto auto 50%;
+  width: 100vw;
+  height: calc(100% + 84px);
+  translate: -50% 0;
+  pointer-events: none;
+}
+.flight-frame .earth-map { opacity: calc(.13 * var(--globe-dots, 1)); }
+.flight-world-outside {
+  fill: none;
+  stroke: #666e81;
+  stroke-width: .24;
+  stroke-linecap: round;
+  opacity: calc(.20 * var(--globe-dots, 1));
+  mask-image: linear-gradient(transparent, #000 19%, #000 81%, transparent);
+}
+.flight-stage { height: clamp(400px, min(37vw, 64svh), 600px); }
+.flight-stage-visible .earth-copy { animation: flight-type 730ms linear 100ms both; }
+.flight-stage .earth:not([inert]) .earth-visual { cursor: default; pointer-events: none; }
+.flight-controls { padding-top: 20px; }
+@media (max-width: 720px) {
+  .flight-stage { height: clamp(395px, 60svh, 510px); }
+  .flight-frame .earth-map, .flight-world-outside { width: max(100vw, 630px); }
+  .flight-steps button { width: clamp(36px, 10.3vw, 44px); }
+  .flight-steps button[aria-current] { width: 46px; }
+}
+
+
+.flight-sequence { --flight-page: #f4f4f6; }
+.flight-feature { background: var(--flight-page); }
+.flight-sequence .sky { --paper: var(--flight-page); }
+.sky[data-handoff] { overscroll-behavior: contain; }

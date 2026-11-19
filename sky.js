@@ -1,7 +1,9 @@
-import { startClouds } from "./clouds.js?v=cloud-perf";
-import { startEarth } from "./earth.js?v=viewport-render";
-
-import { startDepartures } from "./departures.js?v=row-glide";
+import { setupFocusRipple } from "./focus-ripple.js";
+import { setupPortholeSky } from "./porthole/sky.js?v=handoff";
+import { setupWindowShade } from "./porthole/shade.js";
+import { prepareCopy, unit } from "./motion-copy.js";
+import { startClouds } from "./clouds.js?v=framed-flight";
+import { startContrails } from "./contrails.js?v=nozzle-alignment";
 
 const night = ["091327", "182a49", "455472", "121c31", "626f8d", 1];
 const day = ["457fb2", "87b1d2", "e3e9eb", "4c6380", "f7f5f0", 0];
@@ -43,73 +45,16 @@ function sample(hour) {
 const sky = document.querySelector(".sky");
 const canvas = document.querySelector(".stars");
 const aircraft = document.querySelector(".aircraft");
+const animateContrails = startContrails(aircraft.querySelector(".contrails"));
+let contrailsVisible = true;
 const ctx = canvas.getContext("2d");
-const earth = document.querySelector(".earth");
-const departures = document.querySelector(".departures");
-const sequence = document.querySelector(".flight-sequence");
-const earthVisual = earth.querySelector(".earth-visual");
-const skyHeader = sky.querySelector(".sky-header");
-const earthMap = earth.querySelector(".earth-map");
-fetch(new URL("./brand/world-map-dots.svg", import.meta.url))
-  .then(response => response.ok ? response.text() : "")
-  .then(source => {
-    const bands = Array.from({length: 96}, () => []);
-    for (const [dot, x, y] of source.matchAll(/M(\d+) (\d+)h0/g)) {
-      const stagger = ((Number(x) * 37 + Number(y) * 61) % 97) / 97;
-      const band = Math.floor((Number(x) / 125 * .84 + stagger * .16) * bands.length);
-      bands[band].push(dot);
-    }
-    earthMap.append(...bands.flatMap((dots, index) => {
-      if (!dots.length) return [];
-      const path = document.createElementNS(earthMap.namespaceURI, "path");
-      path.setAttribute("d", dots.join(""));
-      path.style.setProperty("--dot-start", index / bands.length * .91);
-      return [path];
-    }));
-  })
-  .catch(error => console.warn("Could not load the decorative world map:", error));
-let glyphIndex = 0;
-for (const line of earth.querySelectorAll(".earth-copy h2, .earth-copy p")) {
-  const original = document.createElement("span");
-  original.className = "earth-copy-text";
-  original.append(...line.childNodes);
-  const animated = document.createElement("span");
-  animated.setAttribute("aria-hidden", "true");
-  for (const node of original.childNodes) {
-    if (node.nodeType !== Node.TEXT_NODE) {
-      animated.append(node.cloneNode(true));
-      continue;
-    }
-    animated.append(...Array.from(node.textContent, letter => {
-      const glyph = document.createElement("span");
-      glyph.className = "earth-glyph";
-      glyph.style.setProperty("--glyph-start", glyphIndex++ * .047);
-      glyph.textContent = letter;
-      return glyph;
-    }));
-  }
-  line.append(original, animated);
-  glyphIndex++;
-}
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-const paintEarth = startEarth(earth, () => sky.hasAttribute("data-night"), reducedMotion);
-const paintDepartures = startDepartures(departures, reducedMotion);
-const scenes = [sequence, earth, departures];
-let camera = { height: 1240, travel: false };
-let lastCameraProgress;
-let previousNight;
+const hero = sky.querySelector(".hero-copy");
+const narrowHero = matchMedia("(max-width: 540px), (max-width: 720px) and (min-height: 480px)");
 let lastPalette;
-let progress = 0;
-let copyProgress = 0;
-let velocity = 0;
-let destination = 0;
-let sceneFrame;
-let focusAfter;
-let wheelDistance = 0;
-let lastWheel = -Infinity;
-let wheelDirection = 0;
-let wheelConsumed = false;
-let touchStart;
+let heroVisible = true;
+new IntersectionObserver(([entry]) => { heroVisible = entry.isIntersecting; }).observe(sky);
+for (const copy of hero.querySelectorAll("h1, p")) prepareCopy(copy);
+hero.classList.add("motion-ready");
 
 const time = new URLSearchParams(location.search).get("time");
 const previewHour = /^([01]\d|2[0-3]):[0-5]\d$/.test(time)
@@ -124,13 +69,6 @@ function paintSky() {
     sky.style.setProperty("--" + name, `rgb(${colors[i].join(" ")})`);
   });
   sky.style.setProperty("--stars", stars);
-  const dark = stars >= 0.48;
-  sky.toggleAttribute("data-night", dark);
-  if (dark !== previousNight) {
-    previousNight = dark;
-    paintScene();
-  }
-
   lastPalette = { colors, stars };
   return lastPalette;
 }
@@ -167,81 +105,12 @@ let aircraftPixelsPerX;
 let aircraftPixelsPerY;
 let aircraftCenterX;
 let aircraftCenterY;
-let aircraftRadiusX;
-let aircraftRadiusY;
-let lastPointer;
-let lastFlightTime;
-let pointerGustArmed = true;
-const gusts = [];
-
-function handlePointerMove(event) {
-  if (event.pointerType !== "mouse" || lastFlightTime === undefined || camera.travel || destination !== 0) return;
-
-  const previous = lastPointer;
-  lastPointer = { x: event.clientX, y: event.clientY, time: event.timeStamp };
-  const interval = previous ? event.timeStamp - previous.time : Infinity;
-  if (interval > 150) {
-    pointerGustArmed = true;
-    return;
-  }
-
-  const endX = (event.clientX - aircraftCenterX) / aircraftRadiusX;
-  const endY = (event.clientY - aircraftCenterY) / aircraftRadiusY;
-  if (endX ** 2 + endY ** 2 > 1.15) pointerGustArmed = true;
-  if (!pointerGustArmed || lastFlightTime - (gusts.at(-1)?.start ?? -Infinity) < 0.62) return;
-
-  const dx = event.clientX - previous.x;
-  const dy = event.clientY - previous.y;
-  const speed = Math.hypot(dx, dy) * 1000 / Math.max(8, interval);
-  if (speed < 210) return;
-
-  // Find where the sweep passed closest to the aircraft, including between pointer events.
-  const stepX = dx / aircraftRadiusX;
-  const stepY = dy / aircraftRadiusY;
-  const x = endX - stepX;
-  const y = endY - stepY;
-  const along = Math.max(0, Math.min(1, -(x * stepX + y * stepY) / (stepX ** 2 + stepY ** 2)));
-  const hitX = x + along * stepX;
-  const hitY = y + along * stepY;
-  const distance = hitX ** 2 + hitY ** 2;
-  if (distance > 0.68) return;
-
-  const strength = Math.min(1, speed / 1000) * (1 - 0.6 * distance);
-  // The hit location sets the torque. Cursor direction never drives aircraft position.
-  gusts.push({
-    start: lastFlightTime,
-    lift: -0.95 * strength,
-    pitch: -0.73 * hitX * strength,
-    bank: (0.32 + hitY * 0.86) * strength,
-  });
-  pointerGustArmed = false;
-}
-
-function gustResponse(age, peakTime) {
-  const phase = age / peakTime;
-  return phase * Math.exp(1 - phase);
-}
 
 function animateAircraft(seconds) {
+  if (contrailsVisible) animateContrails(seconds);
   if (seconds === null) {
     aircraft.style.transform = "";
-    lastFlightTime = lastPointer = undefined;
-    pointerGustArmed = true;
-    gusts.length = 0;
     return [0, 0];
-  }
-
-  lastFlightTime = seconds;
-  while (gusts.length && seconds - gusts[0].start > 2.4) gusts.shift();
-
-  let buffetingLift = 0;
-  let buffetingPitch = 0;
-  let buffetingBank = 0;
-  for (const gust of gusts) {
-    const age = seconds - gust.start;
-    buffetingLift += gust.lift * gustResponse(age, 0.33);
-    buffetingPitch += gust.pitch * gustResponse(age, 0.20);
-    buffetingBank += gust.bank * gustResponse(age, 0.27);
   }
 
   // Different response times keep the heave, pitch and bank from moving in lockstep.
@@ -258,257 +127,53 @@ function animateAircraft(seconds) {
   const progress = Math.min(seconds / 1.8, 1);
   const blend = progress * progress * (3 - 2 * progress);
   const x = drift * aircraftPixelsPerX * blend;
-  const y = -heave * aircraftPixelsPerY * blend + buffetingLift;
-  const pitchDegrees = -pitch * blend + buffetingPitch;
-  const bankDegrees = bank * blend + buffetingBank;
+  const y = -heave * aircraftPixelsPerY * blend;
+  const pitchDegrees = -pitch * blend;
+  const bankDegrees = bank * blend;
   aircraft.style.transform = `translate3d(${x}px, ${y}px, 0) perspective(900px) rotateZ(${pitchDegrees}deg) rotateX(${bankDegrees}deg)`;
   return [x / aircraftPixelsPerX, -y / aircraftPixelsPerY];
 }
-
-let flybyFrame;
-let boardTransition = false;
 
 function resizeScene() {
   paintStars();
   const width = Math.max(1, sky.clientWidth);
   const height = Math.max(1, sky.clientHeight);
   const aspect = width / height;
-  const diameter = earthVisual.offsetWidth;
-  flybyFrame = {
-    width, height, diameter,
-    x: earthVisual.offsetLeft + diameter / 2,
-    y: earthVisual.offsetTop + diameter / 2,
-  };
-  aircraftDistance = 1280 * Math.max(1, 0.82 / aspect);
-  aircraftPixelsPerX = width / (aircraftDistance * Math.min(aspect, 2.15));
+  const narrow = narrowHero.matches;
+  const projectionAspect = Math.min(aspect, 2.15);
+  const scene = sky.getBoundingClientRect();
+  const copy = hero.getBoundingClientRect();
+  const gutter = copy.left - scene.left;
+  // Measure the opaque silhouette inside the baked 1024 × 512 frame.
+  const visibleWidth = 667 / 1024;
+  const visibleHeight = 212 / 512;
+  const silhouetteX = (174 + 841) / 2 / 1024 - .5;
+  const silhouetteY = (120 + 332) / 2 / 512 - .5;
+  const planeTop = copy.bottom - scene.top + gutter;
+  const preferredPlaneWidth = copy.width * .96 / visibleWidth;
+  const planeWidth = narrow
+    ? Math.max(1, Math.min(preferredPlaneWidth, (height - gutter - planeTop) * 2 / visibleHeight))
+    : preferredPlaneWidth;
+  const planeHeight = planeWidth / 2;
+  aircraftDistance = 880 * width / (planeWidth * projectionAspect);
+  aircraftPixelsPerX = planeWidth / 880;
   aircraftPixelsPerY = height / (aircraftDistance * 0.86);
-  // Match the baked camera crop to the cloud camera projection.
-  aircraft.style.width = `${88000 / (aircraftDistance * Math.min(aspect, 2.15))}%`;
-  aircraft.style.height = `${44000 / (aircraftDistance * 0.86)}%`;
-  const centerY = 54.8 - 12500 / (aircraftDistance * 0.86);
-  aircraft.style.top = `${centerY}%`;
-  aircraftCenterX = width / 2;
-  aircraftCenterY = centerY * height / 100;
-  aircraftRadiusX = Math.max(82, 365 * aircraftPixelsPerX);
-  aircraftRadiusY = Math.max(50, 160 * aircraftPixelsPerY);
-  paintScene();
+  aircraft.style.setProperty("--aircraft-pixels-per-y", `${aircraftPixelsPerY}px`);
+  aircraft.style.width = `${planeWidth}px`;
+  aircraft.style.height = `${planeHeight}px`;
+  const columnGap = width - 2 * (gutter + copy.width);
+  const visualX = narrow ? width / 2 : width - gutter - copy.width / 2 - columnGap / 4;
+  const visualY = narrow ? planeTop + planeHeight * visibleHeight / 2 : copy.top - scene.top + copy.height / 2;
+  aircraftCenterX = visualX - planeWidth * silhouetteX;
+  aircraftCenterY = visualY - planeHeight * silhouetteY;
+  aircraft.style.left = `${aircraftCenterX}px`;
+  aircraft.style.top = `${aircraftCenterY}px`;
 }
-
-function interval(from, to, value) {
-  return Math.max(0, Math.min(1, (value - from) / (to - from)));
-}
-
-function ease(from, to, value) {
-  const t = interval(from, to, value);
-  return t * t * (3 - 2 * t);
-}
-
-const sceneStyles = new Map();
-
-function paintScene() {
-  const drop = interval(0, .96, progress);
-  const verticalTravel = 1860 * Math.min(1, progress / .96);
-  const travel = sceneFrame !== undefined;
-  if (lastCameraProgress !== progress || camera.travel !== travel) {
-    lastCameraProgress = progress;
-    camera = { height: 1240 - verticalTravel, travel };
-  }
-
-  const ground = ease(.44, .91, drop);
-  const horizon = ease(.24, .62, drop);
-  const flyby = boardTransition;
-  const departure = flyby ? Math.max(-.06, Math.min(1, progress - 1)) : 0;
-  const globe = ease(.43, 1.13, flyby ? 1 : progress);
-  const arrival = flyby ? 0 : 1 - progress;
-  const globeRise = ease(.43, 1.13, 1) - globe;
-  const reveal = ease(.51, 1, flyby ? 1 : progress);
-  const routes = ease(.65, .98, progress);
-  const { width, height, diameter, x, y } = flybyFrame ?? { width: 1, height: 1, diameter: 1, x: 0, y: 0 };
-  const radius = diameter * .46;
-  // Switch backgrounds only while the opaque globe covers every viewport corner.
-  const coverRadius = Math.hypot(width, height) * .5 + 48;
-  const endScale = Math.max(2.15, 2 * coverRadius / radius - 1);
-  const scale = .94 + .06 * reveal + (endScale - 1) * departure;
-  const crossScreen = (origin, center) => {
-    const delta = center - origin;
-    if (departure <= .5) return 2 * delta * departure;
-    const t = (departure - .5) * 2;
-    const end = -radius * endScale - 48;
-    return delta + delta * t + (end - center - delta) * t * t * t;
-  };
-  const flybyX = crossScreen(x, width / 2);
-  const flybyY = crossScreen(y, height / 2);
-  const cloudBlur = 6 * ease(.25, .57, drop) * (1 - ease(.70, .95, drop));
-  const aircraftShift = Math.min(verticalTravel, 1200) * (aircraftPixelsPerY || 0);
-  aircraft.style.translate = `-50% calc(-50% - ${aircraftShift}px)`;
-
-  for (const [name, value] of Object.entries({
-    "plane-exit": ease(.17, .40, progress),
-    "clock-phase": interval(.03, .34, progress),
-    "telemetry-exit": ease(.035, .29, progress),
-    "award-exit": ease(.07, .34, progress),
-    "ground-edge": `${145 - 171 * ground}%`,
-    "ground-light": `${ease(.58, .86, drop) * 100}%`,
-    "sky-horizon-soften": `${horizon * 100}%`,
-    "stars-rise": ease(.10, .37, progress),
-    "cloud-blur": `${cloudBlur}px`,
-    "cloud-scale": 1 + cloudBlur / 235,
-    "earth-scale": scale,
-    "earth-flyby-x": `${flybyX}px`,
-    "earth-flyby-y": `${flybyY}px`,
-    "earth-flyby-roll": `${-112 * departure - 28 * arrival}deg`,
-    "earth-flyby-blur": "0px",
-    "departure-header": Number(departure >= .5),
-    "earth-rise": globeRise,
-    "earth-focus": ease(.61, .88, progress),
-    "earth-copy": copyProgress,
-    "earth-map-progress": Math.max(.22 * interval(.78, .98, progress), copyProgress),
-  })) {
-    if (sceneStyles.get(name) === value) continue;
-    sceneStyles.set(name, value);
-    const element = name.startsWith("earth-flyby-") || name === "earth-scale" || name === "earth-rise"
-      ? earthVisual : name === "departure-header" ? skyHeader : sky;
-    element.style.setProperty(`--${name}`, value);
-  }
-  earth.toggleAttribute("data-visible", progress > .43 && departure < 1);
-  paintEarth(reveal, routes, 32 * departure - 32 * arrival, -100 * departure + 95 * arrival, {
-    diameter, scale, width, height,
-    left: x + flybyX - diameter * scale / 2,
-    top: y + flybyY + globeRise * height * 1.29 - diameter * scale / 2,
-    roll: (-112 * departure - 28 * arrival) * Math.PI / 180,
-  });
-  earth.toggleAttribute("data-flyby", flyby);
-  departures.toggleAttribute("data-visible", departure >= .5);
-  paintDepartures(Math.max(0, departure), departure === 1 && !departures.inert);
-}
-
-function finishScene() {
-  sceneFrame = undefined;
-  boardTransition = destination === 2;
-  copyProgress = Number(destination > 0);
-  earth.inert = destination !== 1;
-  departures.inert = destination !== 2;
-  paintScene();
-  focusAfter?.focus({ preventScroll: true });
-  focusAfter = undefined;
-}
-
-function cueScene(next, focus) {
-  if (destination === next) return;
-  cancelAnimationFrame(sceneFrame);
-  const boardSpring = next === 2 || destination === 2 || progress > 1.08;
-  boardTransition = boardSpring;
-  // Give a fresh departure a small counter-motion; reversals retain their velocity.
-  if (next === 2 && destination === 1 && Math.abs(progress - 1) < .001) velocity = -.0008;
-  destination = next;
-  focusAfter = focus || (focusAfter || earth.contains(document.activeElement) || departures.contains(document.activeElement)
-    ? scenes[next] : undefined);
-  earth.inert = true;
-  departures.inert = true;
-  if (reducedMotion.matches) {
-    progress = next;
-    velocity = 0;
-    finishScene();
-    return;
-  }
-
-  const start = performance.now();
-  const duration = boardSpring ? 1100 : next ? 1540 : 1710;
-  // Keep the mass, but raise restoring force for a brisk glide without a long settling tail.
-  const { mass, damping, stiffness } = { mass: 16, damping: 128, stiffness: 320 };
-  const seconds = duration / 1000;
-  const decay = boardSpring ? damping / (2 * mass) * seconds : 5.18;
-  const frequency = boardSpring ? Math.sqrt(stiffness / mass - (damping / (2 * mass)) ** 2) * seconds : 4.84;
-  const offset = progress - next;
-  const tangent = (velocity * duration + decay * offset) / frequency;
-  const settleStart = boardSpring ? .62 : .92;
-  const settleEnd = boardSpring ? 1.20 : 1.34;
-  let previousFrame = start;
-  let typeIn = copyProgress > 0;
-
-  function play(now) {
-    const time = Math.max(0, (now - start) / duration);
-    const envelope = Math.exp(-decay * time);
-    const cos = Math.cos(frequency * time);
-    const sin = Math.sin(frequency * time);
-    const wave = offset * cos + tangent * sin;
-    const remaining = envelope * wave;
-    const springSpeed = envelope * (frequency * (tangent * cos - offset * sin) - decay * wave);
-    // Bring the spring to rest with zero velocity and acceleration at the handoff.
-    const tail = interval(settleStart, settleEnd, time);
-    const weight = (1 - tail) ** 3 * (1 + 3 * tail + 6 * tail * tail);
-    const weightSpeed = -30 * tail ** 2 * (1 - tail) ** 2 / (settleEnd - settleStart);
-    velocity = (springSpeed * weight + remaining * weightSpeed) / duration;
-    if (reducedMotion.matches || time >= settleEnd) {
-      progress = next;
-      velocity = 0;
-      finishScene();
-      return;
-    }
-    progress = next + remaining * weight;
-    const elapsed = Math.max(0, now - previousFrame);
-    previousFrame = now;
-    if (next && progress >= .98) typeIn = true;
-    if (!next || typeIn) {
-      copyProgress = Math.max(0, Math.min(1, copyProgress + (next ? elapsed / 920 : -elapsed / 340)));
-    }
-    sceneFrame = requestAnimationFrame(play);
-    paintScene();
-  }
-  sceneFrame = requestAnimationFrame(play);
-}
-
-function moveScene(direction, focus = false) {
-  const next = Math.max(0, Math.min(scenes.length - 1, destination + direction));
-  cueScene(next, focus ? scenes[next] : undefined);
-}
-
-window.addEventListener("wheel", event => {
-  if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-  if (event.cancelable) event.preventDefault();
-  const direction = Math.sign(event.deltaY);
-  if (!direction) return;
-  if (event.timeStamp - lastWheel > 150 || wheelDirection !== direction) {
-    wheelDistance = 0;
-    wheelConsumed = false;
-    wheelDirection = direction;
-  }
-  lastWheel = event.timeStamp;
-  if (wheelConsumed) return;
-  wheelDistance += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? sky.clientHeight : 1);
-  if (Math.abs(wheelDistance) < 14) return;
-  wheelConsumed = true;
-  moveScene(direction);
-}, { passive: false });
-
-sky.addEventListener("touchstart", event => {
-  const onGlobe = !earth.inert && event.target.closest(".earth-visual");
-  touchStart = event.touches.length === 1 && !onGlobe ? event.touches[0] : undefined;
-}, { passive: true });
-sky.addEventListener("touchend", event => {
-  if (!touchStart) return;
-  const end = event.changedTouches[0];
-  const delta = touchStart.clientY - end.clientY;
-  if (Math.abs(delta) > Math.max(38, Math.abs(touchStart.clientX - end.clientX))) moveScene(Math.sign(delta));
-  touchStart = undefined;
-}, { passive: true });
-sky.addEventListener("touchcancel", () => { touchStart = undefined; });
-
-window.addEventListener("keydown", event => {
-  if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
-  if (event.target instanceof HTMLInputElement && event.target.name === "sky-section" && event.key.startsWith("Arrow")) return;
-  const down = ["ArrowDown", "PageDown", "End"].includes(event.key);
-  const up = ["ArrowUp", "PageUp", "Home"].includes(event.key);
-  if (!down && !up) return;
-  event.preventDefault();
-  if (!event.repeat) moveScene(down ? 1 : -1, true);
-});
 
 let palette = paintSky();
 resizeScene();
 window.addEventListener("resize", resizeScene);
-sky.addEventListener("pointermove", handlePointerMove, { passive: true });
-sky.addEventListener("pointerleave", () => { lastPointer = undefined; });
+new ResizeObserver(resizeScene).observe(hero);
 if (previewHour === null) {
   setInterval(() => {
     if (!document.hidden) palette = paintSky();
@@ -518,9 +183,368 @@ if (previewHour === null) {
   });
 }
 
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let cloudCamera = { height: 1240, travel: false };
+// Fit to EasingWizard Glide (0a1h30d) over a 1.85 s reference duration.
+const handoffSpring = { mass: 24, stiffness: 2063, damping: 625 };
+const springDecay = handoffSpring.damping / (2 * handoffSpring.mass);
+const springRoot = Math.sqrt(springDecay ** 2 - handoffSpring.stiffness / handoffSpring.mass);
+const springSlow = -springDecay + springRoot;
+const springFast = -springDecay - springRoot;
+let handoffFrame = 0;
+let handoffProgress = 0;
+let handoffVelocity = 0;
+let pageTarget = 0;
+let pageOrigin = 0;
+const wheelQuietPeriod = 140;
+const deviceWheelQuietPeriod = 80;
+const returnWheelThreshold = 32;
+const returnTouchThreshold = 36;
+const deviceWheelThreshold = 12;
+const deviceTouchThreshold = 14;
+let lastWheelAt = -Infinity;
+let lastWheelDown;
+let capturedWheelDirection;
+let capturedDeviceWheel = false;
+let wheelDistance = 0;
+
+function ease(from, to, value) {
+  const t = unit((value - from) / (to - from));
+  return t * t * (3 - 2 * t);
+}
+
+const siteHeader = document.querySelector(".site-header");
+const showcase = document.getElementById("showcase");
+const deepFocus = document.getElementById("deep-focus");
+
+setupWindowShade(deepFocus.querySelector(".porthole"));
+setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
+
+const sections = [sky, showcase, deepFocus];
+const sequence = sky.parentElement;
+for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
+
+const ripple = setupFocusRipple(showcase);
+
+function clearFocusHandoff() {
+  if (!sequence.hasAttribute("data-focus-handoff")) return;
+  ripple.end();
+  sequence.removeAttribute("data-focus-handoff");
+  deepFocus.style.removeProperty("--window-reveal");
+}
+
+const glazing = deepFocus.querySelector(".porthole-frame");
+function alignFocusScene() {
+  const glass = glazing.getBoundingClientRect();
+  const scene = deepFocus.getBoundingClientRect();
+  ripple.capture(glass.left + glass.width / 2 - scene.left, glass.top + glass.height / 2 - scene.top);
+  deepFocus.style.setProperty("--focus-offset", (showcase.offsetTop - deepFocus.offsetTop) + "px");
+}
+
+function paintFocusHandoff(progress) {
+  if (!sequence.hasAttribute("data-focus-handoff")) {
+    alignFocusScene();
+    sequence.setAttribute("data-focus-handoff", "");
+    window.scrollTo({ top: showcase.offsetTop, behavior: "instant" });
+  }
+  // Extend the spring's quiet tail so the last letters have room to resolve.
+  const t = 1 - Math.pow(1 - unit(progress - 1), .65);
+  ripple.draw(t);
+  const cabin = ease(.23, .88, t);
+  showcase.style.setProperty("--showcase-presence", 1 - ease(.1, .58, t));
+  deepFocus.style.setProperty("--cabin-reveal", cabin);
+  deepFocus.style.setProperty("--window-reveal", ease(.12, .92, t));
+  deepFocus.style.setProperty("--title-reveal", unit((t - .39) / .56));
+  siteHeader.toggleAttribute("data-on-showcase", cabin < .54);
+  siteHeader.toggleAttribute("data-on-focus", cabin >= .54);
+}
+
+function saveSection(page) {
+  const hash = "#" + sections[page].id;
+  if (location.hash !== hash) history.replaceState(history.state, "", hash);
+}
+
+function paintHandoff(progress, travel) {
+  const planeExit = ease(.17, .40, progress);
+  contrailsVisible = planeExit < 1;
+  const drop = unit(progress / .96);
+  const distance = 1860 * drop;
+  const ground = ease(.44, .91, drop);
+  const cloudBlur = 6 * ease(.25, .57, drop) * (1 - ease(.70, .95, drop));
+  cloudCamera = { height: 1240 - distance, travel };
+  sky.parentElement.style.setProperty("--showcase-reveal", ease(.73, .97, progress));
+  aircraft.style.setProperty("--aircraft-travel", 1200 * ease(0, 1, progress));
+  siteHeader.style.setProperty("--logo-ink", drop >= .76 + .02 * palette.stars ? "#202020" : "#fff");
+  siteHeader.style.setProperty("--logo-shadow", ease(.06, .18, drop) * (1 - ease(.71, .76, drop)));
+  for (const [key, value] of Object.entries({
+    "plane-exit": planeExit,
+    "hero-exit": ease(.03, .32, progress),
+    "hero-title-progress": 1 - ease(.04, .80, progress),
+    "ground-edge": `${145 - 171 * ground}%`,
+    "sky-horizon-soften": `${ease(.24, .62, drop) * 100}%`,
+    "stars-rise": ease(.10, .37, progress),
+    "cloud-blur": `${cloudBlur}px`,
+    "cloud-scale": 1 + cloudBlur / 235,
+  })) sky.style.setProperty(`--${key}`, value);
+}
+
+function playPage(target, focusPage = false) {
+  if (target === pageTarget) return false;
+  deepFocus.removeAttribute("data-anchor-entry");
+  pageOrigin = pageTarget;
+  pageTarget = target;
+  saveSection(target);
+  const cloudTransition = handoffProgress < 1 || Math.min(pageOrigin, target) === 0;
+  cancelAnimationFrame(handoffFrame);
+
+  function paintPage(progress, travel) {
+    if (cloudTransition) {
+      sky.toggleAttribute("data-handoff", travel && progress < 1);
+      paintHandoff(unit(progress), travel && progress < 1);
+    }
+    if (travel && progress > 1) {
+      paintFocusHandoff(progress);
+      return;
+    }
+    clearFocusHandoff();
+    const top = progress <= 1
+      ? showcase.offsetTop * ease(.42, .985, progress)
+      : showcase.offsetTop + (deepFocus.offsetTop - showcase.offsetTop) * (progress - 1);
+    window.scrollTo({ top, behavior: "instant" });
+  }
+
+  function settle() {
+    handoffFrame = 0;
+    handoffProgress = target;
+    handoffVelocity = 0;
+    paintPage(target, false);
+    syncHeader();
+    hero.inert = target !== 0;
+    sky.removeAttribute("data-handoff");
+    if (focusPage || (target === 2 && showcase.contains(document.activeElement))) {
+      [sky.parentElement, showcase, deepFocus][target].focus({ preventScroll: true });
+    }
+  }
+
+  if (reducedMotion.matches) {
+    settle();
+    return true;
+  }
+
+  hero.inert = true;
+  sky.toggleAttribute("data-handoff", cloudTransition && handoffProgress < 1);
+  const start = performance.now();
+  const offset = handoffProgress - target;
+  // Reversing a running spring carries its current position and velocity.
+  const rate = Math.max(pageOrigin, target) === 2 ? .8 : 1;
+  const slowRate = springSlow * rate;
+  const fastRate = springFast * rate;
+  const slowOffset = (handoffVelocity - fastRate * offset) / (slowRate - fastRate);
+  const fastOffset = offset - slowOffset;
+
+  function play(now) {
+    const seconds = Math.max(0, (now - start) / 1000);
+    const slow = slowOffset * Math.exp(slowRate * seconds);
+    const fast = fastOffset * Math.exp(fastRate * seconds);
+    const displacement = slow + fast;
+    handoffVelocity = slowRate * slow + fastRate * fast;
+
+    if (reducedMotion.matches || (Math.abs(displacement) < .002 && Math.abs(handoffVelocity) < .022)) {
+      settle();
+      return;
+    }
+
+    handoffProgress = target + displacement;
+    paintPage(handoffProgress, true);
+    handoffFrame = requestAnimationFrame(play);
+  }
+
+  handoffFrame = requestAnimationFrame(play);
+  return true;
+}
+
+for (const link of [siteHeader.querySelector(".sky-brand"), hero.querySelector(".hero-explore")]) {
+  link.addEventListener("click", event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = sections.findIndex(section => "#" + section.id === link.hash);
+    if (target < 0 || (target === pageTarget && !handoffFrame)) return;
+    event.preventDefault();
+    playPage(target, true);
+  });
+}
+
+function stepPage(down, focusPage = false) {
+  if (handoffFrame && !onShowcase() && down === (pageTarget > pageOrigin)) return true;
+  const target = Math.max(0, Math.min(2, pageTarget + (down ? 1 : -1)));
+  return playPage(target, focusPage);
+}
+
+function onShowcase() {
+  if (pageTarget !== 1) return false;
+  // The showcase can handle input during the visible tail of the spring.
+  if (handoffFrame) return Math.abs(handoffProgress - 1) <= .1;
+  return Math.abs(window.scrollY - showcase.offsetTop) <= 2;
+}
+
+function adjacentDevice(down) {
+  const buttons = [...showcase.querySelectorAll("button[data-device]")];
+  const selected = buttons.findIndex(button => button.getAttribute("aria-pressed") === "true");
+  return buttons[selected + (down ? 1 : -1)];
+}
+
+window.addEventListener("wheel", event => {
+  if (event.ctrlKey || event.defaultPrevented || !event.deltaY) return;
+  const now = event.timeStamp;
+  const down = event.deltaY > 0;
+  const returning = !down && pageTarget > 0;
+  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+    if (returning) event.preventDefault();
+    return;
+  }
+  const quietPeriod = capturedDeviceWheel ? deviceWheelQuietPeriod : wheelQuietPeriod;
+  const newGesture = now - lastWheelAt > quietPeriod;
+  if (newGesture) {
+    capturedWheelDirection = undefined;
+    capturedDeviceWheel = false;
+  }
+  if (newGesture || down !== lastWheelDown) wheelDistance = 0;
+  lastWheelAt = now;
+  lastWheelDown = down;
+  // Only a deliberate reversal or a new gesture can consume another step.
+  if (capturedWheelDirection === down) {
+    event.preventDefault();
+    return;
+  }
+
+  const inShowcase = onShowcase();
+  const next = inShowcase && adjacentDevice(down);
+  if (inShowcase || returning) {
+    event.preventDefault();
+    const scale = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? window.innerHeight : 1;
+    wheelDistance += Math.abs(event.deltaY) * scale;
+    if (wheelDistance < (next ? deviceWheelThreshold : returnWheelThreshold)) return;
+  }
+
+  if (next) next.click();
+  else if (!stepPage(down)) return;
+  capturedWheelDirection = down;
+  capturedDeviceWheel = Boolean(next);
+  wheelDistance = 0;
+  if (!event.defaultPrevented && event.cancelable) event.preventDefault();
+}, { passive: false });
+
+let touchOrigin;
+let touchHandoff = false;
+window.addEventListener("touchstart", event => {
+  touchHandoff = false;
+  touchOrigin = event.touches.length === 1 && !event.target.closest?.(".shade-control")
+    ? event.touches[0] : undefined;
+}, { passive: true });
+window.addEventListener("touchmove", event => {
+  if (!touchOrigin || event.touches.length !== 1) return;
+  if (touchHandoff) { if (event.cancelable) event.preventDefault(); return; }
+  const { clientX, clientY } = event.touches[0];
+  const dy = touchOrigin.clientY - clientY;
+  const dx = Math.abs(touchOrigin.clientX - clientX);
+  const next = onShowcase() && adjacentDevice(dy > 0);
+  if (next && Math.abs(dy) > dx) {
+    if (event.cancelable) event.preventDefault();
+    if (Math.abs(dy) >= deviceTouchThreshold) { next.click(); touchHandoff = true; }
+    return;
+  }
+  if (dy < 0 && pageTarget > 0) {
+    if (event.cancelable) event.preventDefault();
+    if (-dy < returnTouchThreshold || -dy < dx * 1.25) return;
+  }
+  if (Math.abs(dy) < 5 || Math.abs(dy) <= dx) return;
+  const down = dy > 0;
+  touchHandoff ||= stepPage(down);
+  if (touchHandoff && event.cancelable) event.preventDefault();
+}, { passive: false });
+for (const type of ["touchend", "touchcancel"]) {
+  window.addEventListener(type, () => { touchOrigin = undefined; }, { passive: true });
+}
+
+window.addEventListener("keydown", event => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+  if (event.target.closest?.("input, textarea, select, [contenteditable=true]")) return;
+  const space = event.key === " " && !event.target.closest?.("a, button, input");
+  if (event.shiftKey && !space) return;
+  const down = event.key === "PageDown" || event.key === "ArrowDown" || (space && !event.shiftKey);
+  const up = event.key === "PageUp" || event.key === "ArrowUp" || (space && event.shiftKey);
+  if (!down && !up) return;
+  if (onShowcase()) {
+    const next = adjacentDevice(down);
+    if (next || event.repeat) {
+      if (!event.repeat) next.click();
+      event.preventDefault();
+      return;
+    }
+  }
+  if (event.repeat || stepPage(down, true)) {
+    event.preventDefault();
+  }
+});
+
+function syncHeader() {
+  if (sequence.hasAttribute("data-focus-handoff")) return;
+  const header = siteHeader.getBoundingClientRect();
+  const midpoint = header.top + header.height / 2;
+  const onFocus = deepFocus.getBoundingClientRect().top <= midpoint;
+  siteHeader.toggleAttribute("data-on-focus", onFocus);
+  siteHeader.toggleAttribute("data-on-showcase", !onFocus && showcase.getBoundingClientRect().top <= midpoint);
+}
+
+function syncScroll() {
+  syncHeader();
+  if (handoffFrame) return;
+  const stops = [0, showcase.offsetTop, deepFocus.offsetTop];
+  const page = stops.findIndex(top => Math.abs(window.scrollY - top) < 2);
+  if (page < 0 || page === pageTarget) return;
+  saveSection(page);
+  pageTarget = pageOrigin = page;
+  handoffProgress = page;
+  hero.inert = page !== 0;
+  paintHandoff(Math.min(page, 1), false);
+}
+
+function restoreSection() {
+  const page = sections.findIndex(section => section.id === location.hash.slice(1));
+  if (page < 0) { syncScroll(); return; }
+  deepFocus.toggleAttribute("data-anchor-entry", page === 2);
+  cancelAnimationFrame(handoffFrame);
+  handoffFrame = handoffVelocity = 0;
+  handoffProgress = pageOrigin = pageTarget = page;
+  clearFocusHandoff();
+  sky.removeAttribute("data-handoff");
+  hero.inert = page !== 0;
+  paintHandoff(Math.min(page, 1), false);
+  window.scrollTo({ top: [0, showcase.offsetTop, deepFocus.offsetTop][page], behavior: "instant" });
+  syncHeader();
+}
+
+restoreSection();
+window.addEventListener("hashchange", restoreSection);
+window.addEventListener("pageshow", restoreSection);
+window.addEventListener("resize", () => {
+  if (sequence.hasAttribute("data-focus-handoff")) {
+    alignFocusScene();
+    window.scrollTo({ top: showcase.offsetTop, behavior: "instant" });
+  }
+  if (!handoffFrame && pageTarget > 0) {
+    window.scrollTo({ top: pageTarget === 2 ? deepFocus.offsetTop : showcase.offsetTop, behavior: "instant" });
+  }
+  syncScroll();
+});
+window.addEventListener("scroll", syncScroll, { passive: true });
+
 startClouds(document.querySelector(".clouds"), () => palette, {
   distance: () => aircraftDistance,
   animate: animateAircraft,
-}, () => camera).catch((error) => {
+  position: () => [
+    (aircraftCenterX - sky.clientWidth / 2) / aircraftPixelsPerX,
+    125 - (aircraftCenterY - sky.clientHeight * .548) / aircraftPixelsPerY,
+  ],
+}, () => ({ ...cloudCamera, visible: heroVisible })).catch((error) => {
   console.error("Cloud renderer could not start:", error);
 });

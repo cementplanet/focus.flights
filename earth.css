@@ -5,10 +5,15 @@
   --ground-top: color-mix(in srgb, var(--zenith, #457fb2) 11%, var(--paper));
 }
 
-.sky[data-night] {
-  --paper: #000;
-  --ink: #f2f2f2;
-  --ground-top: color-mix(in srgb, var(--zenith, #091327) 68%, var(--paper));
+@media (prefers-color-scheme: dark) {
+  .sky {
+    --paper: #101218;
+    --ink: #f2f2f2;
+    --ground-top: color-mix(in srgb, var(--zenith, #091327) 18%, var(--paper));
+  }
+
+  .sky .earth-map { --map-opacity: .12; }
+  .earth .earth-sphere--fallback { background: radial-gradient(circle at 38% 28%, #404040, #161616); }
 }
 
 .sky::before {
@@ -28,27 +33,13 @@
 }
 
 .clouds { z-index: 1; pointer-events: none; filter: blur(var(--cloud-blur, 0px)); scale: var(--cloud-scale, 1); }
-.flight-display, .aircraft, .sky-header { z-index: 2; }
+.hero-copy, .aircraft, .sky-header { z-index: 2; }
 
 .sky .aircraft {
   --exit: var(--plane-exit, 0);
+  opacity: calc(1 - var(--exit));
   filter: blur(calc(var(--exit) * 10px));
   scale: calc(1 - var(--exit) * .04);
-}
-
-.sky .sky-award {
-  --exit: var(--award-exit, 0);
-  --wipe: calc(var(--exit) * 144% - 5%);
-  mask-image: linear-gradient(to bottom, transparent calc(var(--wipe) - 30%), #000 calc(var(--wipe) + 5%));
-  filter: blur(calc(var(--exit) * 8px));
-  translate: -50% calc(-50% - var(--exit) * 27px);
-  scale: calc(1 - var(--exit) * .07);
-}
-
-.sky-header {
-  color: color-mix(in srgb,
-    color-mix(in srgb, #f7fbff calc(94% - 17% * var(--stars, 0)), var(--zenith, #223c61)),
-    var(--ink) var(--ground-light, 0%));
 }
 
 .earth {
@@ -69,13 +60,13 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  color: var(--ink);
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
-  opacity: .12;
+  opacity: var(--map-opacity, .09);
+  pointer-events: none;
 }
-
-.sky[data-night] .earth-map { opacity: .16; }
 
 .earth-map path {
   --dot-focus: clamp(0, (var(--earth-map-progress, 0) - var(--dot-start)) * 12, 1);
@@ -90,9 +81,7 @@
   right: -13vw;
   bottom: -28svh;
   aspect-ratio: 1;
-  translate: var(--earth-flyby-x, 0px) calc(var(--earth-rise, 0) * 129svh + var(--earth-flyby-y, 0px));
-  scale: var(--earth-scale, 1);
-  filter: blur(calc((1 - var(--earth-focus, 1)) * 16px + var(--earth-flyby-blur, 0px)));
+  filter: blur(calc((1 - var(--earth-focus, 1)) * 16px + var(--earth-handoff-blur, 0px)));
 }
 
 .earth-copy {
@@ -100,14 +89,19 @@
   z-index: 1;
   top: 45%;
   left: var(--content-left);
-  font-family: "Hiragino Sans GB", "冬青黑体简体中文", "PingFang SC", "Microsoft YaHei", sans-serif;
   translate: 0 -50%;
+}
+
+.earth .earth-copy {
+  --copy-progress: var(--earth-copy, 0);
+  opacity: calc(1 - var(--earth-copy-out, 0));
+  filter: blur(calc(var(--earth-copy-out, 0) * 8px));
 }
 
 .earth-copy h2 {
   margin: 0;
-  font-size: clamp(32px, min(5.15vw, 10svh), 88px);
-  font-weight: 600;
+  font-size: clamp(28px, min(4.6vw, 10svh), 88px);
+  font-weight: 700;
   line-height: 1.14;
   letter-spacing: -.025em;
 }
@@ -128,20 +122,28 @@
   white-space: nowrap;
 }
 
+.earth-word { display: inline-block; }
+
 .earth-glyph {
   display: inline-block;
-  --t: clamp(0, (var(--earth-copy, 0) - var(--glyph-start)) * 5, 1);
+  --t: clamp(0, (var(--copy-progress, 0) - var(--glyph-start)) * 5, 1);
   --focus: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
   opacity: var(--focus);
   filter: blur(calc((1 - var(--focus)) * min(.29em, 13px)));
   translate: 0 calc((1 - var(--focus)) * .18em);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .earth-glyph {
+    filter: none;
+    translate: none;
+  }
+}
+
 .earth-sphere, .earth-routes { position: absolute; inset: 0; width: 100%; height: 100%; }
 .earth-sphere { pointer-events: none; }
-.earth[data-flyby] .earth-visual { z-index: 3; }
-.earth .earth-routes { rotate: var(--earth-flyby-roll, 0deg); }
-.earth-routes { overflow: visible; pointer-events: none; }
+.earth .earth-routes { rotate: var(--earth-roll, 0deg); }
+.earth-routes { overflow: visible; pointer-events: none; opacity: var(--earth-route-opacity, 1); }
 .earth:not([inert]) .earth-visual { cursor: grab; pointer-events: auto; touch-action: none; }
 .earth:not([inert]) .earth-visual.is-dragging { cursor: grabbing; }
 
@@ -165,8 +167,8 @@
 
 @media (orientation: portrait) {
   .earth-map {
-    inset: 36% auto auto 50%;
-    width: 144%;
+    inset: 49% auto auto 50%;
+    width: 168%;
     height: auto;
     translate: -50% -50%;
   }
@@ -181,7 +183,7 @@
     top: max(104px, 18svh);
     translate: none;
   }
-  .earth-copy h2 { font-size: clamp(32px, min(10vw, 7svh), 64px); }
+  .earth-copy h2 { font-size: clamp(28px, min(8.6vw, 7svh), 64px); }
 }
 
 .earth-sphere--fallback {
@@ -191,4 +193,3 @@
   border-radius: 50%;
   background: radial-gradient(circle at 38% 28%, #ddd, #aaa);
 }
-[data-night] .earth-sphere--fallback { background: radial-gradient(circle at 38% 28%, #404040, #161616); }

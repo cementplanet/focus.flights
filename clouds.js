@@ -94,7 +94,8 @@ export async function startClouds(canvas, sky, aircraft, camera) {
     requestAnimationFrame(render);
     const delta = Math.min(now - (previousAnimationAt ?? now), 50);
     previousAnimationAt = now;
-    if (document.hidden) return;
+    const view = camera();
+    if (document.hidden || view.visible === false) return;
 
     const reduce = reducedMotion.matches;
     if (!reduce) flightTime += delta / 1000;
@@ -104,7 +105,6 @@ export async function startClouds(canvas, sky, aircraft, camera) {
       aircraftOffset = aircraft.animate(motion);
       previousMotion = motion;
     }
-    const view = camera();
     const moved = view.height !== lastCamera?.height;
     if (view.height <= -560 && lastCamera?.height <= -560) return;
     // During camera travel submit on every display callback. Throttle only ambient drift.
@@ -160,7 +160,8 @@ export async function startClouds(canvas, sky, aircraft, camera) {
 
     gl.uniform1f(uniforms.elapsed, elapsed);
     gl.uniform1f(uniforms.aircraftDistance, aircraft.distance());
-    gl.uniform2fv(uniforms.aircraftOffset, aircraftOffset);
+    const [aircraftX, aircraftY] = aircraft.position();
+    gl.uniform2f(uniforms.aircraftOffset, aircraftX + aircraftOffset[0], aircraftY + aircraftOffset[1]);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (!view.travel) {
       pendingFrame = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);

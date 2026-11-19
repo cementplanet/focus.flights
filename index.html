@@ -1,32 +1,54 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>FocusFlights - 天空预览</title>
-  <link rel="stylesheet" href="typography.css">
+  <title>FocusFlight</title>
+  <script>history.scrollRestoration = "manual";</script>
+  <link rel="icon" href="brand/app-icon-ios27.png">
+  <link rel="stylesheet" href="typography.css?v=selection">
   <style>
     :root {
       /* Align left-side copy with the visible edge of the wordmark. */
-      --content-left: max(clamp(28px, 5.625vw, 112px), env(safe-area-inset-left));
+      --content-left: max(clamp(28px, 5.625vw, 112px), env(safe-area-inset-left), env(safe-area-inset-right));
+      --hero-gap: clamp(24px, 4vw, 80px);
+      --header-top: max(clamp(32px, 6vh, 76px), calc(env(safe-area-inset-top) + 16px));
+      --header-height: 44px;
     }
 
     html, body {
       margin: 0;
-      overflow: hidden;
-      overscroll-behavior: none;
       background: #0b1931;
     }
 
+    html {
+      overscroll-behavior-y: none;
+      scrollbar-width: none;
+    }
+    html::-webkit-scrollbar { display: none; }
+
+    .flight-sequence { background: var(--flight-page); }
+
     .sky {
       position: relative;
-      touch-action: pinch-zoom;
       height: 100dvh;
       overflow: clip;
       background: linear-gradient(#223c61, #7391ac 40%, #efcbb3 57%, #8394a8);
       background: linear-gradient(in srgb, var(--zenith, #223c61), var(--sky, #7391ac) 38%,
         color-mix(in srgb, var(--horizon, #efcbb3), var(--sky, #7391ac) var(--sky-horizon-soften, 0%)) 58%,
         color-mix(in srgb, var(--shadow, #8394a8), var(--sky, #7391ac) var(--sky-horizon-soften, 0%)));
+    }
+
+    .sky[data-handoff] {
+      position: sticky;
+      top: 0;
+      opacity: calc(1 - var(--showcase-reveal, 0));
+    }
+
+    .sky[data-handoff] + .showcase {
+      position: relative;
+      background: transparent;
+      opacity: var(--showcase-reveal, 0);
     }
 
     .stars {
@@ -39,8 +61,7 @@
 
     .aircraft {
       position: absolute;
-      left: 50%;
-      translate: -50% -50%;
+      translate: -50% calc(-50% - var(--aircraft-travel, 0) * var(--aircraft-pixels-per-y, 0px));
       pointer-events: none;
       isolation: isolate;
     }
@@ -50,6 +71,22 @@
       inset: 0;
       width: 100%;
       height: 100%;
+    }
+
+    .aircraft-body {
+      position: absolute;
+      inset: 0;
+      isolation: isolate;
+    }
+
+    .contrails {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 62.5%;
+      height: 25%;
+      opacity: calc(.84 - .16 * var(--stars, 0));
+      filter: brightness(calc(1 - .26 * var(--stars, 0)));
     }
 
     .aircraft-night {
@@ -115,47 +152,72 @@
       .aircraft-light--strobe, .aircraft-light--beacon { display: none; }
     }
 
-    .sky-award {
-      --award-width: min(clamp(126px, 13vw, 224px), 30vh);
-      --award-height: calc(var(--award-width) * 88 / 305);
+    .hero-copy {
       position: absolute;
-      /* Keep the title above the cloud horizon when the viewport gets short. */
-      top: min(
-        calc(var(--flight-clock-center)
-          + (var(--flight-clock-size) + var(--flight-telemetry-size)) * var(--flight-line-height) / 2
-          + var(--flight-telemetry-gap) - clamp(5px, .85vh, 9px)),
-        calc(55.5% - var(--award-height) * .31)
-      );
-      left: 50%;
-      width: var(--award-width);
-      translate: -50% -50%;
-      mix-blend-mode: screen;
-      opacity: .58;
-      pointer-events: none;
+      top: 49%;
+      left: var(--content-left);
+      width: calc((100% - 2 * var(--content-left) - var(--hero-gap)) / 2);
+      translate: 0 -50%;
+      color: #fff;
     }
 
-    .sky-award img {
+    .hero-copy h1 {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      font-size: clamp(34px, 5.1vw, 100px);
+      font-weight: 600;
+      line-height: 1.03;
+      letter-spacing: -.02em;
+    }
+
+    .hero-copy p {
+      max-width: 35ch;
+      margin: clamp(14px, 2.4vh, 26px) 0 0;
+      font-size: clamp(18px, 1.85vw, 32px);
+      line-height: 1.35;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      --badge-height: clamp(44px, 5.8vh, 56px);
+      --badge-width: calc(var(--badge-height) * 119.66407 / 40);
+      gap: clamp(12px, 1.2vw, 16px);
+      margin-top: clamp(22px, 4.6vh, 44px);
+      opacity: calc(1 - var(--hero-exit, 0));
+    }
+
+    .hero-actions img {
       display: block;
-      width: 100%;
-      height: auto;
+      width: var(--badge-width);
+      height: var(--badge-height);
     }
 
-    .sky-award__sharp {
-      mask-image: linear-gradient(#000 55%, transparent);
+    .hero-explore {
+      --aqua-radius: calc(var(--badge-height) * .17 - 1px);
+      display: inline-flex;
+      width: var(--badge-width);
+      height: var(--badge-height);
+      align-items: center;
+      justify-content: center;
+      gap: .45em;
+      border-radius: calc(var(--badge-height) * .17);
+      background: #fff;
+      color: #111;
+      font-size: clamp(15px, 1.24vw, 21px);
+      font-weight: 600;
+      line-height: 1.2;
+      text-decoration: none;
     }
 
-    .sky-award__soft {
-      position: absolute;
-      inset: 0;
-      filter: blur(clamp(.55px, .09vw, 1.5px));
-      mask-image: linear-gradient(transparent 55%, #000);
-      mix-blend-mode: plus-lighter;
-    }
+    .hero-actions a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 
-    @media (max-width: 640px) {
-      .sky-award {
-        --award-width: clamp(104px, 28vw, 126px);
-        top: calc(55.2% - var(--award-height) * .24);
+    @media (max-width: 540px), (max-width: 720px) and (min-height: 480px) {
+      .hero-copy {
+        top: max(126px, 22%);
+        width: calc(100% - 2 * var(--content-left));
+        translate: none;
       }
     }
 
@@ -166,177 +228,262 @@
       height: 100%;
     }
 
-    .sky-header {
-      position: absolute;
-      top: max(clamp(32px, 6vh, 76px), calc(env(safe-area-inset-top) + 16px));
+    .site-header {
+      position: fixed;
+      z-index: 10;
+      top: var(--header-top);
       left: var(--content-left);
-      right: max(clamp(28px, 5.625vw, 112px), env(safe-area-inset-right));
+      right: var(--content-left);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      color: #eaf0f7;
-      color: color-mix(in srgb, #f7fbff calc(94% - 17% * var(--stars, 0)), var(--zenith, #223c61));
+      color: var(--logo-ink, #fff);
+      text-shadow: 0 1px 3px rgb(0 0 0 / calc(var(--logo-shadow, 0) * .8));
+      pointer-events: none;
+    }
+
+    .site-header[data-on-showcase] {
+      color: #202020;
+      text-shadow: none;
     }
 
     .sky-brand {
-      width: clamp(112px, 11.25vw, 224px);
-      margin: 0;
-      pointer-events: none;
-      background: currentColor;
-      mask: url("brand/focusflight-logo.png") center / contain no-repeat;
+      display: inline-flex;
+      width: fit-content;
+      color: inherit;
+      text-decoration: none;
+      pointer-events: auto;
+      align-items: center;
+      gap: 10px;
+      font: 600 clamp(19px, 1.65vw, 27px)/1 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      letter-spacing: -.025em;
+    }
+
+    .sky-brand:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 4px;
+      border-radius: 6px;
     }
 
     .sky-brand img {
       display: block;
-      width: 100%;
+      width: clamp(30px, 2.75vw, 38px);
       height: auto;
-      opacity: 0;
     }
 
     .sky-nav {
+      --nav-item-height: 44px;
       display: flex;
-      gap: clamp(12px, 1.65vw, 28px);
-      margin-block: -22px;
-      font-size: clamp(14px, 1.05vw, 16px);
+      align-items: center;
+      min-height: var(--nav-item-height);
+      gap: clamp(14px, 2.35vw, 36px);
+      font-size: clamp(14px, 1.15vw, 17px);
+      font-weight: 550;
       line-height: 1.2;
-    }
-
-    .sky-nav label {
-      display: grid;
-      min-height: 44px;
-      place-items: center;
-      cursor: pointer;
-    }
-
-    .sky-nav input {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      clip-path: inset(50%);
-    }
-
-    .sky-nav span {
       white-space: nowrap;
-      translate: 0 1px;
     }
 
-    .sky-nav input:checked + span { font-weight: 600; }
-    .sky-nav label:hover span,
-    .sky-nav input:focus-visible + span {
-      text-decoration: underline;
-      text-underline-offset: .25em;
+    .sky-get-app {
+      --aqua-radius: calc(var(--nav-item-height) / 2 - 1px);
+      display: inline-flex;
+      height: var(--nav-item-height);
+      align-items: center;
+      justify-content: center;
+      padding-inline: clamp(12px, 1.15vw, 18px);
+      border-radius: 999px;
+      color: #202020;
+      font-weight: 650;
+      text-decoration: none;
+      text-shadow: none;
+      pointer-events: auto;
     }
 
-    @media (max-width: 540px) {
-      .sky-header {
-        flex-wrap: wrap;
-        column-gap: 20px;
+    .sky-get-app:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 5px #293c55;
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --header-top: max(16px, calc(env(safe-area-inset-top) + 4px));
+        --header-height: 76px;
+      }
+
+      .site-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
       }
 
       .sky-nav {
-        margin-block: 0;
-        margin-inline-start: auto;
-        font-size: clamp(12px, 3.6vw, 14px);
+        justify-content: flex-end;
+        gap: clamp(8px, 3vw, 14px);
       }
     }
 
   </style>
-  <link rel="stylesheet" href="flight.css?v=cloud-glide-11">
-  <link rel="stylesheet" href="earth.css?v=viewport-render">
-  <link rel="stylesheet" href="departures.css?v=aligned-sign">
-  <script src="sky.js?v=crisp-globe" type="module"></script>
-  <script src="flight.js?v=cloud-glide-11" type="module"></script>
+  <link rel="stylesheet" href="earth.css?v=plane-return">
+  <link rel="stylesheet" href="journey.css?v=reversible-titles">
+  <link rel="stylesheet" href="showcase.css?v=contact-hairline">
+  <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
+  <script src="button-motion.js?v=aqua-nav" type="module"></script>
+  <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
+  <script src="sky.js?v=refracted-handoff" type="module"></script>
+  <script src="showcase.js?v=ripple-playback" type="module"></script>
 </head>
 <body>
+  <header class="site-header">
+    <a class="sky-brand" href="#flight" aria-label="FocusFlight home">
+      <img src="brand/app-icon-ios27.png" alt="" width="38" height="38">
+      <span>FocusFlight</span>
+    </a>
+    <div class="sky-nav">
+      <span>Flight</span>
+      <span>Gift</span>
+      <span>Creator</span>
+      <a class="sky-get-app aqua-button" href="https://apps.apple.com/app/id6648771147">
+        <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+          <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
+          <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
+        </svg>
+        Get the App
+      </a>
+    </div>
+  </header>
   <main class="flight-sequence" id="flight-sequence" tabindex="-1" aria-label="FocusFlight">
-    <div class="sky">
+    <div class="sky" id="flight">
       <canvas class="stars" aria-hidden="true"></canvas>
-      <div class="sky-award" role="img" aria-label="App Store Editors’ Choice">
-        <img class="sky-award__sharp" src="brand/editors-choice.png" alt="" width="305" height="88">
-        <img class="sky-award__soft" src="brand/editors-choice.png" alt="" width="305" height="88">
-      </div>
-      <section class="earth" id="flight-map" aria-labelledby="earth-title" tabindex="-1" inert>
-        <svg class="earth-map" aria-hidden="true" viewBox="-.5 -.5 126 71" preserveAspectRatio="xMidYMid slice"></svg>
-        <div class="earth-visual">
-          <canvas class="earth-sphere" aria-hidden="true"></canvas>
-          <svg class="earth-routes" role="img" aria-label="从东京羽田出发并返回的环球航线" viewBox="0 0 600 600">
-            <defs>
-              <radialGradient id="earth-route-fade" gradientUnits="userSpaceOnUse" cx="300" cy="300" r="276">
-                <stop offset="86%" stop-color="var(--ink)"/>
-                <stop offset="94%" stop-color="var(--ink)" stop-opacity=".65"/>
-                <stop offset="98%" stop-color="var(--ink)" stop-opacity=".12"/>
-                <stop offset="100%" stop-color="var(--ink)" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <path id="earth-route-shape" class="earth-arc"/>
-          </svg>
-        </div>
-        <div class="earth-copy">
-          <h2 id="earth-title">记录专注<br>飞遍世界</h2>
-          <p>让每段航线跃然眼前</p>
-        </div>
-      </section>
-      <section class="departures" id="focus-scenarios" aria-label="专注场景" tabindex="-1" inert>
-        <div class="departures__layout">
-          <div class="departures__title-slot">
-            <h2 class="departure-sign" lang="zh-CN">
-              <svg class="departure-sign__arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M3 12h17M12 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="miter"/>
-              </svg>
-              <svg class="departure-sign__plane" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect width="24" height="24" rx="1" fill="#171713"/>
-                <path d="m18.5 4.5-4.1 3.3-8.8-2-1.3 1.3 7 3.8-4 4-3-.6-1 1 4 2 2 4 1-1-.6-3 4-4 3.8 7 1.3-1.3-2-8.8 3.3-4.1c1.1-1.5-.1-2.7-1.6-1.6Z"/>
-              </svg>
-              <span>任何场景，皆可专注</span>
-            </h2>
-          </div>
-          <table class="departure-board" lang="en">
-            <thead><tr>
-              <th scope="col">Duration</th>
-              <th scope="col">Focus</th>
-              <th scope="col">Destination</th>
-            </tr></thead>
-            <tbody>
-              <tr><td>25:00</td><td>READING</td><td>KYOTO</td></tr>
-              <tr><td>45:00</td><td>STUDYING</td><td>HELSINKI</td></tr>
-              <tr><td>50:00</td><td>WRITING</td><td>PARIS</td></tr>
-              <tr><td>60:00</td><td>DEEP WORK</td><td>NEW YORK</td></tr>
-              <tr><td>40:00</td><td>DESIGNING</td><td>COPENHAGEN</td></tr>
-              <tr><td>30:00</td><td>PRACTICE</td><td>VIENNA</td></tr>
-              <tr><td>35:00</td><td>CODING</td><td>TOKYO</td></tr>
-              <tr><td>20:00</td><td>REVIEWING</td><td>OSLO</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
       <canvas class="clouds" aria-hidden="true"></canvas>
-      <div class="flight-display">
-        <div class="flight-clock" role="time">
-          <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
-        </div>
-        <div class="flight-telemetry" lang="en" role="img">
-          <div class="flight-clock__face flight-clock__face--sharp" aria-hidden="true"></div>
-        </div>
-      </div>
       <div class="aircraft" aria-hidden="true">
-        <img class="aircraft-day" src="aircraft/day.webp?v=airliner-clay-2" alt="" width="1024" height="512">
-        <img class="aircraft-night" src="aircraft/night.webp?v=airliner-clay-2" alt="" width="1024" height="512">
+        <canvas class="contrails" width="640" height="128"></canvas>
+        <div class="aircraft-body">
+          <img class="aircraft-day" src="aircraft/day-hd.webp" alt="" width="3072" height="1536">
+          <img class="aircraft-night" src="aircraft/night-hd.webp" alt="" width="3072" height="1536">
+        </div>
         <div class="aircraft-lights">
           <span class="aircraft-light aircraft-light--navigation"></span>
           <span class="aircraft-light aircraft-light--strobe"></span>
           <span class="aircraft-light aircraft-light--beacon"></span>
         </div>
       </div>
-      <header class="sky-header">
-        <h1 class="sky-brand"><img src="brand/focusflight-logo.png" alt="FocusFlight" width="669" height="127"></h1>
-        <div class="sky-nav" role="group" aria-label="Homepage sections" lang="en">
-          <label><input type="radio" name="sky-section" checked><span>Features</span></label>
-          <label><input type="radio" name="sky-section"><span>How it works</span></label>
-          <label><input type="radio" name="sky-section"><span>Creators</span></label>
-          <label><input type="radio" name="sky-section"><span>FAQ</span></label>
+      <section class="hero-copy" lang="en" aria-labelledby="hero-title">
+        <h1 id="hero-title">Fly into Focus.</h1>
+
+        <div class="hero-actions">
+          <a href="https://apps.apple.com/app/id6648771147">
+            <img src="brand/download-on-the-app-store.svg" alt="Download on the App Store" width="120" height="40">
+          </a>
+          <a class="hero-explore aqua-button" href="#showcase">
+            <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+              <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
+              <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
+            </svg>
+            Explore <span aria-hidden="true">→</span>
+          </a>
         </div>
-      </header>
+      </section>
     </div>
+    <section class="showcase" id="showcase" tabindex="-1" aria-label="Device showcase">
+      <div class="showcase-intro">
+        <p class="showcase-copy"><strong>FocusFlight</strong> is a focus app that turns each <strong>focus session</strong> into a <strong>flight.</strong></p>
+        <div class="flight-playback contact-material" role="group" aria-label="Flight preview playback">
+          <div class="flight-segments contact-surface">
+            <input class="flight-scrubber" type="range" min="0" max="100" step="0.1" value="0" aria-label="Preview progress" aria-controls="device-preview" disabled>
+            <div class="flight-segment" role="progressbar" aria-label="Boarding" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 7v2m0 2v2m0 2v2" stroke="currentColor" stroke-width="1.7"/></svg><span>Boarding</span></span>
+            </div>
+            <div class="flight-segment" role="progressbar" aria-label="Takeoff" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(45 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Takeoff</span></span>
+            </div>
+            <div class="flight-segment" role="progressbar" aria-label="Focus" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(90 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Focus</span></span>
+            </div>
+            <div class="flight-segment" role="progressbar" aria-label="Arrival" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(135 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Arrival</span></span>
+            </div>
+          </div>
+          <div class="flight-playback-action">
+            <svg class="device-liquid" aria-hidden="true" focusable="false">
+              <path class="contact-face"/><path class="contact-ink"/>
+            </svg>
+            <button class="flight-playback-toggle" type="button" aria-label="Play preview" aria-controls="device-preview" disabled>
+              <svg class="playback-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5a1 1 0 0 0-1.5.86v11.28a1 1 0 0 0 1.5.86l10-5.64a1 1 0 0 0 0-1.72z"/></svg>
+              <svg class="playback-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.3"/><rect x="14" y="5" width="4" height="14" rx="1.3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="showcase-stage" data-device="iphone">
+        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="device-media/iphone-website-4k.png" preload="none" muted playsinline></video>
+      </div>
+      <div class="showcase-devices contact-material" role="group" aria-label="Device">
+        <svg class="device-liquid" aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="device-glass-tone" cx="32%" cy="18%" r="90%">
+              <stop stop-color="#fff"/>
+              <stop offset=".52" stop-color="#f2f4f8"/>
+              <stop offset=".84" stop-color="#e3e7ee"/>
+              <stop offset="1" stop-color="#fbfcff"/>
+            </radialGradient>
+            <filter id="device-aqua" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="rounding"/>
+              <feSpecularLighting in="rounding" surfaceScale="2" specularConstant=".65" specularExponent="24" lighting-color="#fff" result="light">
+                <feDistantLight azimuth="225" elevation="55"/>
+              </feSpecularLighting>
+              <feComposite in="light" in2="SourceAlpha" operator="in" result="highlight"/>
+              <feBlend in="SourceGraphic" in2="highlight" mode="screen"/>
+            </filter>
+            <linearGradient id="contact-face" x2="0%" y2="100%">
+              <stop stop-color="var(--contact-highlight)"/>
+              <stop offset=".07" stop-color="var(--contact-tone)"/>
+              <stop offset=".94" stop-color="var(--contact-tone)"/>
+              <stop offset="1" stop-color="var(--contact-lowlight)"/>
+            </linearGradient>
+            <linearGradient id="device-bridge-tint" gradientUnits="userSpaceOnUse"><stop stop-color="#000"/><stop offset="1" stop-color="#000"/></linearGradient>
+          </defs>
+          <path class="contact-face"/><path class="contact-face"/><path class="contact-face"/><path class="contact-face"/>
+          <path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/>
+        </svg>
+        <button type="button" data-device="iphone" data-cues="3.0,7.5,10.8,13.5,15.3,22.2" data-media="iphone-website-4k" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="6.25" y="2.5" width="11.5" height="19" rx="2.6"/>
+            <path d="M10.85 5.2h2.3" stroke-width="1.4"/>
+            <path d="M10.1 19h3.8" stroke-width="1"/>
+          </svg>
+        </button>
+        <button type="button" data-device="iphone-duo" data-cues="4.6,12.8,15.95,19.1,21.1,28.0" data-media="iphone-duo-cardiff-4k" aria-controls="device-preview" aria-pressed="false" aria-label="iPhone Duo" title="iPhone Duo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7.45 4.25h9.1a2.6 2.6 0 0 1 2.6 2.6v6.1l2.2 5.65c.22.55-.18 1.15-.78 1.15H3.43c-.6 0-1-.6-.78-1.15l2.2-5.65v-6.1a2.6 2.6 0 0 1 2.6-2.6Z"/>
+            <path d="M9.6 17.35h4.8" stroke-width="1"/>
+          </svg>
+        </button>
+        <button type="button" data-device="ipad" data-cues="4.5,8.4,13.2,16.2,19.2,27.3" data-media="ipad-website-4k" aria-controls="device-preview" aria-pressed="false" aria-label="iPad" title="iPad">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="4.65" width="20" height="14.7" rx="2.3"/>
+            <path d="M8.9 17h6.2" stroke-width="1"/>
+          </svg>
+        </button>
+        <button type="button" data-device="macbook" data-cues="4.5,8.4,13.2,16.2,18.6,25.8" data-media="macbook-website-4k" aria-controls="device-preview" aria-pressed="false" aria-label="MacBook" title="MacBook">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.55 18.1V7.3a1.65 1.65 0 0 1 1.65-1.65h13.6a1.65 1.65 0 0 1 1.65 1.65v10.8"/>
+            <path d="M9.95 5.65h4.1v.95a.6.6 0 0 1-.6.6h-2.9a.6.6 0 0 1-.6-.6Z" fill="currentColor" stroke="none"/>
+            <path d="M1.6 18.1h20.8" stroke-width="1.9"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+    <section class="deep-focus" id="deep-focus" aria-labelledby="deep-focus-title" tabindex="-1">
+      <div class="porthole">
+        <canvas class="porthole-frame" aria-hidden="true"></canvas>
+        <button type="button" class="shade-control" role="slider" aria-label="Window shade opening" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="Fully open"></button>
+      </div>
+      <div class="focus-copy">
+        <h2 id="deep-focus-title">Deep Focus</h2>
+        <p><span class="focus-sentence">Every session is a full flight from takeoff to touchdown.</span>
+          <span class="focus-sentence">Climb above the noise, <span class="focus-phrase">stay locked in,</span> and land on schedule.</span></p>
+      </div>
+    </section>
   </main>
 </body>
 </html>

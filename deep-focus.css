@@ -1,0 +1,194 @@
+@property --shade-drop {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+@property --window-reveal {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+.deep-focus {
+  --window-height: min(94dvh, calc(100dvh - .3 * var(--focus-title-size)), 121vw);
+  --window-center: calc(var(--window-height) / 2 + 1dvh);
+  --window-origin: 50% var(--window-center);
+  --focus-title-size: min(15.5vw, 37dvh);
+  --focus-gutter: max(clamp(12px, 1.55vw, 38px), env(safe-area-inset-left), env(safe-area-inset-right));
+  --focus-title-inset: max(.45dvh, env(safe-area-inset-bottom));
+  position: relative;
+  isolation: isolate;
+  height: 100dvh;
+  overflow: clip;
+  outline: none;
+  color: #f3f3f3;
+  --cabin-wall: radial-gradient(ellipse 68% 87% at var(--window-origin), #17191b 0%, #0d0f11 53%, #060709 100%);
+  background: var(--cabin-wall);
+}
+
+.porthole {
+  position: absolute;
+  top: var(--window-center);
+  left: 50%;
+  translate: -50% -50%;
+  height: var(--window-height);
+  mask-image: linear-gradient(black 62%, rgb(0 0 0 / .78) 75%, transparent 96%);
+  aspect-ratio: 912 / 1144;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(calc((1 - var(--window-reveal)) * 1dvh)) scale(calc(.975 + .025 * var(--window-reveal)));
+  --shade-travel: 52.8%;
+  transition: --shade-drop 650ms var(--button-press);
+}
+.porthole-frame { position: absolute; inset: 0; }
+.porthole-frame { width: 100%; height: 100%; }
+.shade-control {
+  appearance: none;
+  position: absolute;
+  top: 21.8%;
+  left: 32%;
+  width: 35%;
+  height: max(44px, calc(5.6% + var(--shade-drop) * var(--shade-travel)));
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: grab;
+}
+.shade-control:focus-visible { outline: none; }
+.porthole:has(.shade-control:focus-visible)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(23.8% + var(--shade-drop) * var(--shade-travel));
+  translate: -50% -50%;
+  width: 12%;
+  height: 2.4%;
+  border: 1.5px solid #e1e6ee;
+  border-radius: 50%;
+}
+.porthole[data-dragging] { transition: none; }
+.porthole[data-dragging] .shade-control { cursor: grabbing; }
+[data-focus-handoff] .shade-control { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .porthole { transition: none; }
+}
+.focus-copy {
+  --copy-progress: var(--type-progress);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.focus-copy h2 {
+  --type-progress: clamp(0, var(--copy-progress) * 1.65, 1);
+  position: absolute;
+  inset-inline: 0;
+  bottom: var(--focus-title-inset);
+  margin: 0;
+  display: grid;
+  isolation: isolate;
+  color: #e0e1df;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+  font-size: var(--focus-title-size);
+  font-weight: 540;
+  font-stretch: 132%;
+  font-variation-settings: "wdth" 132;
+  line-height: 1;
+  letter-spacing: -.032em;
+  word-spacing: .035em;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: auto;
+}
+.focus-copy h2 > [aria-hidden] {
+  mask-image: linear-gradient(black 48%, rgb(0 0 0 / .85) 65%, rgb(0 0 0 / .18) 100%);
+}
+.focus-copy p {
+  position: absolute;
+  inset-inline: var(--focus-gutter);
+  top: var(--window-center);
+  translate: 0 -50%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  color: #d4d6d9;
+  font-size: clamp(17px, min(1.85vw, 3.2dvh), 35px);
+  line-height: 1.24;
+  letter-spacing: -.012em;
+}
+.focus-sentence {
+  display: block;
+  width: min(25vw, 26ch);
+  text-wrap: balance;
+  pointer-events: auto;
+  --type-progress: clamp(0, (var(--copy-progress) - .19) * 1.68, 1);
+}
+.focus-sentence + .focus-sentence {
+  color: #bcc1c7;
+  text-align: end;
+  --type-progress: clamp(0, (var(--copy-progress) - .39) * 1.68, 1);
+}
+.focus-phrase { white-space: nowrap; }
+@media (max-aspect-ratio: 1/1) {
+  .deep-focus {
+    --window-height: min(82dvh, 121vw);
+    --window-center: 42%;
+  }
+  .focus-copy p {
+    top: auto;
+    bottom: calc(var(--focus-title-inset) + var(--focus-title-size) + clamp(16px, 3dvh, 32px));
+    translate: none;
+    align-items: start;
+    font-size: clamp(15px, 3.85vw, 26px);
+    line-height: 1.27;
+  }
+  .focus-sentence { width: min(46%, 25ch); }
+}
+@media (max-width: 540px) and (max-aspect-ratio: 1/1) {
+  .porthole { mask-image: linear-gradient(black 60%, rgb(0 0 0 / .86) 72%, transparent 94%); }
+}
+@keyframes porthole-arrival {
+  from { --window-reveal: 0; opacity: .14; }
+  to { --window-reveal: 1; opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .deep-focus[data-anchor-entry] .porthole { animation: porthole-arrival 1.6s var(--button-press) both; }
+  .deep-focus[data-anchor-entry] .focus-copy { animation: flight-type 1.35s var(--button-press) .15s both; }
+}
+
+.site-header[data-on-focus] { color: #f1f5fc; text-shadow: none; }
+[data-focus-handoff] .deep-focus {
+  z-index: 3;
+  transform: translateY(var(--focus-offset));
+  background: transparent;
+  pointer-events: none;
+}
+[data-focus-handoff] .deep-focus::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--cabin-wall);
+  opacity: var(--cabin-reveal);
+}
+.focus-ripple {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.showcase[data-ripple] .focus-ripple { display: block; }
+.showcase[data-ripple] :is(.showcase-stage, .showcase-copy) { opacity: 0; }
+[data-focus-handoff] :is(.flight-playback, .showcase-devices),
+[data-focus-handoff] .showcase:not([data-ripple]) :is(.showcase-stage, .showcase-copy) {
+  opacity: var(--showcase-presence);
+}
+[data-focus-handoff] .porthole { opacity: var(--window-reveal); }
+[data-focus-handoff] .focus-copy { --type-progress: var(--title-reveal); }
+[data-focus-handoff] .showcase:focus { outline: none; }
