@@ -142,6 +142,7 @@ async function createScene(gl) {
 export function setupPortholeSky(canvas) {
   const host = canvas.parentElement;
   const sequence = host.closest(".deep-focus").parentElement;
+  const inTransit = () => sequence.hasAttribute("data-focus-handoff") || sequence.hasAttribute("data-window-flight");
   let nearby = false;
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   let softwareCanvas, render, loading, generation = 0, visible = false, frame = 0, lastTime = null, elapsed = 0;
@@ -149,7 +150,7 @@ export function setupPortholeSky(canvas) {
   function draw(now) {
     frame = 0;
     if (lastTime === null || now-lastTime >= 1000/30-1 || motion.matches) {
-      if (lastTime !== null && !motion.matches && !sequence.hasAttribute("data-focus-handoff")) elapsed += Math.min(.125,(now-lastTime)/1000);
+      if (lastTime !== null && !motion.matches && !inTransit()) elapsed += Math.min(.125,(now-lastTime)/1000);
       lastTime = now;
       const scale = Math.min(devicePixelRatio, 1600/Math.max(1,canvas.clientWidth,canvas.clientHeight));
       const w = Math.max(1,Math.round(canvas.clientWidth*scale)), h = Math.max(1,Math.round(canvas.clientHeight*scale));
@@ -157,7 +158,7 @@ export function setupPortholeSky(canvas) {
       render(w,h,elapsed, Number(getComputedStyle(host).getPropertyValue("--shade-drop")));
       canvas.dataset.ready = "";
     }
-    if (visible && !sequence.hasAttribute("data-focus-handoff") && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
+    if (visible && !inTransit() && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
   }
 
   async function prepare(version) {
@@ -185,7 +186,7 @@ export function setupPortholeSky(canvas) {
     cancelAnimationFrame(frame);
     lastTime = null;
     if ((!visible && !nearby) || document.hidden) return;
-    if ((!visible || sequence.hasAttribute("data-focus-handoff")) && canvas.hasAttribute("data-ready")) return;
+    if ((!visible || inTransit()) && canvas.hasAttribute("data-ready")) return;
     if (render) draw(performance.now());
     else loading ??= prepare(generation).catch(error=>console.warn("Porthole:",error));
   }
@@ -198,12 +199,12 @@ export function setupPortholeSky(canvas) {
     nearby = entry.isIntersecting;
     if (nearby && !canvas.hasAttribute("data-ready")) sync();
   }, {rootMargin:"90% 0px"}).observe(canvas);
-  new MutationObserver(sync).observe(sequence,{attributes:true,attributeFilter:["data-focus-handoff"]});
+  new MutationObserver(sync).observe(sequence,{attributes:true,attributeFilter:["data-focus-handoff","data-window-flight"]});
   new ResizeObserver(sync).observe(canvas);
   // The transition freezes the sky texture. Keep painting shade geometry as it moves.
   new MutationObserver(() => {
     if (!render || document.hidden || (!visible && !nearby)) return;
-    if (motion.matches || softwareCanvas || sequence.hasAttribute("data-focus-handoff")) {
+    if (motion.matches || softwareCanvas || inTransit()) {
       cancelAnimationFrame(frame);
       lastTime = null;
       draw(performance.now());

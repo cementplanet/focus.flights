@@ -96,8 +96,8 @@ export function setupWindowShade(porthole) {
     event.preventDefault();
   });
 
-  return function setActive(next) {
-    if (active === next) return;
+  return function setActive(next, openForFlight = false) {
+    if (active === next && !(openForFlight && (target > 0 || drag))) return;
     active = next;
     if (drag) handle.releasePointerCapture(drag.id);
     if (!active || reduced.matches || canvas.hasAttribute("data-ready")) glide(active ? 0 : 1, active ? 1 : 1.45);
