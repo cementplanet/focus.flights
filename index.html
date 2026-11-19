@@ -329,8 +329,8 @@
   <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
-  <link rel="stylesheet" href="download.css?v=ascent">
-  <script src="sky.js?v=ascent" type="module"></script>
+  <link rel="stylesheet" href="download.css?v=download-page">
+  <script src="sky.js?v=download-page" type="module"></script>
   <script src="showcase.js?v=ripple-playback" type="module"></script>
 </head>
 <body>
@@ -485,7 +485,37 @@
           <span class="focus-sentence">Climb above the noise, <span class="focus-phrase">stay locked in,</span> and land on schedule.</span></p>
       </div>
     </section>
-    <section class="download" id="download" aria-label="Download FocusFlight" tabindex="-1"></section>
+    <section class="download" id="download" aria-labelledby="download-title" tabindex="-1">
+      <div class="download-layout">
+        <div class="download-copy">
+          <img class="download-icon" src="brand/app-icon-ios27.png" alt="" width="152" height="152">
+          <h2 id="download-title">FocusFlight</h2>
+          <p>For iPhone, iPad, and Mac.</p>
+          <div class="hero-actions">
+            <a href="https://apps.apple.com/app/id6648771147">
+              <img src="brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" width="120" height="40">
+            </a>
+          </div>
+        </div>
+        <!-- Apple Design Resources product bezels. App screenshots belong inside each device-display. -->
+        <div class="download-devices" aria-hidden="true">
+          <div class="device-family">
+            <div class="download-device download-iphone">
+              <div class="device-display"></div>
+              <img src="download-devices/iphone.webp" width="391" height="800" alt="" draggable="false">
+            </div>
+            <div class="download-device download-ipad">
+              <div class="device-display"></div>
+              <img src="download-devices/ipad.webp" width="997" height="1400" alt="" draggable="false">
+            </div>
+            <div class="download-device download-mac">
+              <div class="device-display"></div>
+              <img src="download-devices/mac.webp" width="2400" height="1559" alt="" draggable="false">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 </body>
 </html>

@@ -1,11 +1,14 @@
 export function setupWindowFlight(cabin, download, ease, setCamera) {
   const host = cabin.querySelector(".porthole");
   const sequence = cabin.parentElement;
+  const content = download.querySelector(".download-layout");
+  content.inert = true;
   let layout;
 
   function measure() {
     const screen = cabin.getBoundingClientRect();
     const window = host.getBoundingClientRect();
+    download.style.setProperty("--download-offset", (cabin.offsetTop - download.offsetTop) + "px");
     layout = {
       x: (window.left + window.width / 2 - screen.left) / screen.width,
       y: (window.top + window.height / 2 - screen.top) / screen.height,
@@ -40,6 +43,9 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
       measure();
     }
     const view = camera(t);
+    const arrival = ease(.46, .97, view.rise / 1250);
+    download.style.setProperty("--download-arrival", arrival);
+    content.inert = arrival < .99;
     const approach = view.advance / 3.57;
     const nearFocus = ease(.24, .78, approach) * (1 - ease(.8, 1.14, approach));
     view.blur = 2.4 * nearFocus;
@@ -51,6 +57,7 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
 
   function end(atDownload = false) {
     sequence.removeAttribute("data-window-flight");
+    content.inert = !atDownload;
     if (atDownload) {
       measure();
       setCamera(camera(1), download);

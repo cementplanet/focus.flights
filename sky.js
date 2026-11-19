@@ -1,4 +1,4 @@
-import { setupWindowFlight } from "./window-flight.js?v=ascent";
+import { setupWindowFlight } from "./window-flight.js?v=download-page";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
