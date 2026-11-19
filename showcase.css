@@ -59,7 +59,8 @@
   --track-cap: calc(var(--playback-size) / 2 - var(--track-inset) - var(--contact-edge-width));
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   flex: 1;
   min-width: 0;
   height: var(--playback-size);
@@ -179,6 +180,8 @@
   .showcase-copy[data-visible] + .flight-playback .flight-segment:nth-of-type(2) { animation-delay: 260ms; }
   .showcase-copy[data-visible] + .flight-playback .flight-segment:nth-of-type(3) { animation-delay: 350ms; }
   .showcase-copy[data-visible] + .flight-playback .flight-segment:nth-of-type(4) { animation-delay: 440ms; }
+  .showcase-copy[data-visible] + .flight-playback .flight-segment:nth-of-type(5) { animation-delay: 530ms; }
+  .showcase-copy[data-visible] + .flight-playback .flight-segment:nth-of-type(6) { animation-delay: 620ms; }
   .showcase-copy[data-visible] + .flight-playback .flight-playback-action {
     animation: playback-shell-reveal 1100ms var(--button-press) 530ms backwards;
   }
@@ -234,6 +237,10 @@
 .device-orbit-item[data-device="iphone-duo"] { --device-width: 57cqw; --device-height: 90cqh; }
 .device-orbit-item[data-device="ipad"] { --device-width: 62cqw; --device-height: 86cqh; }
 .device-orbit-item[data-device="macbook"] { --device-width: 64cqw; --device-height: 84cqh; }
+
+@media (min-width: 701px) {
+  .device-orbit-item { max-width: var(--front-width, 100%); }
+}
 
 .device-orbit-item::before,
 .device-orbit-item::after {
@@ -436,7 +443,12 @@
   .showcase-copy[data-type-ready] { transition: none; }
 }
 
-@media (max-width: 360px) {
+@container (max-width: 600px) {
   .flight-segment-label { flex-direction: column; gap: 2px; font-size: 10px; }
-  .flight-playback { gap: 6px; }
+  .flight-segment-label svg { width: 14px; height: 14px; }
+}
+
+@media (max-width: 360px) {
+  .flight-playback { display: grid; justify-items: center; gap: 6px; }
+  .flight-segments { width: 100%; }
 }

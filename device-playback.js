@@ -1,15 +1,14 @@
-function flightProgress(cues, duration, time) {
-  if (!Number.isFinite(duration) || duration <= 0) return [0, 0, 0, 0];
-  // Existing cue points mark the takeoff prompt, flight map, and arrival screen.
-  const boundaries = [0, cues[2], cues[3], cues[5], duration];
+function flightProgress(chapters, duration, time) {
+  if (!Number.isFinite(duration) || duration <= 0) return chapters.map(() => 0);
+  const boundaries = [...chapters, duration];
   return boundaries.slice(0, -1).map((start, index) =>
     Math.max(0, Math.min(1, (time - start) / (boundaries[index + 1] - start))));
 }
 
-function flightTime(cues, duration, progress) {
-  const boundaries = [0, cues[2], cues[3], cues[5], duration];
-  const position = Math.max(0, Math.min(4, progress / 25));
-  const index = Math.min(3, Math.floor(position));
+function flightTime(chapters, duration, progress) {
+  const boundaries = [...chapters, duration];
+  const position = Math.max(0, Math.min(chapters.length, progress * chapters.length / 100));
+  const index = Math.min(chapters.length - 1, Math.floor(position));
   return Math.min(duration - 1 / 30,
     boundaries[index] + (boundaries[index + 1] - boundaries[index]) * (position - index));
 }
@@ -73,7 +72,10 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     video.poster = `${base}.png`;
     video.setAttribute("aria-hidden", "true");
     item.querySelector(".device-orbit-media").append(video);
-    return { button, video, item, base, cues: button.dataset.cues?.split(",").map(Number) ?? [], ready: false };
+    const chapterStarts = button.dataset.chapters.split(",").map(Number);
+    const chapters = [0, ...chapterStarts];
+    const cues = [...button.dataset.boardingCues.split(",").map(Number), ...chapterStarts];
+    return { button, video, item, base, cues, chapters, ready: false };
   });
   let active = devices[0];
   let cueSource = active;
@@ -109,10 +111,10 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   function updateProgress() {
     retireHiddenVideos();
     const source = switching ? cueSource : active;
-    let progress = flightProgress(source.cues, source.video.duration, source.video.currentTime);
+    let progress = flightProgress(source.chapters, source.video.duration, source.video.currentTime);
     if (replay?.device === source && replay.animations) {
       const blend = replay.animations[1].effect.getComputedTiming().progress ?? 0;
-      const position = 4 + (progress.reduce((sum, value) => sum + value, 0) - 4) * blend;
+      const position = segments.length + (progress.reduce((sum, value) => sum + value, 0) - segments.length) * blend;
       progress = progress.map((_, index) => Math.max(0, Math.min(1, position - index)));
     }
     if (shouldPlay() && active.ready && !switching && !replay && active.video.duration - active.video.currentTime < 2.5) {
@@ -125,8 +127,8 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
       if (segment.getAttribute("aria-valuenow") !== percent) segment.setAttribute("aria-valuenow", percent);
     });
     scrubber.disabled = !active.ready || switching || cycling;
-    if (!scrubbing) scrubber.value = progress.reduce((sum, value) => sum + value, 0) * 25;
-    const currentSegment = Math.min(3, Math.floor(Number(scrubber.value) / 25));
+    if (!scrubbing) scrubber.value = progress.reduce((sum, value) => sum + value, 0) * 100 / segments.length;
+    const currentSegment = Math.min(segments.length - 1, Math.floor(Number(scrubber.value) * segments.length / 100));
     scrubber.setAttribute("aria-valuetext", `${segments[currentSegment].getAttribute("aria-label")}, ${Math.round(Number(scrubber.value))}%`);
     toggle.disabled = !active.ready || switching;
     const playing = !active.video.paused && !active.video.ended;
@@ -153,7 +155,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
 
   function seekScrub() {
     cancelAnimationFrame(seekFrame);
-    active.video.currentTime = flightTime(active.cues, active.video.duration, Number(scrubber.value));
+    active.video.currentTime = flightTime(active.chapters, active.video.duration, Number(scrubber.value));
     updateProgress();
   }
 

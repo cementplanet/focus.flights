@@ -1,7 +1,7 @@
 import { prepareCopy } from "./motion-copy.js?v=inline-emphasis";
 import { setupDeviceLiquid } from "./device-liquid.js?v=contact-hairline";
-import { setupDevicePlayback } from "./device-playback.js?v=device-switch";
-import { setupDeviceOrbit } from "./device-orbit.js?v=continuous-scroll";
+import { setupDevicePlayback } from "./device-playback.js?v=flight-chapters";
+import { setupDeviceOrbit } from "./device-orbit.js?v=flight-chapters";
 
 const section = document.querySelector(".showcase");
 const copy = section.querySelector(".showcase-copy");

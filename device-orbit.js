@@ -1,8 +1,7 @@
 export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   // Visible bounds inside the shared 3840 × 2160 transparent exports.
   const bounds = [[1483, 189, 906, 1804], [1016, 94, 1788, 1878], [747, 227, 2401, 1738], [610, 298, 2471, 1610]];
-  // Optical centers for portrait, folded, tablet and laptop silhouettes.
-  const centers = [[.72, .52], [.69, .52], [.665, .515], [.66, .53]];
+  const centerY = [.52, .52, .515, .53];
   const firstVideo = stage.querySelector("video");
   const items = buttons.map((button, index) => {
     const item = document.createElement("div");
@@ -43,6 +42,24 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   const step = turn / buttons.length;
   const compact = matchMedia("(max-width: 700px)");
 
+  const section = stage.closest(".showcase");
+  const intro = section.querySelector(".showcase-intro");
+  const picker = section.querySelector(".showcase-devices");
+  let frontX = .72;
+
+  function fitDevice() {
+    if (!compact.matches) {
+      const bounds = stage.getBoundingClientRect();
+      const left = intro.getBoundingClientRect().right + 16;
+      const right = picker.getBoundingClientRect().left - 16;
+      if (bounds.width > 0 && right > left) {
+        frontX = ((left + right) / 2 - bounds.left) / bounds.width;
+        stage.style.setProperty("--front-width", (right - left) + "px");
+      }
+    }
+    paint();
+  }
+
   function paint() {
     items.forEach((item, index) => {
       const phase = angle + index * step;
@@ -51,10 +68,10 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
       const distance = 1 - depth;
       const scale = 1 + distance * .6;
       const focus = (depth + 1) / 2;
-      const [focusX, focusY] = centers[index];
+      const focusY = centerY[index];
       const x = compact.matches
         ? .43 + .25 * depth + .12 * side - .18 * focus
-        : .33 + .43 * depth + .18 * side + (focusX - .76) * focus;
+        : .33 + .43 * depth + .18 * side + (frontX - .76) * focus;
       const y = compact.matches
         ? .50 + .08 * depth - .55 * side - .05 * depth ** 2 - .03 * focus
         : .55 + .12 * depth - .51 * side - .12 * depth ** 2 + (focusY - .55) * focus;
@@ -116,8 +133,10 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     return new Promise(resolve => { complete = resolve; });
   }
 
-  compact.addEventListener("change", paint);
+  const resize = new ResizeObserver(fitDevice);
+  for (const element of [stage, intro, picker]) resize.observe(element);
+  compact.addEventListener("change", fitDevice);
   reducedMotion.addEventListener("change", () => { if (reducedMotion.matches) settle(); });
-  paint();
+  fitDevice();
   return move;
 }

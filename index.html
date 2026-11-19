@@ -325,13 +325,13 @@
   </style>
   <link rel="stylesheet" href="earth.css?v=plane-return">
   <link rel="stylesheet" href="journey.css?v=reversible-titles">
-  <link rel="stylesheet" href="showcase.css?v=contact-hairline">
+  <link rel="stylesheet" href="showcase.css?v=flight-chapters">
   <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
   <link rel="stylesheet" href="download.css?v=download-page">
   <script src="sky.js?v=download-page" type="module"></script>
-  <script src="showcase.js?v=ripple-playback" type="module"></script>
+  <script src="showcase.js?v=flight-chapters" type="module"></script>
 </head>
 <body>
   <header class="site-header">
@@ -397,8 +397,14 @@
             <div class="flight-segment" role="progressbar" aria-label="Takeoff" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(45 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Takeoff</span></span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Focus" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(90 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Focus</span></span>
+            <div class="flight-segment" role="progressbar" aria-label="Cruise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(90 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Cruise</span></span>
+            </div>
+            <div class="flight-segment" role="progressbar" aria-label="Window view" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6.5" y="3" width="11" height="18" rx="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 12.8c3-1.8 6.1 1.4 10 0" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Window</span></span>
+            </div>
+            <div class="flight-segment" role="progressbar" aria-label="Focus music" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 17V6l11-2v11m-11-5 11-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="6.5" cy="17.6" rx="3.3" ry="2.5"/><ellipse cx="17.5" cy="15.6" rx="3.3" ry="2.5"/></svg><span>Music</span></span>
             </div>
             <div class="flight-segment" role="progressbar" aria-label="Arrival" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true"><svg viewBox="0 0 24 24"><g transform="rotate(135 12 12)"><path d="m21 10-7-4V3a2 2 0 0 0-4 0v3l-7 4v3l7-2v6l-3 2v2l5-1 5 1v-2l-3-2v-6l7 2z"/></g></svg><span>Arrival</span></span>
@@ -416,7 +422,7 @@
         </div>
       </div>
       <div class="showcase-stage" data-device="iphone">
-        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="device-media/iphone-website-4k.png" preload="none" muted playsinline></video>
+        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="device-media/films/iphone.png" preload="none" muted playsinline></video>
       </div>
       <div class="showcase-devices contact-material" role="group" aria-label="Device">
         <svg class="device-liquid" aria-hidden="true" focusable="false">
@@ -446,26 +452,26 @@
           <path class="contact-face"/><path class="contact-face"/><path class="contact-face"/><path class="contact-face"/>
           <path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/>
         </svg>
-        <button type="button" data-device="iphone" data-cues="3.0,7.5,10.8,13.5,15.3,22.2" data-media="iphone-website-4k" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">
+        <button type="button" data-device="iphone" data-boarding-cues="2.643,5.695,9.196" data-chapters="11.967,16.7,21.767,27.467,30.967" data-media="films/iphone" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="6.25" y="2.5" width="11.5" height="19" rx="2.6"/>
             <path d="M10.85 5.2h2.3" stroke-width="1.4"/>
             <path d="M10.1 19h3.8" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="iphone-duo" data-cues="4.6,12.8,15.95,19.1,21.1,28.0" data-media="iphone-duo-cardiff-4k" aria-controls="device-preview" aria-pressed="false" aria-label="iPhone Duo" title="iPhone Duo">
+        <button type="button" data-device="iphone-duo" data-boarding-cues="2.654,5.723,9.208" data-chapters="11.9,16.567,21.6,27.167,30.667" data-media="films/iphone-duo" aria-controls="device-preview" aria-pressed="false" aria-label="iPhone Duo" title="iPhone Duo">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7.45 4.25h9.1a2.6 2.6 0 0 1 2.6 2.6v6.1l2.2 5.65c.22.55-.18 1.15-.78 1.15H3.43c-.6 0-1-.6-.78-1.15l2.2-5.65v-6.1a2.6 2.6 0 0 1 2.6-2.6Z"/>
             <path d="M9.6 17.35h4.8" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="ipad" data-cues="4.5,8.4,13.2,16.2,19.2,27.3" data-media="ipad-website-4k" aria-controls="device-preview" aria-pressed="false" aria-label="iPad" title="iPad">
+        <button type="button" data-device="ipad" data-boarding-cues="2.678,5.774,9.227" data-chapters="11.967,16.667,21.667,27.4,30.9" data-media="films/ipad" aria-controls="device-preview" aria-pressed="false" aria-label="iPad" title="iPad">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="2" y="4.65" width="20" height="14.7" rx="2.3"/>
             <path d="M8.9 17h6.2" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="macbook" data-cues="4.5,8.4,13.2,16.2,18.6,25.8" data-media="macbook-website-4k" aria-controls="device-preview" aria-pressed="false" aria-label="MacBook" title="MacBook">
+        <button type="button" data-device="macbook" data-boarding-cues="2.519,5.557,9.014" data-chapters="12.1,16.8,21.833,27.4,30.9" data-media="films/macbook" aria-controls="device-preview" aria-pressed="false" aria-label="MacBook" title="MacBook">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3.55 18.1V7.3a1.65 1.65 0 0 1 1.65-1.65h13.6a1.65 1.65 0 0 1 1.65 1.65v10.8"/>
             <path d="M9.95 5.65h4.1v.95a.6.6 0 0 1-.6.6h-2.9a.6.6 0 0 1-.6-.6Z" fill="currentColor" stroke="none"/>
