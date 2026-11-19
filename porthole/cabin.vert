@@ -6,6 +6,8 @@ layout(location=2) in vec4 finish;
 uniform vec2 resolution;
 uniform float shade;
 uniform float zoom;
+uniform vec4 projection;
+uniform vec2 tilt;
 uniform sampler2D skyMap;
 out vec3 point, surfaceNormal;
 out vec4 material;
@@ -23,9 +25,12 @@ vec3 lightAt(float y) {
 void main() {
     point = position;
     if (finish.x == 4.) point.y -= 1.51 * shade;
-    float z = 3.25 + point.z;
-    vec2 projected = 2.81 * vec2(point.x, (point.y - .017 + point.z*.065) * resolution.x/resolution.y);
-    gl_Position = vec4(zoom * projected, 2.*(.17*z-.23)-z, z);
+    float z = 3.25 + point.z - projection.w;
+    float y = point.y - .017 + point.z*.065 - tilt.y;
+    vec2 lens = mat2(cos(tilt.x),sin(tilt.x),-sin(tilt.x),cos(tilt.x)) * vec2(y,z);
+    z = lens.y;
+    vec2 projected = 2.81 * vec2(point.x, lens.x * resolution.x/resolution.y);
+    gl_Position = vec4(zoom * projection.z * projected + projection.xy*z, z-.04, z);
     surfaceNormal = normal;
     material = finish;
     // Sample a small patch just inside the corresponding part of the aperture.

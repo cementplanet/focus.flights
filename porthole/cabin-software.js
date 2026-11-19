@@ -1,3 +1,4 @@
+import {drawSky} from "./sky-software.js";
 // Software projection of the same mesh for browsers with WebGL disabled.
 import {createCabinMesh} from "./cabin-mesh.js";
 
@@ -15,7 +16,7 @@ const molding = [.38, .39, .40];
 
 export async function softwareCabin(canvas,zoom) {
   const ctx = canvas.getContext("2d");
-  const art = await Promise.all(["twilight.webp","airliner.webp"].map(async file => {
+  const art = await Promise.all(["twilight.webp","airliner.webp","cloud-deck.webp"].map(async file => {
     const image = new Image();
     image.src = new URL(file,import.meta.url);
     await image.decode();
@@ -38,22 +39,36 @@ export async function softwareCabin(canvas,zoom) {
   });
   const ambient = lights[0].map((v,i)=>mix(mix(v,lights[1][i],.68),lights[2][i],.20));
   const mesh = createCabinMesh();
-  let previousShade, width, height;
-  return function paint(w,h,time,shade) {
-    const scale = Math.min(1,720/Math.max(w,h));
-    w = Math.round(w*scale);
-    h = Math.round(h*scale);
-    if (width===w && height===h && previousShade===shade) return;
+  const linerSurface = document.createElement("canvas");
+  const linerContext = linerSurface.getContext("2d");
+  let image, depth;
+  let previousShade, width, height, wasFlying = false;
+  return function paint(w,h,time,shade,view) {
+    if (!view && !wasFlying && width===w && height===h && previousShade===shade) return;
+    wasFlying = Boolean(view);
     previousShade=shade; width=w; height=h;
-    canvas.width=w; canvas.height=h;
-    const image = ctx.createImageData(w,h);
-    const depth = new Float32Array(w*h).fill(Infinity);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; }
+    else ctx.clearRect(0,0,w,h);
+    if (view?.advance >= 3.49) {
+      drawSky(ctx,w,h,view,art[2],art[1],time);
+      return;
+    }
+    if (!image || image.width !== w || image.height !== h) {
+      image = ctx.createImageData(w,h);
+      depth = new Float32Array(w*h);
+    } else image.data.fill(0);
+    depth.fill(Infinity);
     const points = [];
+    const sinPitch = Math.sin(view?.pitch ?? 0), cosPitch = Math.cos(view?.pitch ?? 0);
     for (let i=0; i<mesh.vertices.length; i+=10) {
       const [x,y0,z,nx,ny,nz,mat,exposure,u,v] = mesh.vertices.subarray(i,i+10);
       const y = y0 - (mat===4 ? shade*1.51 : 0);
-      const n = [nx,ny,nz], perspective = .5*w*2.81*zoom/(3.25+z);
-      const px=w*.5+x*perspective, py=h*.5-(y-.017+.065*z)*perspective;
+      const heightAtLens = y-.017+.065*z-(view?.lift ?? 0);
+      const forward = 3.25+z-(view?.advance ?? 0);
+      const depthAtLens = heightAtLens*sinPitch + forward*cosPitch;
+      const n = [nx,ny,nz], perspective = .5*w*(view?.width ?? 1)*2.81*zoom/Math.max(.02,depthAtLens);
+      const px=w*(view?.x ?? .5)+x*perspective;
+      const py=h*(view?.y ?? .5)-(heightAtLens*cosPitch-forward*sinPitch)*perspective;
       const sky=dot(n,unit(-x,.61-y,.47-z)), cloud=dot(n,unit(-x,-.48-y,.47-z));
       const inner=dot(n,unit(-x,-y,.48-z));
       const glassX = .5 + .72*x, glassY = .5 - .52*y;
@@ -118,6 +133,22 @@ export async function softwareCabin(canvas,zoom) {
         for (let k=0;k<3;k++) image.data[4*pixel+k]=(s*a[3+k]+u*b[3+k]+v*c[3+k])*grain;
         image.data[4*pixel+3]=s*a[6]+u*b[6]+v*c[6];
       }
+    }
+    if (view) {
+      if (linerSurface.width !== w || linerSurface.height !== h) {
+        linerSurface.width=w; linerSurface.height=h;
+      }
+      linerContext.putImageData(image,0,0);
+      ctx.clearRect(0,0,w,h);
+      ctx.save();
+      ctx.clip(aperture);
+      drawSky(ctx,w,h,view,art[2],art[1],time);
+      ctx.restore();
+      ctx.save();
+      if (view.blur > .05) ctx.filter = `blur(${view.blur*devicePixelRatio}px)`;
+      ctx.drawImage(linerSurface,0,0);
+      ctx.restore();
+      return;
     }
     ctx.putImageData(image,0,0);
     const sw=.435*w*zoom, sh=.44*1.5*w*zoom, top=h*.5+.003*w*zoom-sh*.5;

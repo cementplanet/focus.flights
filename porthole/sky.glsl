@@ -7,9 +7,12 @@ precision highp sampler2D;
 uniform sampler3D shapeNoise, detailNoise;
 uniform sampler2D weatherNoise;
 uniform vec2 resolution;
+uniform vec4 view; // optical centre and field of view, in viewport units
+uniform vec3 camera; // pitch, metres climbed, metres forward
+uniform sampler2D aircraft;
 uniform float elapsed;
 out vec4 pixel;
-const float cloudBase = 160., cloudCeiling = 1120., cameraHeight = 1240.;
+const float cloudBase = 160., cloudCeiling = 1120.;
 const float earthRadius = 6371000.;
 const float sceneHour = 19.55;
 struct Palette { vec3 zenith; vec3 sky; vec3 horizon; vec3 shadow; vec3 light; float stars; };
@@ -34,22 +37,23 @@ uint skyHash(uvec2 cell) {
     return seed ^ (seed >> 15u);
 }
 
-vec3 skyColor(vec2 uv, Palette palette) {
-    vec3 color = mix(palette.zenith, palette.sky, saturate(uv.y / 0.38));
-    color = mix(color, palette.horizon, saturate((uv.y - 0.38) / 0.20));
-    color = mix(color, palette.shadow, saturate((uv.y - 0.58) / 0.42));
+float starsAt(vec2 uv) {
+    if (uv.y >= .54) return 0.;
+    vec2 grid = uv * vec2(15.,23.);
+    uint seed = skyHash(uvec2(ivec2(floor(grid))));
+    vec2 center = .15 + .7 * vec2(seed & 255u, (seed >> 8u) & 255u) / 255.;
+    float star = 1. - smoothstep(.018,.064,length(fract(grid)-center));
+    float brightness = float((seed >> 16u) & 255u) / 255.;
+    return star * smoothstep(.82,1.,brightness) * (1.-smoothstep(.1,.54,uv.y));
+}
 
-    if (palette.stars > 0.0 && uv.y < 0.54) {
-        vec2 grid = uv * vec2(15.0, 23.0);
-        uint seed = skyHash(uvec2(grid));
-        vec2 center = 0.15 + 0.7 * vec2(seed & 255u, (seed >> 8u) & 255u) / 255.0;
-        float star = 1.0 - smoothstep(0.018, 0.064, length(fract(grid) - center));
-        float brightness = float((seed >> 16u) & 255u) / 255.0;
-        brightness = smoothstep(0.82, 1.0, brightness);
-        float visibility = palette.stars * star * brightness * (1.0 - smoothstep(0.1, 0.54, uv.y));
-        color = mix(color, rgb(0xdee7fbu), visibility);
-    }
-    return color;
+vec3 skyColor(vec2 uv, Palette palette, float elevation, float lift) {
+    vec3 color = mix(palette.zenith, palette.sky, saturate(uv.y / .38));
+    color = mix(color, palette.horizon, saturate((uv.y-.38)/.20));
+    color = mix(color, palette.shadow, saturate((uv.y-.58)/.42));
+    vec3 blue = mix(rgb(0x5576a0u), rgb(0x182e53u), smoothstep(-.12,.89,elevation));
+    color = mix(color,blue,lift);
+    return mix(color,rgb(0xdee7fbu),palette.stars*starsAt(uv)*(1.-.45*lift));
 }
 
 float density(vec3 point, float terrainScale) {
@@ -84,8 +88,8 @@ float terrainAt(float distance) {
     return 1.0 - smoothstep(7000.0, 26000.0, distance);
 }
 
-vec2 cloudSpan(vec3 ray) {
-    const float ceiling = cameraHeight - cloudCeiling;
+vec2 cloudSpan(vec3 ray, float height) {
+    float ceiling = height - cloudCeiling;
     float a = dot(ray.xz, ray.xz) / (2.0 * earthRadius);
     float discriminant = ray.y * ray.y - 4.0 * a * ceiling;
     if (ray.y >= 0.0 || discriminant <= 0.0) return vec2(0.0);
@@ -93,17 +97,15 @@ vec2 cloudSpan(vec3 ray) {
     return vec2(2.0 * ceiling / (root - ray.y), min((root - ray.y) / (2.0 * a), 47000.0));
 }
 
-void main() {
-    vec2 position = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
-    vec2 uv = position.xy / resolution;
+vec3 atmosphere(vec2 position, vec2 uv, vec3 ray, float height) {
     Palette palette = twilight();
-    vec3 sky = skyColor(uv, palette);
-    vec3 ray = normalize(vec3((uv.x - 0.5) * (resolution.x / resolution.y), (0.548 - uv.y) * 0.86, 1.0));
-    vec2 span = cloudSpan(ray);
+    float lift = camera.y / 1250.;
+    vec3 sky = skyColor(uv,palette,ray.y,lift);
+    vec2 span = cloudSpan(ray, height);
     float fade = 1.0 - smoothstep(7200.0, 43000.0, span.x);
-    if (span.y <= span.x || fade <= 0.0) { pixel = vec4(sky, 1.0); return; }
+    if (span.y <= span.x || fade <= 0.0) return sky;
 
-    vec3 origin = vec3(260.0, cameraHeight, -830.0);
+    vec3 origin = vec3(260.0, height, -830.0 + camera.z);
     // Lower light at twilight, using the site's shadow and highlight palette throughout the day.
     float lightHeight = 0.29 + 0.55 * saturate(1.0 - abs(sceneHour - 12.0) / 6.0);
     vec3 toLight = normalize(vec3(-0.36, lightHeight, -0.40));
@@ -137,5 +139,34 @@ void main() {
         if (transmittance < 0.012) break;
     }
 
-    pixel = vec4(sky * (1.0 - fade * (1.0 - transmittance)) + scattering * fade, 1.0);
+    return sky * (1.0 - fade * (1.0 - transmittance)) + scattering * fade;
+}
+
+
+void main() {
+    vec2 position = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
+    vec2 filmUV = (position / resolution - view.xy) / view.zw + .5;
+    vec3 ray = vec3((filmUV.x - .5) * (2. / 3.), (.548 - filmUV.y) * .86, 1.);
+    float c = cos(camera.x), s = sin(camera.x);
+    ray.yz = mat2(c, -s, s, c) * ray.yz;
+    ray = normalize(ray);
+    vec2 slope = ray.xy / ray.z;
+    vec2 uv = vec2(.5 + 1.5 * slope.x, .548 - slope.y / .86);
+    vec3 color = atmosphere(position, uv, ray, 1240. + camera.y);
+
+    // Intersect this ray with the passing aircraft's plane, 6 km beyond the glass.
+    vec2 distant = slope * (1. - camera.z / 6000.) + vec2(0., camera.y / 6000.);
+    vec2 world = vec2(.5 + 1.5 * distant.x, .548 - distant.y / .86);
+    vec2 center = vec2(.55 + .095*sin(elapsed*.052), .463 + .006*cos(elapsed*.052));
+    vec2 sprite = (world-center)/vec2(.18,.038) + .5;
+    float trail = smoothstep(-.44,-.055,world.x-center.x) * (1.-smoothstep(-.070,-.054,world.x-center.x));
+    float trailY = center.y+.004-(world.x-center.x)*.008;
+    color = mix(color, vec3(.81,.79,.81), .14*trail*exp(-abs(world.y-trailY)*560.));
+    if (all(greaterThanEqual(sprite,vec2(0.))) && all(lessThanEqual(sprite,vec2(1.)))) {
+        vec4 plane = texture(aircraft, sprite);
+        color = mix(color, plane.rgb, plane.a);
+    }
+    // One display-level dither keeps the long blue gradient smooth at 8 bits.
+    float grain = fract(52.9829189 * fract(dot(floor(position),vec2(.06711056,.00583715)))) - .5;
+    pixel = vec4(color + grain / 255., 1.);
 }

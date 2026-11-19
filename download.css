@@ -3,41 +3,22 @@
   height: 100dvh;
   overflow: clip;
   outline: none;
-  background: #304d77;
+  background: linear-gradient(#1c3459, #506f97);
 }
-.download::before {
-  content: "";
+.porthole-frame.flight-camera {
   position: absolute;
   inset: 0;
-  background-image: url("porthole/blue-hour.webp"), linear-gradient(#152a50, #476d9d 48%, #999eb9 73%, #546985);
-  background-position: center;
-  background-size: cover;
-}
-
-/* Project the exterior through the glazing until the aperture clears all four corners. */
-[data-window-flight] .download {
-  z-index: 4;
-  translate: 0 var(--download-offset);
+  width: 100%;
+  height: 100%;
+  mask-image: none;
   pointer-events: none;
-  opacity: var(--outside-opacity);
-  mask-image: radial-gradient(ellipse var(--pane-rx) var(--pane-ry) at var(--pane-x) var(--pane-y),
-    #000 83%, transparent 100%);
-}
-[data-window-flight] .download::before {
-  transform: translateY(var(--horizon-shift)) scale(var(--distant-scale));
-  filter: blur(var(--distant-blur));
-}
-[data-window-flight] .porthole-frame {
-  transform: var(--cabin-camera);
-  filter: blur(var(--liner-blur));
-  will-change: transform;
 }
 [data-window-flight] .porthole::before {
   opacity: calc((1 - .93 * var(--shade-drop)) * var(--wall-light));
 }
 [data-window-flight] .shade-control { visibility: hidden; }
 [data-window-flight] .focus-copy {
+  z-index: 1;
   opacity: var(--cabin-copy);
   transform: translateX(var(--copy-drift));
-  filter: blur(var(--copy-blur));
 }

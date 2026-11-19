@@ -1,6 +1,6 @@
-import { setupWindowFlight } from "./window-flight.js";
+import { setupWindowFlight } from "./window-flight.js?v=ascent";
 import { setupFocusRipple } from "./focus-ripple.js";
-import { setupPortholeSky } from "./porthole/sky.js?v=window-flight";
+import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
 import { prepareCopy, unit } from "./motion-copy.js";
 import { startClouds } from "./clouds.js?v=framed-flight";
@@ -219,10 +219,10 @@ const showcase = document.getElementById("showcase");
 const deepFocus = document.getElementById("deep-focus");
 
 const setShadeActive = setupWindowShade(deepFocus.querySelector(".porthole"));
-setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
+const setCamera = setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
 
 const download = document.getElementById("download");
-const windowFlight = setupWindowFlight(deepFocus, download, ease);
+const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const sections = [sky, showcase, deepFocus, download];
 const sequence = sky.parentElement;
 for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
@@ -315,7 +315,7 @@ function playPage(target, focusPage = false) {
       siteHeader.setAttribute("data-on-focus", "");
       return;
     }
-    windowFlight.end();
+    windowFlight.end(!travel && target === 3);
     if (travel && progress > 1) {
       if (progress >= 1.48) setShadeActive(target >= 2);
       paintFocusHandoff(progress);
@@ -354,7 +354,7 @@ function playPage(target, focusPage = false) {
   const offset = handoffProgress - target;
   // Reversing a running spring carries its current position and velocity.
   const farthest = Math.max(pageOrigin, target);
-  const rate = farthest === 3 ? .72 : farthest === 2 ? .8 : 1;
+  const rate = farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
   const slowOffset = (handoffVelocity - fastRate * offset) / (slowRate - fastRate);
@@ -392,7 +392,7 @@ for (const link of [siteHeader.querySelector(".sky-brand"), hero.querySelector("
 }
 
 function stepPage(down, focusPage = false) {
-  const arrivingAtCabin = pageTarget === 2 && Math.abs(handoffProgress - 2) < .08;
+  const arrivingAtCabin = pageTarget === 2 && Math.abs(handoffProgress - 2) <= .10;
   if (handoffFrame && !onShowcase() && !arrivingAtCabin && down === (pageTarget > pageOrigin)) return true;
   const target = Math.max(0, Math.min(sections.length - 1, pageTarget + (down ? 1 : -1)));
   return playPage(target, focusPage);
@@ -525,6 +525,7 @@ function syncScroll() {
   handoffProgress = page;
   setShadeActive(page >= 2);
   deepFocus.inert = page === 3;
+  windowFlight.end(page === 3);
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
 }
@@ -539,7 +540,7 @@ function restoreSection() {
   setShadeActive(page >= 2);
   deepFocus.inert = page === 3;
   clearFocusHandoff();
-  windowFlight.end();
+  windowFlight.end(page === 3);
   sky.removeAttribute("data-handoff");
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
@@ -559,6 +560,8 @@ window.addEventListener("resize", () => {
     window.scrollTo({ top: deepFocus.offsetTop, behavior: "instant" });
     windowFlight.measure();
     windowFlight.paint(unit(handoffProgress - 2));
+  } else if (!handoffFrame && pageTarget === 3) {
+    windowFlight.end(true);
   }
   if (!handoffFrame && pageTarget > 0) {
     window.scrollTo({ top: sections[pageTarget].offsetTop, behavior: "instant" });

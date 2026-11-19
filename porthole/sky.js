@@ -11,17 +11,22 @@ precision highp float;
 layout(location=0) in vec3 position;
 uniform float zoom;
 uniform vec2 resolution;
+uniform vec4 projection;
+uniform vec2 tilt;
 void main() {
-  float z = 3.25 + position.z;
-  vec2 projected = 2.81 * vec2(position.x, (position.y-.017+position.z*.065)*resolution.x/resolution.y);
-  gl_Position = vec4(1.003*zoom*projected, 0., z);
+  float z = 3.25 + position.z - projection.w;
+  float y = position.y-.017+position.z*.065-tilt.y;
+  vec2 lens = mat2(cos(tilt.x),sin(tilt.x),-sin(tilt.x),cos(tilt.x)) * vec2(y,z);
+  z = lens.y;
+  vec2 projected = 2.81 * vec2(position.x, lens.x*resolution.x/resolution.y);
+  gl_Position = vec4(1.003*zoom*projection.z*projected + projection.xy*z, 0., z);
 }`;
 const skyWidth = 320, skyHeight = 480;
 // The original 2:3 camera, cropped slightly tighter for the website.
 const zoom = 1.14;
 
 async function read(path, binary = false) {
-  const response = await fetch(new URL(path, import.meta.url));
+  const response = await fetch(new URL(path + (binary ? "" : "?v=ascent"), import.meta.url));
   if (!response.ok) throw new Error(path + " returned " + response.status);
   return binary ? response.arrayBuffer() : response.text();
 }
@@ -51,9 +56,36 @@ async function createScene(gl) {
     Promise.all(noise.map(([, file]) => read("../data/noise/"+file+".bin", true))), aircraft.decode(),
   ]);
   if (gl.isContextLost()) return;
-  const sky = program(gl, fullscreen, skySource, ["resolution","elapsed",...noise.map(([name])=>name)]);
-  const glass = program(gl, paneVertex, glassFragment, ["resolution","elapsed","zoom","skyMap","aircraft"]);
-  const cabin = program(gl, cabinVertex, cabinFragment, ["resolution","shade","zoom","skyMap"]);
+  const sky = program(gl, fullscreen, skySource, ["resolution","elapsed","view","camera","aircraft",...noise.map(([name])=>name)]);
+  const glass = program(gl, paneVertex, glassFragment, ["resolution","projection","tilt","zoom","skyMap"]);
+  const cabin = program(gl, cabinVertex, cabinFragment, ["resolution","projection","tilt","shade","zoom","skyMap"]);
+  // Shade the moving view directly into the display-sized canvas. The
+  // pane texture is reserved for lighting the cabin and the resting glass.
+  const paneSky = program(gl,paneVertex,skySource,
+    ["resolution","elapsed","view","camera","aircraft","projection","zoom","tilt",...noise.map(([name])=>name)]);
+  const stencil = program(gl,paneVertex,`#version 300 es
+    precision highp float;
+    out vec4 pixel;
+    void main() { pixel = vec4(0.); }`, ["resolution","zoom","projection","tilt"]);
+  const defocus = program(gl,fullscreen,`#version 300 es
+    precision highp float;
+    uniform vec2 resolution;
+    uniform float radius;
+    uniform sampler2D liner;
+    out vec4 pixel;
+    void main() {
+      vec2 uv = gl_FragCoord.xy/resolution;
+      vec4 sum = texture(liner,uv)*2.;
+      for (int i=0;i<8;i++) {
+        float a = float(i)*.78539816;
+        sum += texture(liner,uv + radius*vec2(cos(a),sin(a))/resolution);
+      }
+      pixel = sum*.1;
+    }`, ["resolution","radius","liner"]);
+  gl.useProgram(defocus.handle);
+  gl.uniform1i(defocus.liner,5);
+  gl.useProgram(stencil.handle);
+  gl.uniform1f(stencil.zoom,zoom);
   function texture(unit, target, wrap) {
     const tex = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0 + unit);
@@ -73,7 +105,6 @@ async function createScene(gl) {
     else gl.texImage2D(target,0,gl.RGBA8,size,size,0,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
     gl.uniform1i(sky[name],unit);
   });
-  gl.uniform2f(sky.resolution,skyWidth,skyHeight);
 
   const skyTexture = texture(3,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,skyWidth,skyHeight,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
@@ -84,6 +115,21 @@ async function createScene(gl) {
   texture(4,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,aircraft);
 
+  const linerTexture = texture(5,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
+  const linerTarget = gl.createFramebuffer(), linerDepth = gl.createRenderbuffer();
+  let linerWidth = 0, linerHeight = 0;
+  function bindLiner(w,h) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER,linerTarget);
+    if (linerWidth === w && linerHeight === h) return;
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D,linerTexture);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,linerTexture,0);
+    gl.bindRenderbuffer(gl.RENDERBUFFER,linerDepth);
+    gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH24_STENCIL8,w,h);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_STENCIL_ATTACHMENT,gl.RENDERBUFFER,linerDepth);
+    linerWidth=w; linerHeight=h;
+  }
   const mesh = createCabinMesh();
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
@@ -101,17 +147,46 @@ async function createScene(gl) {
     gl.uniform1i(pass.skyMap,3);
     gl.uniform1f(pass.zoom,zoom);
   }
-  gl.useProgram(glass.handle);
-  gl.uniform1i(glass.aircraft,4);
-  let lastSkyTime;
-  return function render(width,height,time,shade) {
+  for (const pass of [sky,paneSky]) {
+    gl.useProgram(pass.handle);
+    gl.uniform1i(pass.aircraft,4);
+    noise.forEach(([name],i)=>gl.uniform1i(pass[name],i));
+  }
+  gl.useProgram(paneSky.handle);
+  gl.uniform1f(paneSky.zoom,zoom);
+  let lastSkyTime, lightWidth = skyWidth, lightHeight = skyHeight;
+
+  function skyCamera(pass,w,h,time,view) {
+    gl.uniform2f(pass.resolution,w,h);
+    gl.uniform4f(pass.view,view?.x ?? .5,view?.skyCenterY ?? .5,view?.skyX ?? 1,view?.skyY ?? 1);
+    gl.uniform3f(pass.camera,view?.pitch ?? 0,view?.rise ?? 0,view?.travel ?? 0);
+    gl.uniform1f(pass.elapsed,time);
+  }
+
+  return function render(width,height,time,shade,view) {
+    if (linerWidth > 1 && (!view || view.rise === 1250)) {
+      bindLiner(1,1);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    }
     gl.bindVertexArray(null);
     gl.disable(gl.DEPTH_TEST);
-    if (lastSkyTime !== time) {
+    // At rest the sky texture covers only the glazing. Match its texels to the
+    // pane's physical pixels so the first moving frame has the same detail.
+    if (!view) {
+      const w = Math.max(1,Math.ceil(width * zoom * .435));
+      const h = Math.max(1,Math.ceil(width * zoom * 1.5 * .44));
+      if (w !== lightWidth || h !== lightHeight) {
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D,skyTexture);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+        lightWidth=w; lightHeight=h; lastSkyTime=undefined;
+      }
+    }
+    if (lastSkyTime === undefined || (!view && lastSkyTime !== time)) {
       gl.bindFramebuffer(gl.FRAMEBUFFER,target);
-      gl.viewport(0,0,skyWidth,skyHeight);
+      gl.viewport(0,0,lightWidth,lightHeight);
       gl.useProgram(sky.handle);
-      gl.uniform1f(sky.elapsed,time);
+      skyCamera(sky,lightWidth,lightHeight,time,null);
       gl.drawArrays(gl.TRIANGLES,0,3);
       lastSkyTime = time;
     }
@@ -119,23 +194,60 @@ async function createScene(gl) {
     gl.viewport(0,0,width,height);
     gl.stencilMask(0xff);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+    if (view?.advance >= 3.49) {
+      gl.useProgram(sky.handle);
+      skyCamera(sky,width,height,time,view);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      return;
+    }
+    const projection = view ? [2*view.x-1,1-2*view.y,view.width,view.advance] : [0,0,1,0];
+    const tilt = [view?.pitch ?? 0,view?.lift ?? 0];
     gl.enable(gl.STENCIL_TEST);
     gl.stencilFunc(gl.ALWAYS,1,0xff);
     gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
-    gl.useProgram(glass.handle);
-    gl.uniform2f(glass.resolution,width,height);
-    gl.uniform1f(glass.elapsed,time);
     gl.bindVertexArray(vao);
+    const pane = view ? paneSky : glass;
+    gl.useProgram(pane.handle);
+    gl.uniform4f(pane.projection,...projection);
+    gl.uniform2f(pane.tilt,...tilt);
+    if (view) skyCamera(pane,width,height,time,view);
+    else gl.uniform2f(pane.resolution,width,height);
     gl.drawArrays(gl.TRIANGLE_FAN,0,mesh.apertureCount);
+    // Only nearby molding goes out of focus. The cloud deck, stars and
+    // aircraft remain native-resolution samples even at closest approach.
+    const blur = view?.blur ?? 0;
+    if (blur > .05) {
+      bindLiner(width,height);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+      gl.useProgram(stencil.handle);
+      gl.uniform2f(stencil.resolution,width,height);
+      gl.uniform4f(stencil.projection,...projection);
+      gl.uniform2f(stencil.tilt,...tilt);
+      gl.drawArrays(gl.TRIANGLE_FAN,0,mesh.apertureCount);
+    }
     gl.enable(gl.DEPTH_TEST);
     gl.useProgram(cabin.handle);
     gl.uniform2f(cabin.resolution,width,height);
     gl.uniform1f(cabin.shade,shade);
+    gl.uniform4f(cabin.projection,...projection);
+    gl.uniform2f(cabin.tilt,...tilt);
     gl.stencilMask(0);
     gl.stencilFunc(gl.EQUAL,1,0xff);
     gl.drawElements(gl.TRIANGLES,mesh.indices.length-mesh.trimIndexCount,gl.UNSIGNED_SHORT,2*mesh.trimIndexCount);
     gl.disable(gl.STENCIL_TEST);
     gl.drawElements(gl.TRIANGLES,mesh.trimIndexCount,gl.UNSIGNED_SHORT,0);
+    if (blur > .05) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+      gl.disable(gl.DEPTH_TEST);
+      gl.bindVertexArray(null);
+      gl.useProgram(defocus.handle);
+      gl.uniform2f(defocus.resolution,width,height);
+      gl.uniform1f(defocus.radius,blur*devicePixelRatio);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      gl.disable(gl.BLEND);
+    }
   };
 }
 
@@ -143,38 +255,41 @@ export function setupPortholeSky(canvas) {
   const host = canvas.parentElement;
   const sequence = host.closest(".deep-focus").parentElement;
   const inTransit = () => sequence.hasAttribute("data-focus-handoff") || sequence.hasAttribute("data-window-flight");
-  let nearby = false;
+  let nearby = false, camera = null, mount = host, maxCanvasSize = 8192;
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   let softwareCanvas, render, loading, generation = 0, visible = false, frame = 0, lastTime = null, elapsed = 0;
 
   function draw(now) {
     frame = 0;
-    if (lastTime === null || now-lastTime >= 1000/30-1 || motion.matches) {
-      if (lastTime !== null && !motion.matches && !inTransit()) elapsed += Math.min(.125,(now-lastTime)/1000);
+    if (camera || lastTime === null || now-lastTime >= 1000/30-1 || motion.matches) {
+      if (lastTime !== null && !motion.matches && !inTransit() && !camera) elapsed += Math.min(.125,(now-lastTime)/1000);
       lastTime = now;
-      const scale = Math.min(devicePixelRatio, 1600/Math.max(1,canvas.clientWidth,canvas.clientHeight));
+      const scale = Math.min(devicePixelRatio, maxCanvasSize/Math.max(1,canvas.clientWidth,canvas.clientHeight));
       const w = Math.max(1,Math.round(canvas.clientWidth*scale)), h = Math.max(1,Math.round(canvas.clientHeight*scale));
       if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; }
-      render(w,h,elapsed, Number(getComputedStyle(host).getPropertyValue("--shade-drop")));
+      render(w,h,elapsed, Number(host.style.getPropertyValue("--shade-drop")),camera);
       canvas.dataset.ready = "";
     }
-    if (visible && !inTransit() && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
+    if (!camera && visible && !inTransit() && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
   }
 
   async function prepare(version) {
     const gl = canvas.getContext("webgl2",{alpha:true,depth:true,stencil:true,antialias:true,premultipliedAlpha:true});
     let scene;
     if (gl && !gl.isContextLost()) {
-      try { scene = await createScene(gl); }
+      try {
+        maxCanvasSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));
+        scene = await createScene(gl);
+      }
       catch (error) { console.warn("Porthole WebGL:",error); }
     }
     if (!scene && version === generation) {
-      const {softwareCabin} = await import("./cabin-software.js");
+      const {softwareCabin} = await import("./cabin-software.js?v=ascent");
       const surface = document.createElement("canvas");
-      surface.className = "porthole-frame";
       surface.setAttribute("aria-hidden","true");
       scene = await softwareCabin(surface,zoom);
       if (version !== generation) return;
+      surface.className = canvas.className;
       canvas.after(surface);
       softwareCanvas = surface;
     }
@@ -185,15 +300,15 @@ export function setupPortholeSky(canvas) {
   function sync() {
     cancelAnimationFrame(frame);
     lastTime = null;
-    if ((!visible && !nearby) || document.hidden) return;
-    if ((!visible || inTransit()) && canvas.hasAttribute("data-ready")) return;
+    if ((!camera && !visible && !nearby) || document.hidden) return;
+    if (!camera && (!visible || inTransit()) && canvas.hasAttribute("data-ready")) return;
     if (render) draw(performance.now());
     else loading ??= prepare(generation).catch(error=>console.warn("Porthole:",error));
   }
   new IntersectionObserver(([entry])=>{
     visible = entry.intersectionRatio >= .001;
     sync();
-  }, {threshold: .001}).observe(canvas.closest(".focus-window-stage") || canvas);
+  }, {threshold: .001}).observe(canvas.closest(".focus-window-stage") || host);
   // Prepare one still frame on the preceding screen. Resume cloud rendering after landing.
   new IntersectionObserver(([entry])=>{
     nearby = entry.isIntersecting;
@@ -221,7 +336,7 @@ export function setupPortholeSky(canvas) {
     softwareCanvas = null;
     loading = null;
     delete canvas.dataset.ready;
-    if (visible) sync();
+    if (visible || camera) sync();
   });
   canvas.addEventListener("webglcontextrestored",()=>{
     generation++;
@@ -231,4 +346,20 @@ export function setupPortholeSky(canvas) {
     loading = null;
     sync();
   });
+  return function setCamera(next, destination) {
+    if (!next && !camera && mount === host) return;
+    camera = next;
+    if (mount !== destination) {
+      mount = destination;
+      for (const surface of [canvas,softwareCanvas]) {
+        if (!surface) continue;
+        surface.classList.toggle("flight-camera", Boolean(camera));
+        mount.append(surface);
+      }
+      cancelAnimationFrame(frame);
+      lastTime = null;
+    }
+    if (camera && render) draw(performance.now());
+    else sync();
+  };
 }

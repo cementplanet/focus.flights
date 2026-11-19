@@ -1,56 +1,62 @@
-// The liner approaches the camera while the cloud deck stays at optical infinity.
-export function setupWindowFlight(cabin, download, ease) {
+export function setupWindowFlight(cabin, download, ease, setCamera) {
+  const host = cabin.querySelector(".porthole");
   const sequence = cabin.parentElement;
-  const frame = cabin.querySelector(".porthole");
-  let view;
+  let layout;
 
   function measure() {
-    const scene = cabin.getBoundingClientRect();
-    const glass = frame.getBoundingClientRect();
-    const width = scene.width, height = scene.height;
-    // Inscribed in the projected gasket of the 3D mesh, in CSS pixels.
-    const rx = glass.width * .236, ry = glass.width * .330;
-    const fill = Math.hypot(width / (2 * rx), height / (2 * ry)) / .80;
-    view = {width, height, rx, ry, fill,
-      x: glass.left + glass.width / 2 - scene.left,
-      y: glass.top + glass.height / 2 - scene.top};
-    download.style.setProperty("--download-offset", (cabin.offsetTop - download.offsetTop) + "px");
+    const screen = cabin.getBoundingClientRect();
+    const window = host.getBoundingClientRect();
+    layout = {
+      x: (window.left + window.width / 2 - screen.left) / screen.width,
+      y: (window.top + window.height / 2 - screen.top) / screen.height,
+      width: window.width / screen.width,
+      aspect: screen.width / screen.height,
+    };
+  }
+
+  function camera(t) {
+    const path = 1 - (1 - t) ** .58;
+    const center = ease(0, .43, path);
+    const climb = .68 * path + .32 * ease(0, 1, path);
+    const width = layout.width, aspect = layout.aspect;
+    const x = layout.x + (.5 - layout.x) * center;
+    const y = layout.y + (.5 - layout.y) * center;
+    // Hold the exterior field of view independently of the near glass.
+    const lensHeight = .44 * 1.5 * 1.14 * width * aspect;
+    const skyHeight = lensHeight + (1.08 - lensHeight) * center;
+    return {
+      x, y, width, advance: 7.25 * path,
+      skyX: skyHeight * .435 / (.44 * 1.5) / aspect, skyY: skyHeight,
+      skyCenterY: y + .003 * 1.14 * width * aspect * (1 - center),
+      pitch: .51 * climb, rise: 1250 * climb, travel: 880 * climb,
+      lift: .11 * climb,
+    };
   }
 
   function paint(t) {
-    if (!view) {
+    if (!sequence.hasAttribute("data-window-flight")) {
       window.scrollTo({top: cabin.offsetTop, behavior: "instant"});
-      measure();
       sequence.setAttribute("data-window-flight", "");
+      measure();
     }
-    const {width, height, x, y, rx, ry, fill} = view;
-    // Perspective magnification is inversely proportional to remaining lens distance.
-    const scale = 1 / (1 - t * (1 - 1 / fill));
-    const aim = ease(0, .90, t);
-    const dx = (width / 2 - x) * aim, dy = (height / 2 - y) * aim;
-    const focus = ease(.15, .87, t);
-    cabin.style.setProperty("--cabin-camera", `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`);
-    cabin.style.setProperty("--liner-blur", (8 * focus / scale) + "px");
-    cabin.style.setProperty("--wall-light", 1 - focus * .85);
-    cabin.style.setProperty("--cabin-copy", 1 - ease(0, .5, t));
-    cabin.style.setProperty("--copy-drift", (-width * .07 * aim) + "px");
-    cabin.style.setProperty("--copy-blur", (4 * aim) + "px");
-
-    download.style.setProperty("--pane-x", (x + dx) + "px");
-    download.style.setProperty("--pane-y", (y + dy) + "px");
-    download.style.setProperty("--pane-rx", (rx * scale) + "px");
-    download.style.setProperty("--pane-ry", (ry * scale) + "px");
-    download.style.setProperty("--outside-opacity", ease(.19, .68, t));
-    const horizonShift = (y - height * .69) * (1 - t);
-    download.style.setProperty("--horizon-shift", horizonShift + "px");
-    download.style.setProperty("--distant-scale", 1 + 2 * Math.abs(horizonShift) / height + .04 * (1 - t));
-    download.style.setProperty("--distant-blur", (2.3 * (1 - focus)) + "px");
+    const view = camera(t);
+    const approach = view.advance / 3.57;
+    const nearFocus = ease(.24, .78, approach) * (1 - ease(.8, 1.14, approach));
+    view.blur = 2.4 * nearFocus;
+    cabin.style.setProperty("--wall-light", 1 - ease(.08, .95, approach));
+    cabin.style.setProperty("--cabin-copy", 1 - ease(0, .58, approach));
+    cabin.style.setProperty("--copy-drift", (-5 * ease(0, .68, approach)) + "vw");
+    setCamera(view, cabin);
   }
 
-  function end() {
-    if (!view) return;
-    view = undefined;
+  function end(atDownload = false) {
     sequence.removeAttribute("data-window-flight");
+    if (atDownload) {
+      measure();
+      setCamera(camera(1), download);
+    } else {
+      setCamera(null, host);
+    }
   }
   return {paint, measure, end};
 }
