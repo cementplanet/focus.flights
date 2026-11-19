@@ -1,26 +1,72 @@
 export function setupWindowShade(porthole) {
   const handle = porthole.querySelector(".shade-control");
-  let position = 1 - Number(handle.getAttribute("aria-valuenow")) / 100;
-  let drag;
-  let moved = false;
+  const canvas = porthole.querySelector(".porthole-frame");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const clamp = value => Math.max(0, Math.min(1, value));
+  let position = 1, target = 1, velocity = 0, frame = 0;
+  let active = false, drag, moved = false;
 
-  function setPosition(value) {
-    position = Math.max(0, Math.min(1, value));
+  function paint(value) {
+    position = clamp(value);
     porthole.style.setProperty("--shade-drop", position);
     const open = Math.round(100 * (1 - position));
-    handle.setAttribute("aria-valuenow", open);
-    handle.setAttribute("aria-valuetext", open === 0 ? "Closed" : open === 100 ? "Fully open" : open + "% open");
+    if (Number(handle.getAttribute("aria-valuenow")) !== open) {
+      handle.setAttribute("aria-valuenow", open);
+      handle.setAttribute("aria-valuetext", open === 0 ? "Closed" : open === 100 ? "Fully open" : open + "% open");
+    }
   }
+
+  function stop() {
+    cancelAnimationFrame(frame);
+    frame = 0;
+  }
+
+  function glide(value, rate) {
+    stop();
+    target = clamp(value);
+    if (reduced.matches || position === target && velocity === 0) {
+      velocity = 0;
+      paint(target);
+      return;
+    }
+    // The two decay rates follow the page's overdamped Glide spring.
+    const slow = -3.88 * rate, fast = -22.16 * rate;
+    const offset = position - target;
+    const a = (velocity - fast * offset) / (slow - fast);
+    const b = offset - a;
+    const start = performance.now();
+    function tick(now) {
+      const time = Math.max(0, (now - start) / 1000);
+      const x = a * Math.exp(slow * time), y = b * Math.exp(fast * time);
+      velocity = slow * x + fast * y;
+      if (Math.abs(x + y) < .001 && Math.abs(velocity) < .01) {
+        velocity = frame = 0;
+        paint(target);
+      } else {
+        paint(target + x + y);
+        frame = requestAnimationFrame(tick);
+      }
+    }
+    frame = requestAnimationFrame(tick);
+  }
+
+  paint(1);
+  const ready = new MutationObserver(() => {
+    if (!canvas.hasAttribute("data-ready")) return;
+    ready.disconnect();
+    if (active && !drag) glide(0, 1);
+  });
+  ready.observe(canvas, {attributes:true, attributeFilter:["data-ready"]});
+  reduced.addEventListener("change", () => { if (reduced.matches && frame) glide(target, 1); });
 
   handle.addEventListener("pointerdown", event => {
     if (!event.isPrimary || event.button !== 0) return;
-    const style = getComputedStyle(porthole);
-    const start = parseFloat(style.getPropertyValue("--shade-drop"));
-    const travel = parseFloat(style.getPropertyValue("--shade-travel")) / 100;
-    drag = { id: event.pointerId, y: event.clientY, start, pixels: porthole.getBoundingClientRect().height * travel };
+    stop();
+    velocity = 0;
+    const travel = parseFloat(getComputedStyle(porthole).getPropertyValue("--shade-travel")) / 100;
+    drag = {id:event.pointerId, y:event.clientY, start:position, pixels:porthole.getBoundingClientRect().height * travel};
     moved = false;
     porthole.setAttribute("data-dragging", "");
-    setPosition(start);
     handle.setPointerCapture(event.pointerId);
   });
 
@@ -29,7 +75,8 @@ export function setupWindowShade(porthole) {
     const distance = event.clientY - drag.y;
     if (!moved && Math.abs(distance) < 3) return;
     moved = true;
-    setPosition(drag.start + distance / drag.pixels);
+    target = clamp(drag.start + distance / drag.pixels);
+    paint(target);
   });
 
   handle.addEventListener("lostpointercapture", () => {
@@ -37,15 +84,22 @@ export function setupWindowShade(porthole) {
     porthole.removeAttribute("data-dragging");
   });
   handle.addEventListener("click", event => {
-    if (event.detail === 0 || !moved) setPosition(position < .01 ? 1 : 0);
+    if (active && (event.detail === 0 || !moved)) glide(target < .01 ? 1 : 0, 2);
     moved = false;
   });
   handle.addEventListener("keydown", event => {
     const steps = { ArrowUp: -.05, ArrowDown: .05, ArrowRight: -.05, ArrowLeft: .05, PageUp: -.25, PageDown: .25 };
-    if (event.key === "Home") setPosition(1);
-    else if (event.key === "End") setPosition(0);
-    else if (Object.hasOwn(steps, event.key)) setPosition(position + steps[event.key]);
+    if (event.key === "Home") glide(1, 2);
+    else if (event.key === "End") glide(0, 2);
+    else if (Object.hasOwn(steps, event.key)) glide(target + steps[event.key], 2);
     else return;
     event.preventDefault();
   });
+
+  return function setActive(next) {
+    if (active === next) return;
+    active = next;
+    if (drag) handle.releasePointerCapture(drag.id);
+    if (!active || reduced.matches || canvas.hasAttribute("data-ready")) glide(active ? 0 : 1, active ? 1 : 1.45);
+  };
 }

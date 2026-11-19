@@ -10,7 +10,8 @@ const dot = (a,b) => Math.max(0,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]);
 const mix = (a,b,t) => a+(b-a)*t;
 const linear = v => v<=.04045 ? v/12.92 : ((v+.055)/1.055)**2.4;
 const display = v => 255*(v<.0031308 ? v*12.92 : 1.055*v**(1/2.4)-.055);
-const base = [[.031,.033,.037],[.58,.536,.463],[.229,.239,.24],[.073,.082,.092]];
+const gasket = [.027, .029, .032];
+const molding = [.38, .39, .40];
 
 export async function softwareCabin(canvas,zoom) {
   const ctx = canvas.getContext("2d");
@@ -25,9 +26,15 @@ export async function softwareCabin(canvas,zoom) {
   sample.height = 480;
   const outside = sample.getContext("2d", {willReadFrequently:true});
   outside.drawImage(art[0],0,0,320,480);
+  const skyPixels = outside.getImageData(0,0,320,480).data;
+  function skyAt(x,y) {
+    const col = Math.round(clamp(x)*319), row = Math.round(clamp(y)*479);
+    const i = (row*320 + col)*4;
+    return [0,1,2].map(c => linear(skyPixels[i+c]/255));
+  }
   const lights = [.24,.76,.52].map(y => {
-    const points = [.22,.5,.78].map(x=>outside.getImageData(Math.floor(320*x),Math.floor(480*y),1,1).data);
-    return [0,1,2].map(i=>(linear(points[0][i]/255)+2*linear(points[1][i]/255)+linear(points[2][i]/255))*.25);
+    const points = [.22,.5,.78].map(x => skyAt(x,y));
+    return [0,1,2].map(i=>(points[0][i]+2*points[1][i]+points[2][i])*.25);
   });
   const ambient = lights[0].map((v,i)=>mix(mix(v,lights[1][i],.68),lights[2][i],.20));
   const mesh = createCabinMesh();
@@ -49,20 +56,48 @@ export async function softwareCabin(canvas,zoom) {
       const px=w*.5+x*perspective, py=h*.5-(y-.017+.065*z)*perspective;
       const sky=dot(n,unit(-x,.61-y,.47-z)), cloud=dot(n,unit(-x,-.48-y,.47-z));
       const inner=dot(n,unit(-x,-y,.48-z));
-      const shadow=1-.38*clamp((y-.62)/.36);
-      const visibility=1-shade*(.48+.42*clamp((y-.69+shade*1.51+.17)/.34));
+      const glassX = .5 + .72*x, glassY = .5 - .52*y;
+      const local = skyAt(glassX,glassY);
+      const upper = skyAt(glassX+.035,glassY-.025), lower = skyAt(glassX-.035,glassY+.025);
+      const reach = 2**(-Math.max(u-.548,0)/.023);
+      const bevel = clamp((u-.535)/.016);
+      const shadow = clamp((y-.69+shade*1.51+.17)/.34);
+      const visibility = 1-shade*(.75+.22*shadow*shadow*(3-2*shadow));
+      const eye = unit(-x,.045-y,-3.25-z), glass = unit(-x,-y,.48-z);
+      const reflection = dot(n,unit(eye[0]+glass[0],eye[1]+glass[1],eye[2]+glass[2]))**22;
       const color = ambient.map((a,c)=>{
         if (mat===4) {
           const grip = Math.exp(-((Math.abs(u)/.13)**6)-((v-.053)/.016)**2);
-          return display(([.129,.116,.099][c]*(.073+.095*dot(n,[0,.592,-.806]))+a*(.018+.060*Math.exp(-v*9)*(1-.75*shade)))*(1-grip*.35)*(.9-.2*shade));
+          const opening = 1-shade;
+          const t = clamp(opening/.42);
+          const spill = Math.exp(-3.8*v)*t*t*(3-2*t);
+          const side = clamp((Math.abs(u)-.24)/.31);
+          const wrap = .76+.24*dot(n,[0,.55,-.835]);
+          const reflected = mix(lights[0][c],lights[1][c],.28);
+          const light = lights[0][c]*(.045+.12*opening) + reflected*.18*spill;
+          const face = (.002 + light*wrap*(1-.30*side*side))*(1-.30*grip);
+          return display(face + reflected*spill*.020*Math.exp(-90*v));
         }
-        return display(base[mat][c]*exposure*((a*(.34+.66*inner)+lights[0][c]*sky*.67+lights[1][c]*cloud*.78)*visibility*shadow+.009));
+        const light = .5*local[c] + .25*(upper[c]+lower[c]);
+        const bounce = .15*(lights[0][c]*sky + lights[1][c]*cloud);
+        const incident = light*(.26+.76*inner) + bounce;
+        const base = mix(gasket[c],molding[c],bevel*bevel*(3-2*bevel));
+        return display(base*(incident*reach*visibility+.00065)*exposure + light*reflection*.10*reach*visibility);
       });
-      const t = mat===4 ? 0 : clamp((u-.665)/.315);
+      const t = mat===4 ? 0 : clamp((u-.551)/(.637-.551));
       const blend = t*t*t*(t*(t*6-15)+10);
-      const finish = color.map((v,i)=>mix(v, Math.max(v,17+i*2), blend));
+      const finish = color;
       points.push([px,py,z,...finish,255*(1-blend)]);
     }
+    const aperture = new Path2D();
+    points.slice(0,mesh.apertureCount).forEach(([x,y],i)=>{
+      if (i===0) aperture.moveTo(x,y);
+      else aperture.lineTo(x,y);
+    });
+    aperture.closePath();
+    // Cache the geometric aperture once per draw for the shade depth test.
+    ctx.fill(aperture);
+    const stencil = ctx.getImageData(0,0,w,h).data;
     // Resolve all frame and blind triangles through one depth buffer.
     for (let i=0;i<mesh.indices.length;i+=3) {
       const a=points[mesh.indices[i]], b=points[mesh.indices[i+1]], c=points[mesh.indices[i+2]];
@@ -75,16 +110,22 @@ export async function softwareCabin(canvas,zoom) {
         const dx=col+.5-a[0], dy=row+.5-a[1], u=(dx*cy-dy*cx)/det, v=(dy*bx-dx*by)/det, s=1-u-v;
         if (s<0 || u<0 || v<0) continue;
         const pixel=row*w+col, z=s*a[2]+u*b[2]+v*c[2];
-        if (z>=depth[pixel]) continue;
+        if (z>=depth[pixel] || (i>=mesh.trimIndexCount && !stencil[4*pixel+3])) continue;
         depth[pixel]=z;
-        for(let k=0;k<4;k++) image.data[4*pixel+k]=s*a[3+k]+u*b[3+k]+v*c[3+k];
+        // Stable fine grain on the molded surfaces, before compositing the glass.
+        const seed = (Math.imul(col, 1597334677) ^ Math.imul(row, 3812015801)) >>> 0;
+        const grain = 1 + ((seed >>> 24) / 255 - .5) * .065;
+        for (let k=0;k<3;k++) image.data[4*pixel+k]=(s*a[3+k]+u*b[3+k]+v*c[3+k])*grain;
+        image.data[4*pixel+3]=s*a[6]+u*b[6]+v*c[6];
       }
     }
     ctx.putImageData(image,0,0);
     const sw=.435*w*zoom, sh=.44*1.5*w*zoom, top=h*.5+.003*w*zoom-sh*.5;
+    ctx.save();
+    ctx.clip(aperture);
     ctx.globalCompositeOperation="destination-over";
     ctx.drawImage(art[1],w*.5-.04*sw,top+.444*sh,.18*sw,.038*sh);
     ctx.drawImage(art[0],(w-sw)*.5,top,sw,sh);
-    ctx.globalCompositeOperation="source-over";
+    ctx.restore();
   };
 }

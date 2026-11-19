@@ -1,13 +1,11 @@
-// Geometry from porthole-3d-mac/source/CabinMesh.swift. Each section carries
+// Window trim from porthole-3d-mac/source/CabinMesh.swift. Each section carries
 // its original half-width, half-height, depth, material ID and light exposure.
 const sections = [
   [.535,.756,.320,0,.25], [.543,.768,.300,0,.42],
   [.552,.781,.270,1,.78], [.563,.799,.190,1,1], [.580,.823,.080,1,1],
   [.598,.846,-.034,1,.94], [.615,.866,-.085,1,.81], [.640,.900,-.097,1,.68],
   [.656,.920,-.087,2,.41], [.662,.930,-.066,0,.25], [.670,.940,-.075,2,.38],
-  [.700,.982,-.083,2,.54], [.735,1.032,-.056,2,.40], [.781,1.090,.024,2,.28],
-  [.851,1.179,.080,3,.14], [1.06,1.47,.100,3,.036], [1.44,2.04,.070,3,.006],
-  [2.05,2.82,0,3,0],
+  // The final return tapers into the page. The surrounding fuselage is omitted.
 ];
 
 function difference(a, b) {
@@ -55,6 +53,7 @@ export function createCabinMesh() {
   });
 
   const offset = vertices.length / 10;
+  const trimIndexCount = indices.length;
   for (let row = 0; row <= 22; row++) {
     for (let col = 0; col <= 64; col++) {
       const p = shadePosition(row, col);
@@ -67,5 +66,5 @@ export function createCabinMesh() {
       }
     }
   }
-  return {vertices: new Float32Array(vertices), indices: new Uint16Array(indices)};
+  return {vertices: new Float32Array(vertices), indices: new Uint16Array(indices), apertureCount: segments, trimIndexCount};
 }

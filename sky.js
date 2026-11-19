@@ -217,7 +217,7 @@ const siteHeader = document.querySelector(".site-header");
 const showcase = document.getElementById("showcase");
 const deepFocus = document.getElementById("deep-focus");
 
-setupWindowShade(deepFocus.querySelector(".porthole"));
+const setShadeActive = setupWindowShade(deepFocus.querySelector(".porthole"));
 setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
 
 const sections = [sky, showcase, deepFocus];
@@ -293,6 +293,7 @@ function playPage(target, focusPage = false) {
   deepFocus.removeAttribute("data-anchor-entry");
   pageOrigin = pageTarget;
   pageTarget = target;
+  if (target !== 2) setShadeActive(false);
   saveSection(target);
   const cloudTransition = handoffProgress < 1 || Math.min(pageOrigin, target) === 0;
   cancelAnimationFrame(handoffFrame);
@@ -303,6 +304,7 @@ function playPage(target, focusPage = false) {
       paintHandoff(unit(progress), travel && progress < 1);
     }
     if (travel && progress > 1) {
+      if (target === 2 && progress >= 1.48) setShadeActive(true);
       paintFocusHandoff(progress);
       return;
     }
@@ -317,6 +319,7 @@ function playPage(target, focusPage = false) {
     handoffFrame = 0;
     handoffProgress = target;
     handoffVelocity = 0;
+    setShadeActive(target === 2);
     paintPage(target, false);
     syncHeader();
     hero.inert = target !== 0;
@@ -504,6 +507,7 @@ function syncScroll() {
   saveSection(page);
   pageTarget = pageOrigin = page;
   handoffProgress = page;
+  setShadeActive(page === 2);
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
 }
@@ -515,6 +519,7 @@ function restoreSection() {
   cancelAnimationFrame(handoffFrame);
   handoffFrame = handoffVelocity = 0;
   handoffProgress = pageOrigin = pageTarget = page;
+  setShadeActive(page === 2);
   clearFocusHandoff();
   sky.removeAttribute("data-handoff");
   hero.inert = page !== 0;

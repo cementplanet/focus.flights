@@ -9,7 +9,8 @@ uniform float zoom;
 uniform sampler2D skyMap;
 out vec3 point, surfaceNormal;
 out vec4 material;
-flat out vec3 skyLight, cloudLight, horizonLight;
+out vec3 windowLight;
+flat out vec3 skyLight, cloudLight;
 
 vec3 linearRGB(vec3 c) {
     return mix(c / 12.92, pow((c + .055) / 1.055, vec3(2.4)), greaterThan(c, vec3(.04045)));
@@ -27,7 +28,11 @@ void main() {
     gl_Position = vec4(zoom * projected, 2.*(.17*z-.23)-z, z);
     surfaceNormal = normal;
     material = finish;
+    // Sample a small patch just inside the corresponding part of the aperture.
+    vec2 uv = vec2(.5) + vec2(.72, .52) * position.xy;
+    windowLight = .5 * linearRGB(textureLod(skyMap, uv, 0.).rgb)
+                + .25 * linearRGB(textureLod(skyMap, uv + vec2(.035,.025), 0.).rgb)
+                + .25 * linearRGB(textureLod(skyMap, uv - vec2(.035,.025), 0.).rgb);
     skyLight = lightAt(.24);
     cloudLight = lightAt(.76);
-    horizonLight = lightAt(.52);
 }

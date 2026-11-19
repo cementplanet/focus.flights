@@ -3,7 +3,8 @@
 precision highp float;
 in vec3 point, surfaceNormal;
 in vec4 material;
-flat in vec3 skyLight, cloudLight, horizonLight;
+in vec3 windowLight;
+flat in vec3 skyLight, cloudLight;
 uniform float shade;
 out vec4 pixel;
 
@@ -12,8 +13,10 @@ vec3 displayRGB(vec3 rgb) {
     rgb = clamp(rgb, 0., 1.);
     return mix(rgb*12.92, 1.055*pow(rgb, vec3(1./2.4))-.055, greaterThan(rgb, vec3(.0031308)));
 }
-float outerWallMask(float height) {
-    return mix(.83, .36, smoothstep(-.85, 1.20, height));
+float moldedGrain(vec2 uv) {
+    vec2 cell = floor(uv);
+    float noise = fract(52.9829189 * fract(dot(cell, vec2(0.06711056, 0.00583715))));
+    return (noise - 0.5) * (1.0 - smoothstep(0.45, 1.6, length(fwidth(uv))));
 }
 void main() {
     vec4 surface = material;
@@ -28,7 +31,6 @@ void main() {
     float exposure = surface.y;
     vec3 sky = skyLight;
     vec3 cloud = cloudLight;
-    vec3 horizon = horizonLight;
     if (surface.x > 3.9) {
         float u = surface.z, h = surface.w;
         float edge = exp(-h * 90.0);
@@ -36,63 +38,39 @@ void main() {
         float roundedEdge = length(max(recess, vec2(0.0))) + min(max(recess.x, recess.y), 0.0) - 0.008;
         float grip = 1.0 - smoothstep(-0.006, 0.010, roundedEdge);
         float lip = 1.0 - smoothstep(0.004, 0.015, abs(roundedEdge));
-        vec3 bounce = mix(cloud, sky, 0.52);
-        vec3 key = normalize(vec3(0.0, 0.58, -0.79));
-        float facing = max(dot(n, key), 0.0);
-        float edgeBounce = exp(-h * 9.0) * (1.0 - shade * 0.75);
-        vec3 color = vec3(0.129, 0.116, 0.099) * (0.073 + facing * 0.095)
-                     + bounce * (0.018 + 0.024 * edge + 0.060 * edgeBounce + 0.013 * facing);
-        color *= (1.0 - grip * 0.35) * (0.90 - 0.2 * shade);
-        color += bounce * lip * smoothstep(0.049, 0.067, h) * (0.013 + 0.016 * edgeBounce);
+        // Cabin-side fill and diffuse light returning through the uncovered opening.
+        float opening = 1.0 - shade;
+        float spill = exp(-3.8 * h) * smoothstep(0.0, 0.42, opening);
+        float side = clamp((abs(u) - 0.24) / 0.31, 0.0, 1.0);
+        float wrap = 0.76 + 0.24 * max(dot(n, vec3(0.0, 0.55, -0.835)), 0.0);
+        vec3 reflected = mix(sky, cloud, 0.28);
+        vec3 light = sky * (0.045 + 0.12 * opening) + reflected * (0.18 * spill);
+        vec3 color = (vec3(0.002) + light * wrap * (1.0 - 0.30 * side * side))
+                   * (1.0 - 0.30 * grip);
+        color += reflected * spill * (0.020 * edge + 0.014 * lip * smoothstep(0.049, 0.067, h));
+        color *= 1.0 + 0.14 * moldedGrain(vec2(u, h) * vec2(185., 220.));
         pixel = vec4(displayRGB(color), 1.0);
         return;
     }
-    vec3 ambient = mix(mix(sky, cloud, 0.68), horizon, 0.20);
-    float ambientLuma = dot(ambient, vec3(0.213, 0.715, 0.072));
-    ambient = mix(vec3(ambientLuma), ambient, 0.78);
-
     float finish = surface.x;
-    vec3 base = mix(vec3(0.031, 0.033, 0.037), vec3(0.58, 0.536, 0.463), saturate(finish));
-    base = mix(base, vec3(0.229, 0.239, 0.24), saturate(finish - 1.0));
-    base = mix(base, vec3(0.073, 0.082, 0.092), saturate(finish - 2.0));
+    float bevel = smoothstep(.535, .551, surface.z);
+    vec3 base = mix(vec3(.027, .029, .032), vec3(.38, .39, .40), bevel);
 
-    // Fine molded grain. Fade it at the output pixel scale to avoid shimmer on bevels.
-    vec2 grainUV = p.xy * vec2(410.0, 530.0) + p.z * 194.0;
-    vec2 cell = floor(grainUV);
-    float grain = fract(52.9829189 * fract(dot(cell, vec2(0.06711056, 0.00583715))));
-    float grainWeight = 1.0 - smoothstep(0.35, 1.5, length(fwidth(grainUV)));
-    base *= 1.0 + (grain - 0.5) * grainWeight * mix(0.030, 0.13, smoothstep(1.5, 3.0, finish));
-    float split = smoothstep(0.62, 0.98, p.y);
-    float diffuseSky = max(dot(n, toSky), 0.0);
-    float diffuseCloud = max(dot(n, toCloud), 0.0);
-    float diffuseFace = max(dot(n, toGlass), 0.0);
-    float shadeEdge = 0.69 - shade * 1.51;
-    float shaded = smoothstep(shadeEdge - 0.17, shadeEdge + 0.17, p.y);
-    float shadow = 1.0 - 0.38 * split;
-    exposure *= 1.0 - shade * (0.48 + 0.42 * shaded);
-    vec3 irradiance = ambient * (0.34 + 0.66 * diffuseFace)
-                      + sky * diffuseSky * 0.67 + cloud * diffuseCloud * 0.78;
-    vec3 diffuse = base * (irradiance * exposure * shadow + 0.009 * exposure);
-    float wall = smoothstep(2.65, 3.0, finish);
-    float rimDistance = length(p.xy * vec2(1.0, 0.70)) - .83;
-    float rimFalloff = exp(-26.0 * rimDistance * rimDistance);
-    diffuse += wall * rimFalloff * ambient * (0.015 * outerWallMask(p.y));
-
-    vec3 key = normalize(vec3(0.0, 0.62, -0.67));
-    float broad = pow(max(dot(n, normalize(key + view)), 0.0), 8.0);
-    float glassReflection = pow(max(dot(n, normalize(toGlass + view)), 0.0), mix(35.0, 14.0, saturate(finish - 1.0)));
-    float specularScale = mix(0.026, 0.11, smoothstep(2.0, 4.0, finish));
-    float fresnel = 0.25 + 0.75 * pow(1.0 - saturate(dot(n, view)), 3.0);
-    vec3 sheen = (ambient * glassReflection * 0.26 + (sky * 0.60 + cloud * 0.40) * broad * specularScale)
-                 * exposure * fresnel * shadow;
-    float outerFade = 1.0 - smoothstep(0.83, 1.54, length(p.xy * vec2(0.97, 0.73)));
-    // Join the molded return to the page along the actual cross sections.
-    // The quintic blend has zero slope and curvature at both ends.
-    float join = clamp((surface.z - .665) / .315, 0., 1.);
-    float blend = join*join*join * (join*(join*6.0 - 15.0) + 10.0);
-    float coverage = 1.0 - blend;
-    vec3 finishRGB = displayRGB((diffuse + sheen) * outerFade);
-    vec3 cabinAmbient = vec3(.0667, .0745, .0824);
-    finishRGB = mix(finishRGB, max(finishRGB, cabinAmbient), blend);
-    pixel = vec4(finishRGB * coverage, coverage);
+    // Scale the grain in object space and filter it on foreshortened surfaces.
+    vec2 uv = p.xy * vec2(190., 240.) + p.z * 95.;
+    float grain = moldedGrain(uv) + 0.45 * moldedGrain(uv * 2.17);
+    base *= 1.0 + grain * mix(0.15, 0.28, smoothstep(0.1, 1.0, finish));
+    // The deeper, glass-facing bevel sees a much larger portion of the sky.
+    float reach = exp2(-max(surface.z - .548, 0.) / .023);
+    float facing = max(dot(n, toGlass), 0.);
+    vec3 bounce = .15 * (sky * max(dot(n, toSky), 0.) + cloud * max(dot(n, toCloud), 0.));
+    float shadeEdge = .69 - shade * 1.51;
+    float occlusion = 1. - shade * (.75 + .22 * smoothstep(shadeEdge-.17, shadeEdge+.17, p.y));
+    vec3 incident = windowLight * (.26 + .76 * facing) + bounce;
+    float reflection = pow(max(dot(n, normalize(toGlass + view)), 0.), 22.);
+    vec3 diffuse = base * (incident * reach * occlusion + vec3(.00065)) * exposure;
+    vec3 sheen = windowLight * reflection * .10 * reach * occlusion;
+    float edge = clamp((surface.z - .551) / (.637 - .551), 0., 1.);
+    float coverage = 1.0 - edge*edge*edge * (edge*(edge*6.0 - 15.0) + 10.0);
+    pixel = vec4(displayRGB(diffuse + sheen) * coverage, coverage);
 }

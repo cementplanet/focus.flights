@@ -5,6 +5,17 @@ void main() {
   vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
   gl_Position = vec4(p*2.-1.,0.,1.);
 }`;
+// The pane shares the inner gasket contour. A subpixel overlap seals the joint.
+const paneVertex = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 position;
+uniform float zoom;
+uniform vec2 resolution;
+void main() {
+  float z = 3.25 + position.z;
+  vec2 projected = 2.81 * vec2(position.x, (position.y-.017+position.z*.065)*resolution.x/resolution.y);
+  gl_Position = vec4(1.003*zoom*projected, 0., z);
+}`;
 const skyWidth = 320, skyHeight = 480;
 // The original 2:3 camera, cropped slightly tighter for the website.
 const zoom = 1.14;
@@ -41,7 +52,7 @@ async function createScene(gl) {
   ]);
   if (gl.isContextLost()) return;
   const sky = program(gl, fullscreen, skySource, ["resolution","elapsed",...noise.map(([name])=>name)]);
-  const glass = program(gl, fullscreen, glassFragment, ["resolution","elapsed","zoom","skyMap","aircraft"]);
+  const glass = program(gl, paneVertex, glassFragment, ["resolution","elapsed","zoom","skyMap","aircraft"]);
   const cabin = program(gl, cabinVertex, cabinFragment, ["resolution","shade","zoom","skyMap"]);
   function texture(unit, target, wrap) {
     const tex = gl.createTexture();
@@ -106,17 +117,25 @@ async function createScene(gl) {
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);
     gl.viewport(0,0,width,height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.stencilMask(0xff);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+    gl.enable(gl.STENCIL_TEST);
+    gl.stencilFunc(gl.ALWAYS,1,0xff);
+    gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
     gl.useProgram(glass.handle);
     gl.uniform2f(glass.resolution,width,height);
     gl.uniform1f(glass.elapsed,time);
-    gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.bindVertexArray(vao);
+    gl.drawArrays(gl.TRIANGLE_FAN,0,mesh.apertureCount);
     gl.enable(gl.DEPTH_TEST);
     gl.useProgram(cabin.handle);
     gl.uniform2f(cabin.resolution,width,height);
     gl.uniform1f(cabin.shade,shade);
-    gl.bindVertexArray(vao);
-    gl.drawElements(gl.TRIANGLES,mesh.indices.length,gl.UNSIGNED_SHORT,0);
+    gl.stencilMask(0);
+    gl.stencilFunc(gl.EQUAL,1,0xff);
+    gl.drawElements(gl.TRIANGLES,mesh.indices.length-mesh.trimIndexCount,gl.UNSIGNED_SHORT,2*mesh.trimIndexCount);
+    gl.disable(gl.STENCIL_TEST);
+    gl.drawElements(gl.TRIANGLES,mesh.trimIndexCount,gl.UNSIGNED_SHORT,0);
   };
 }
 
@@ -130,7 +149,7 @@ export function setupPortholeSky(canvas) {
   function draw(now) {
     frame = 0;
     if (lastTime === null || now-lastTime >= 1000/30-1 || motion.matches) {
-      if (lastTime !== null && !motion.matches) elapsed += Math.min(.125,(now-lastTime)/1000);
+      if (lastTime !== null && !motion.matches && !sequence.hasAttribute("data-focus-handoff")) elapsed += Math.min(.125,(now-lastTime)/1000);
       lastTime = now;
       const scale = Math.min(devicePixelRatio, 1600/Math.max(1,canvas.clientWidth,canvas.clientHeight));
       const w = Math.max(1,Math.round(canvas.clientWidth*scale)), h = Math.max(1,Math.round(canvas.clientHeight*scale));
@@ -138,11 +157,11 @@ export function setupPortholeSky(canvas) {
       render(w,h,elapsed, Number(getComputedStyle(host).getPropertyValue("--shade-drop")));
       canvas.dataset.ready = "";
     }
-    if (visible && !sequence.hasAttribute("data-focus-handoff") && !motion.matches && (!softwareCanvas || host.getAnimations().some(a => a.transitionProperty === "--shade-drop"))) frame = requestAnimationFrame(draw);
+    if (visible && !sequence.hasAttribute("data-focus-handoff") && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
   }
 
   async function prepare(version) {
-    const gl = canvas.getContext("webgl2",{alpha:true,depth:true,antialias:true,premultipliedAlpha:true});
+    const gl = canvas.getContext("webgl2",{alpha:true,depth:true,stencil:true,antialias:true,premultipliedAlpha:true});
     let scene;
     if (gl && !gl.isContextLost()) {
       try { scene = await createScene(gl); }
@@ -171,9 +190,9 @@ export function setupPortholeSky(canvas) {
     else loading ??= prepare(generation).catch(error=>console.warn("Porthole:",error));
   }
   new IntersectionObserver(([entry])=>{
-    visible=entry.isIntersecting;
+    visible = entry.intersectionRatio >= .001;
     sync();
-  }).observe(canvas);
+  }, {threshold: .001}).observe(canvas.closest(".focus-window-stage") || canvas);
   // Prepare one still frame on the preceding screen. Resume cloud rendering after landing.
   new IntersectionObserver(([entry])=>{
     nearby = entry.isIntersecting;
@@ -181,11 +200,15 @@ export function setupPortholeSky(canvas) {
   }, {rootMargin:"90% 0px"}).observe(canvas);
   new MutationObserver(sync).observe(sequence,{attributes:true,attributeFilter:["data-focus-handoff"]});
   new ResizeObserver(sync).observe(canvas);
-  for (const type of ["transitionrun","transitionend","transitioncancel"]) {
-    host.addEventListener(type,event=>{if (softwareCanvas && event.propertyName==="--shade-drop") sync()});
-  }
-  // Reduced-motion still renders the current shade position on every interaction.
-  new MutationObserver(()=>{if (motion.matches || softwareCanvas) sync()}).observe(host,{attributes:true,attributeFilter:["style"]});
+  // The transition freezes the sky texture. Keep painting shade geometry as it moves.
+  new MutationObserver(() => {
+    if (!render || document.hidden || (!visible && !nearby)) return;
+    if (motion.matches || softwareCanvas || sequence.hasAttribute("data-focus-handoff")) {
+      cancelAnimationFrame(frame);
+      lastTime = null;
+      draw(performance.now());
+    }
+  }).observe(host,{attributes:true,attributeFilter:["style"]});
   motion.addEventListener("change",sync);
   document.addEventListener("visibilitychange",sync);
   canvas.addEventListener("webglcontextlost",event=>{
