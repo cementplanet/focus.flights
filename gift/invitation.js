@@ -6,7 +6,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
-    uniform vec3 cursor; // clip-space pointer and spring strength
+    uniform vec3 press[3]; // per-card tilt vector and centre depth
     uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
@@ -83,17 +83,19 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           float order=panel==2. ? 2. : (panel==6. ? 1. : 0.);
           p-=forward*(order*.16*sin(3.14159*release)*clearLip);
           n=normalize(mix(n,-forward,release));
-          if (cursor.z>0. && release==1.) {
-            vec3 ray=p-eye;
-            // Intersect the pointer ray with the unbent card plane. Distances
-            // in card widths keep the contact patch circular at any aspect.
-            vec2 offset=(vec2(dot(ray,right),dot(ray,up))-cursor.xy*depth/lens)/width;
-            const float radius=.30;
-            float q=max(0.,1.-dot(offset,offset)/(radius*radius));
-            float weight=cursor.z*q*q*q;
-            vec3 radial=right*offset.x+up*offset.y;
-            p+=width*weight*(.58*radial+.054*normalize(ray));
-            n=normalize(n-radial*(6.*.054/(radius*radius))*cursor.z*q*q);
+          if (release==1.) {
+            vec3 pose=panel==2. ? press[0] : (panel==6. ? press[1] : press[2]);
+            float angle=length(pose.xy);
+            vec2 axis=pose.xy/max(angle,.00001);
+            vec3 toward=right*axis.x+up*axis.y;
+            // Rotate the whole printed plane about a line through the opposite
+            // edge or corner. One perspective projection keeps type and rules straight.
+            float arm=dot(point.xy,axis)+dot(vec2(.54,.72),abs(axis));
+            float lever=arm*width/1.08;
+            vec3 cardRay=(centre+right*column*1.07*width-eye)/depth;
+            p+=toward*(lever*(cos(angle)-1.))
+                +cardRay*(lever*sin(angle)+width*pose.z);
+            n=normalize(-forward*cos(angle)+toward*sin(angle));
           }
         } else {
           // The sleeve stays at floor height while its weight carries it
@@ -157,14 +159,18 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
         float reflection=pow(max(dot(n,normalize(view+key)),0.),18.);
         color+=vec3(.018*reflection*texel.g);
       }
+      // Separated, flat sheets receive the studio light directly. The height
+      // map is for the stacked paper and sleeve; it cannot resolve self-shadow
+      // on a tilted, nearly edge-on sheet in light space.
       float shadow=paperShadow(world,.028);
+      if (abs(face-2.)<.25 || face>5.5) shadow*=1.-smoothstep(.82,1.,flight.y);
       vec3 surfaceColor=color*shade*(1.-.32*shadow);
       float haze=airLight(eye,-view,length(world-eye),flight.x);
       // Keep the print close to the original stock even under the shaft.
       gl_FragColor=vec4(mix(surfaceColor,vec3(.84),.008*min(haze,2.)),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
-  const cursor=gl.getUniformLocation(pass.handle,"cursor");
+  const press=gl.getUniformLocation(pass.handle,"press[0]");
   const flight=gl.getUniformLocation(pass.handle,"flight");
   const shot=gl.getUniformLocation(pass.handle,"shot");
   const shadowPass=gl.getUniformLocation(pass.handle,"shadowPass");
@@ -232,7 +238,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
   return (t,camera,shadow,lift,slip,air)=>{
     camera(pass);
     gl.uniform3f(flight,lift,slip,air);
-    gl.uniform3fv(cursor,hover);
+    gl.uniform3fv(press,hover);
     gl.uniform1f(shot,t);
     gl.uniform1f(shadowPass,shadow?1:0);
     gl.bindBuffer(gl.ARRAY_BUFFER,buffer);

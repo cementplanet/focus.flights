@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=card-hover";
+import { prepareInvitation } from "./invitation.js?v=corner-press";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -174,7 +174,7 @@ function cameraPose(t) {
   return {x,y,z,aimY};
 }
 
-async function prepare(gl, hover = new Float32Array(3)) {
+async function prepare(gl, hover = new Float32Array(9)) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
     readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
@@ -323,44 +323,58 @@ async function prepare(gl, hover = new Float32Array(3)) {
   };
 }
 
-function trackCardHover(row, reader) {
-  // xy are viewport coordinates in clip space, z is contact strength.
-  const value = new Float32Array(3);
-  let inside = false, velocity = 0, lastTime = 0;
-  function leave() { inside = false; }
-  window.addEventListener("pointermove", event => {
-    if (event.pointerType !== "mouse" || row.inert || reader.open ||
-        event.target.closest?.(".site-header")) { leave(); return; }
-    const rect = row.getBoundingClientRect();
-    value[0] = 2 * (event.clientX - rect.left) / rect.width - 1;
-    value[1] = 1 - 2 * (event.clientY - rect.top) / rect.height;
-    inside = true;
-  }, {passive:true});
-  document.documentElement.addEventListener("pointerleave", leave);
-  window.addEventListener("blur", leave);
-  document.addEventListener("visibilitychange", leave);
-  reader.addEventListener("close", leave);
+function trackCardPress(row, reader) {
+  const cards = [...row.querySelectorAll("button[data-print]")];
+  // Each sheet has two tilt components and one depth for a centred press.
+  const value = new Float32Array(cards.length * 3);
+  const target = new Float32Array(value.length);
+  const velocity = new Float32Array(value.length);
+  let lastTime = 0;
+  function release() { target.fill(0); }
+  function point(event) {
+    release();
+    if (event.pointerType !== "mouse" || row.inert || reader.open) return;
+    const card = event.target.closest("button[data-print]");
+    const index = cards.indexOf(card);
+    if (index < 0) return;
+    const rect = card.getBoundingClientRect();
+    const x = 2*(event.clientX-rect.left)/rect.width - 1;
+    const y = 1 - 2*(event.clientY-rect.top)/rect.height;
+    const edge = Math.min(1, Math.hypot(x,y));
+    const strength = event.buttons & 1 ? 1.25 : 1;
+    target[3*index] = x * .15 * strength;
+    target[3*index+1] = y * .15 * strength;
+    target[3*index+2] = .065 * (1-edge) * strength;
+  }
+  for (const type of ["pointerover","pointermove","pointerdown","pointerup"]) {
+    row.addEventListener(type, point, {passive:true});
+  }
+  row.addEventListener("pointerleave", release);
+  row.addEventListener("pointercancel", release);
+  window.addEventListener("blur", release);
+  document.addEventListener("visibilitychange", release);
+  reader.addEventListener("close", release);
 
   function update(time, active) {
     const dt = Math.max(0, (time-lastTime)/1000);
     lastTime = time;
     if (!active || row.inert || reader.open) {
-      inside = false;
-      velocity = value[2] = 0;
+      release();
+      value.fill(0);
+      velocity.fill(0);
       return;
     }
-    // A faster sample of the site's overdamped Glide spring. Carry velocity
-    // through a reversal so entering again during release stays continuous.
-    const target = inside ? 1 : 0;
-    const offset = value[2] - target;
-    const slowOffset = (velocity + 80*offset)/66;
-    const slow = slowOffset * Math.exp(-14*dt);
-    const fast = (offset - slowOffset) * Math.exp(-80*dt);
-    value[2] = target + slow + fast;
-    velocity = -14*slow - 80*fast;
-    if (Math.abs(value[2]-target) < .0001 && Math.abs(velocity) < .001) {
-      value[2] = target;
-      velocity = 0;
+    const slowDecay = Math.exp(-14*dt), fastDecay = Math.exp(-80*dt);
+    for (let i=0; i<value.length; i++) {
+      const offset = value[i]-target[i];
+      const slowOffset = (velocity[i]+80*offset)/66;
+      const slow = slowOffset*slowDecay, fast = (offset-slowOffset)*fastDecay;
+      value[i] = target[i]+slow+fast;
+      velocity[i] = -14*slow-80*fast;
+      if (Math.abs(value[i]-target[i]) < .00001 && Math.abs(velocity[i]) < .0001) {
+        value[i] = target[i];
+        velocity[i] = 0;
+      }
     }
   }
   return {value, update};
@@ -368,7 +382,7 @@ function trackCardHover(row, reader) {
 
 export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const hover = trackCardHover(document.querySelector(".gift-card-row"), document.querySelector(".gift-reader"));
+  const hover = trackCardPress(document.querySelector(".gift-card-row"), document.querySelector(".gift-reader"));
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
