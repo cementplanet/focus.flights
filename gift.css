@@ -143,3 +143,11 @@
 @media (prefers-reduced-motion: reduce) {
   .gift-camera { visibility: hidden; }
 }
+
+.runway { height: 100dvh; outline: none; }
+.runway-poster { position: absolute; inset: 0; opacity: var(--runway-arrival, 0); }
+.runway-poster img { width: 100%; height: 100%; object-fit: cover; }
+.gift-letter-poster .gift-print {
+  translate: 0 calc(-106dvh * var(--runway-arrival, 0));
+  filter: blur(calc(14px * var(--runway-arrival, 0)));
+}
