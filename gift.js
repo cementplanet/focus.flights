@@ -1,4 +1,4 @@
-import { setupStudio, skyPitch } from "./gift/camera.js?v=square";
+import { setupStudio, skyPitch } from "./gift/camera.js?v=cube";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease) {
