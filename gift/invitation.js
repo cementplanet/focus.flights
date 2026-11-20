@@ -19,10 +19,10 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     void main() {
       vec3 p=point;
       vec3 n=vec3(0.,0.,1.);
-      float fall=smoothstep(.30,.54,shot);
-      float seated=smoothstep(.43,.58,shot);
-      float open=smoothstep(.555,.83,shot);
-      float extract=smoothstep(.715,.98,shot);
+      float fall=smoothstep(.26,.455,shot);
+      float seated=smoothstep(.355,.48,shot);
+      float open=smoothstep(.475,.81,shot);
+      float extract=smoothstep(.68,.985,shot);
       if (panel==4.) {
         float reach=.865-p.y;
         // The crease moves first. Flex travels to the free tip, then relaxes.

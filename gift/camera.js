@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=tracking-shot";
+import { prepareInvitation } from "./invitation.js?v=paper-settle";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -139,7 +139,7 @@ async function prepare(gl) {
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   let lastShadow=-1;
 
-  return function draw(t,w,h) {
+  return function draw(t,w,h,paperPhase=t) {
     const {x,y,z,aimY}=cameraPose(t);
     const horizontal=Math.hypot(x,aimY-y);
     const aspect=w/h, lensX=Math.min(3.58,3.34/aspect);
@@ -154,7 +154,7 @@ async function prepare(gl) {
       gl.uniform3f(pass.up,fz*ry,-fz*rx,fy*rx-fx*ry);
       gl.uniform2f(pass.lens,lensX,lensX*aspect);
     }
-    if(lastShadow!==t) {
+    if(lastShadow!==paperPhase) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D,atlas);
       gl.activeTexture(gl.TEXTURE0);
@@ -162,11 +162,11 @@ async function prepare(gl) {
       gl.viewport(0,0,size,size);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
-      letter(t,camera,true);
+      letter(paperPhase,camera,true);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
       gl.generateMipmap(gl.TEXTURE_2D);
-      lastShadow=t;
+      lastShadow=paperPhase;
     }
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
@@ -182,18 +182,18 @@ async function prepare(gl) {
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
-    letter(t,camera,false);
+    letter(paperPhase,camera,false);
   };
 }
 
 export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let unavailable = false;
-  let draw, loading, position = 1, visible = false, generation = 0, last = -1;
+  let draw, loading, position = 1, paperPhase = 1, visible = false, generation = 0, last = -1;
   let pixelBudget = 1600000, width = 1, height = 1, idleFrame = 0;
   function paint() {
     if (!draw || !visible || document.hidden || reducedMotion.matches || last === position) return;
-    draw(position,canvas.width,canvas.height);
+    draw(position,canvas.width,canvas.height,paperPhase);
     canvas.dataset.ready = "";
     last = position;
   }
@@ -220,7 +220,7 @@ export function setupStudio(canvas, download) {
       draw = renderer;
       if (reducedMotion.matches) return;
       // Prime the driver while the sky is on screen, before the first gesture.
-      draw(position,canvas.width,canvas.height);
+      draw(position,canvas.width,canvas.height,paperPhase);
       canvas.dataset.ready = "";
       last = position;
     }).catch(error=>console.warn("Gift studio:",error));
@@ -248,11 +248,13 @@ export function setupStudio(canvas, download) {
   new IntersectionObserver(([entry])=>{
     if (canvas.closest("[data-gift-descent]")) return;
     visible = entry.isIntersecting;
-    if (visible) { position = 1; warm(); paint(); }
+    if (visible) { position = paperPhase = 1; warm(); paint(); }
   }).observe(canvas);
-  return t=>{
+  return (t,phase)=>{
     visible = true;
     const leavingRest = position === 1 && t < 1;
+    if (phase !== paperPhase) last = -1;
+    paperPhase = phase;
     position = t;
     warm();
     cancelAnimationFrame(idleFrame);

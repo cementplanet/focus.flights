@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=tracking-shot";
+import { setupGiftDescent } from "./gift.js?v=paper-settle";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -196,21 +196,20 @@ const springFast = -springDecay - springRoot;
 // Integrate a Glide spring's release as a velocity profile. Run it backwards
 // into the crest, then forwards out: both sides meet at full speed with zero
 // acceleration. Remove the small terminal residue for a finite, exact stop.
-const springVelocity = t => (springFast*Math.exp(springSlow*t)-springSlow*Math.exp(springFast*t))/(springFast-springSlow);
-const endSpeed = springVelocity(1);
-const endSlope = springSlow*springFast*(Math.exp(springSlow)-Math.exp(springFast))/(springFast-springSlow);
+const releaseSlow = .62 * springSlow;
+const releaseFast = .62 * springFast;
+const endSpeed = (releaseFast*Math.exp(releaseSlow)-releaseSlow*Math.exp(releaseFast))/(releaseFast-releaseSlow);
+const endSlope = releaseSlow*releaseFast*(Math.exp(releaseSlow)-Math.exp(releaseFast))/(releaseFast-releaseSlow);
 function releaseDistance(t) {
-  const integral = (springFast*Math.expm1(springSlow*t)/springSlow
-    - springSlow*Math.expm1(springFast*t)/springFast)/(springFast-springSlow);
-  return integral - endSpeed*t**3*(1-.5*t) - endSlope*t**3*(t/4-1/3);
+  const area = (releaseFast*Math.expm1(releaseSlow*t)/releaseSlow
+    - releaseSlow*Math.expm1(releaseFast*t)/releaseFast)/(releaseFast-releaseSlow);
+  return area - endSpeed*t**3*(1-.5*t) - endSlope*t**3*(t/4-1/3);
 }
 const releaseLength = releaseDistance(1);
-function giftTravel(t) {
-  const peak = .44;
-  const s = t < peak ? 1-t/peak : (t-peak)/(1-peak);
-  const area = releaseDistance(s)/releaseLength;
-  const speed = springVelocity(s) - endSpeed*s*s*(3-2*s) - endSlope*s*s*(s-1);
-  return [peak + (t < peak ? -peak : 1-peak)*area, speed/releaseLength];
+function giftTravel(phase) {
+  const peak = .36;
+  const s = phase < peak ? 1-phase/peak : (phase-peak)/(1-peak);
+  return peak + (phase < peak ? -peak : 1-peak)*releaseDistance(s)/releaseLength;
 }
 
 let handoffFrame = 0;
@@ -245,7 +244,7 @@ const setCamera = setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
 const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
-const giftDescent = setupGiftDescent(download, gift, windowFlight, ease);
+const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
 const sections = [sky, showcase, deepFocus, download, gift];
 const sequence = sky.parentElement;
 for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
@@ -342,7 +341,7 @@ function playPage(target, focusPage = false) {
       sky.toggleAttribute("data-handoff", travel && progress < 1);
       paintHandoff(unit(progress), travel && progress < 1);
     }
-    if (travel && progress > 3) {
+    if (travel && (progress > 3 || (progress === 3 && (target === 4 || sequence.hasAttribute("data-gift-descent"))))) {
       clearFocusHandoff();
       giftDescent.paint(unit(progress - 3));
       siteHeader.removeAttribute("data-on-showcase");
@@ -398,9 +397,10 @@ function playPage(target, focusPage = false) {
   // Reversing a running spring carries its current position and velocity.
   const farthest = Math.max(pageOrigin, target);
   const giftTrack = (target >= 3 && handoffProgress >= 3) || (target === 4 && handoffProgress > 2.9);
-  // A full sky-to-letter shot lasts 1.5 s, including the braking tail.
-  // Scale the same spring to the distance remaining after a reversal.
-  const giftDuration = giftTrack ? 1.5 * Math.max(.28, Math.sqrt(Math.abs(offset))) : 0;
+  // Page progress is the reversible shot clock; the camera and the paper
+  // sample independent tracks so the flap doesn't inherit the camera's peak speed.
+  const giftStart = Math.min(3, handoffProgress);
+  const giftDuration = giftTrack ? 2.55 * Math.max(.18, Math.abs(offset)) : 0;
   const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
@@ -410,11 +410,13 @@ function playPage(target, focusPage = false) {
   function glide(seconds) {
     if (giftTrack) {
       const t = unit(seconds/giftDuration);
-      const [distance,speed] = giftTravel(t);
-      // Carry momentum through a reversal and release it at the destination.
+      const velocity = -offset/giftDuration;
+      // Ease the change of direction from the current phase velocity. At an
+      // endpoint the camera and both paper tracks already have zero velocity.
+      const inertia = entryVelocity ? entryVelocity-velocity : 0;
       const tail = 1-t;
-      return [offset*(1-distance) + entryVelocity*giftDuration*t*tail**3,
-        -offset*speed/giftDuration + entryVelocity*tail**2*(1-4*t)];
+      return [offset*tail + inertia*giftDuration*t*tail**6,
+        velocity + inertia*tail**5*(1-7*t)];
     }
     const slow = slowOffset*Math.exp(slowRate*seconds);
     const fast = fastOffset*Math.exp(fastRate*seconds);
@@ -433,7 +435,7 @@ function playPage(target, focusPage = false) {
       return;
     }
 
-    handoffProgress = target + displacement;
+    handoffProgress = giftTrack ? Math.max(giftStart, Math.min(4, target + displacement)) : target + displacement;
     paintPage(handoffProgress, true);
     handoffFrame = requestAnimationFrame(play);
   }
