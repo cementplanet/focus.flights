@@ -1,11 +1,12 @@
 // The invitation lies in the XY plane. Its two render passes use the same
 // deformed paper surface, so a lifting flap casts its own moving shadow.
-export function prepareInvitation(gl, program, project, shadows, studioAir, atlas) {
+export function prepareInvitation(gl, program, project, shadows, studioAir, atlas, hover) {
   const vertex = `
     attribute vec3 point;
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
+    uniform vec3 cursor; // clip-space pointer and spring strength
     uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
@@ -73,7 +74,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           float width=2.*depth*min(.296/lens.x,.495/lens.y);
           float spread=smoothstep(.12,.95,release);
           vec3 facing=centre+right*(column*1.07*width*spread+point.x*width/1.08)
-                            +up*(point.y*width/1.08+.012*sin(air*.85));
+                            +up*(point.y*width/1.08+.012*(1.-release)*sin(air*.85));
           p=mix(p,facing,release);
           vec2 pocket=turn(.047+.095*release)*(p.xy-vec2(-.24,-2.75)*release);
           float clearLip=smoothstep(.64,.91,pocket.y);
@@ -82,6 +83,18 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           float order=panel==2. ? 2. : (panel==6. ? 1. : 0.);
           p-=forward*(order*.16*sin(3.14159*release)*clearLip);
           n=normalize(mix(n,-forward,release));
+          if (cursor.z>0. && release==1.) {
+            vec3 ray=p-eye;
+            // Intersect the pointer ray with the unbent card plane. Distances
+            // in card widths keep the contact patch circular at any aspect.
+            vec2 offset=(vec2(dot(ray,right),dot(ray,up))-cursor.xy*depth/lens)/width;
+            const float radius=.30;
+            float q=max(0.,1.-dot(offset,offset)/(radius*radius));
+            float weight=cursor.z*q*q*q;
+            vec3 radial=right*offset.x+up*offset.y;
+            p+=width*weight*(.58*radial+.054*normalize(ray));
+            n=normalize(n-radial*(6.*.054/(radius*radius))*cursor.z*q*q);
+          }
         } else {
           // The sleeve stays at floor height while its weight carries it
           // down the frame. The flap, pocket and wax seal move together.
@@ -151,6 +164,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       gl_FragColor=vec4(mix(surfaceColor,vec3(.84),.008*min(haze,2.)),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
+  const cursor=gl.getUniformLocation(pass.handle,"cursor");
   const flight=gl.getUniformLocation(pass.handle,"flight");
   const shot=gl.getUniformLocation(pass.handle,"shot");
   const shadowPass=gl.getUniformLocation(pass.handle,"shadowPass");
@@ -218,6 +232,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
   return (t,camera,shadow,lift,slip,air)=>{
     camera(pass);
     gl.uniform3f(flight,lift,slip,air);
+    gl.uniform3fv(cursor,hover);
     gl.uniform1f(shot,t);
     gl.uniform1f(shadowPass,shadow?1:0);
     gl.bindBuffer(gl.ARRAY_BUFFER,buffer);

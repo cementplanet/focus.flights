@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=lit-cards";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-descent";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -76,15 +76,17 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
 
   // Overlapping samples of Glide start together. The sheet leads the camera
   // slightly, then the camera finishes framing it after the sleeve clears.
-  function floatLetter(phase) {
+  function floatLetter(phase, approach = 0) {
     const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
     const lift = sample(phase);
     const slip = sample(phase/.94);
-    row.inert = phase < 1;
+    row.inert = phase < 1 || approach > 0;
     if (row.inert && reader.open) reader.close();
     gift.toggleAttribute("data-airborne", phase > 0);
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
-    render(1,1,lift,slip);
+    const landing = sample(approach);
+    gift.style.setProperty("--runway-arrival", landing);
+    render(1,1,lift,slip,landing);
   }
 
   function resetLetter() {
@@ -93,6 +95,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     if (reader.open) reader.close();
     gift.removeAttribute("data-airborne");
     gift.style.removeProperty("--letter-poster");
+    gift.style.removeProperty("--runway-arrival");
     render(1,1);
   }
 

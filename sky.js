@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=lit-cards";
+import { setupGiftDescent } from "./gift.js?v=runway-descent";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -245,7 +245,7 @@ const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
 const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
-const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter")];
+const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), document.getElementById("runway")];
 const sequence = sky.parentElement;
 for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
 
@@ -345,8 +345,10 @@ function playPage(target, focusPage = false) {
       clearFocusHandoff();
       giftDescent.end(true);
       giftDescent.holdSky(false);
-      giftDescent.floatLetter(unit(progress-4));
-      const top = gift.offsetTop + giftTravel(unit(progress-4))*(sections[5].offsetTop-gift.offsetTop);
+      const from = progress >= 5 ? 5 : 4;
+      const phase = unit(progress-from);
+      giftDescent.floatLetter(unit(progress-4), unit(progress-5));
+      const top = sections[from].offsetTop + giftTravel(phase)*(sections[from+1].offsetTop-sections[from].offsetTop);
       window.scrollTo({top, behavior:"instant"});
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
@@ -389,7 +391,7 @@ function playPage(target, focusPage = false) {
     syncHeader();
     hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
-    const leavingControl = leavingDownload || (target === 2 && showcase.contains(document.activeElement)) ||
+    const leavingControl = leavingDownload || (target === 6 && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
       (target === 3 && deepFocus.contains(document.activeElement));
     deepFocus.inert = target >= 3;
     if (focusPage || leavingControl) {
@@ -455,7 +457,7 @@ function playPage(target, focusPage = false) {
       return;
     }
 
-    handoffProgress = giftTrack ? Math.max(giftStart, Math.min(5, target + displacement)) : target + displacement;
+    handoffProgress = giftTrack ? Math.max(giftStart, Math.min(sections.length-1, target + displacement)) : target + displacement;
     paintPage(handoffProgress, true);
     handoffFrame = requestAnimationFrame(play);
   }
@@ -611,7 +613,7 @@ function syncScroll() {
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(page-4);
+  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
@@ -630,7 +632,7 @@ function restoreSection() {
   deepFocus.inert = page >= 3;
   clearFocusHandoff();
   giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(page-4);
+  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);

@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=lit-cards";
+import { prepareInvitation } from "./invitation.js?v=card-hover";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -57,11 +57,13 @@ const stageVertex = `
     gl_Position=vec4(corner,0.,1.);
   }
 `;
-const stageFragment = `
+const stageFragment = runwaySource => `
   precision highp float;
   varying highp vec3 direction;
   varying highp vec2 screen;
-  uniform sampler2D grain;
+  uniform sampler2D grain, airliner, printLayer;
+  uniform float landing;
+  ${runwaySource}
   uniform vec3 atmosphere; // lift, viewport aspect, breathing phase
   uniform vec3 eye;
   ${shadows}
@@ -87,10 +89,21 @@ const stageFragment = `
     vec2 rim=(screen-vec2(0.,-.42))*vec2(.86,1.15);
     space+=vec3(.038,.066,.091)*exp(-2.*dot(rim,rim));
     space+=floorColor*.19+textureValue*.009;
+    vec3 scene=mix(studio,space,atmosphere.x);
+    // Broaden the same shaft into skylight as the runway rises into frame.
+    float diffusion=smoothstep(.06,.94,landing);
+    scene+=vec3(.082,.084,.087)*haze*mix(.48,1.,atmosphere.x);
+    if (landing>0.) {
+      scene=mix(scene,runwayColor(screen,atmosphere.y,landing,atmosphere.z),diffusion);
+      vec2 spread=vec2(screen.x*atmosphere.y/(.36+landing*.84),
+        (screen.y-.94+landing*.68)/1.18);
+      scene+=vec3(.095,.10,.112)*exp(-dot(spread,spread))*diffusion;
+    }
     if (atmosphere.x>.001) {
       // Sparse motes catch the shaft at different depths. Use height units
       // so their diameter stays the same in portrait and landscape.
       vec2 cell=screen*vec2(atmosphere.y,1.)*5.;
+      cell.y-=landing*2.35;
       cell+=vec2(.041,-.069)*atmosphere.z;
       vec2 id=floor(cell);
       vec3 seed=fract(vec3(id.xyx)*vec3(.1031,.1030,.0973));
@@ -98,10 +111,25 @@ const stageFragment = `
       vec2 center=.12+.76*fract((seed.xx+seed.yz)*seed.zy);
       vec2 d=fract(cell)-center;
       float mote=exp(-dot(d,d)*mix(830.,2300.,center.x));
-      space+=vec3(.22,.23,.24)*mote*min(haze,1.)*center.y*center.y;
+      scene+=vec3(.22,.23,.24)*mote*min(haze+.38*diffusion,1.)*center.y*center.y;
     }
-    vec3 scene=mix(studio,space,atmosphere.x);
-    scene+=vec3(.082,.084,.087)*haze*mix(.48,1.,atmosphere.x);
+    if (landing>0. && landing<.93) {
+      // Sample the lit paper apart from the air, keeping the runway in focus.
+      vec2 uv=.5+.5*screen;
+      uv.y-=landing*1.06;
+      float softness=smoothstep(.025,.74,landing);
+      vec2 radius=.0055*softness*vec2(1./atmosphere.y,1.);
+      float lod=5.8*softness;
+      vec4 sheets=.25*(texture2D(printLayer,uv+radius,lod)+texture2D(printLayer,uv-radius,lod)
+        +texture2D(printLayer,uv+radius*vec2(1.,-1.),lod)+texture2D(printLayer,uv-radius*vec2(1.,-1.),lod));
+      // Mip filtering must approach transparent air outside the image.
+      float cardHeight=min(.296*atmosphere.y,.495)*4./3.;
+      float coverage=1.-smoothstep(.5*cardHeight+.02,.5*cardHeight+.08,abs(uv.y-.5));
+      sheets*=coverage*(1.-smoothstep(.18,.92,landing));
+      float headerShade=smoothstep(.61,.94,screen.y)*smoothstep(.04,.20,landing);
+      sheets.rgb*=1.-.40*headerShade;
+      scene=scene*(1.-sheets.a)+sheets.rgb;
+    }
     gl_FragColor=vec4(scene,1.);
   }
 `;
@@ -146,8 +174,15 @@ function cameraPose(t) {
   return {x,y,z,aimY};
 }
 
-async function prepare(gl) {
-  const [invitation,floor]=await Promise.all([readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp")]);
+async function prepare(gl, hover = new Float32Array(3)) {
+  const [invitation,floor,plane,runwaySource]=await Promise.all([
+    readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
+    readImage("../aircraft/deep-focus-front.webp"),
+    fetch(new URL("./runway.glsl",import.meta.url)).then(response=>{
+      if (!response.ok) throw Error("Runway lighting could not load");
+      return response.text();
+    }),
+  ]);
   if (gl.isContextLost()) return;
   function texture(image,repeat=false) {
     const handle=gl.createTexture();
@@ -157,15 +192,30 @@ async function prepare(gl) {
     for(const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T]) {
       gl.texParameteri(gl.TEXTURE_2D,axis,repeat?gl.REPEAT:gl.CLAMP_TO_EDGE);
     }
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
-    gl.generateMipmap(gl.TEXTURE_2D);
+    const mipmaps=(image.width & (image.width-1))===0 && (image.height & (image.height-1))===0;
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,mipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+    if (mipmaps) gl.generateMipmap(gl.TEXTURE_2D);
     return handle;
   }
   const atlas=texture(invitation), ground=texture(floor,true);
-  const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas);
-  const stage=program(gl,stageVertex,stageFragment,["corner"]);
+  const planeTexture=texture(plane);
+  const printTexture=gl.createTexture(), printBuffer=gl.createFramebuffer();
+  gl.bindTexture(gl.TEXTURE_2D,printTexture);
+  // Complete texture even before the first landing on browsers that validate all samplers.
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+  for (const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T]) gl.texParameteri(gl.TEXTURE_2D,axis,gl.CLAMP_TO_EDGE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,printBuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,printTexture,0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  let printWidth=0, printHeight=0, capturedAspect=0;
+  const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas,hover);
+  const stage=program(gl,stageVertex,stageFragment(runwaySource),["corner"]);
   gl.useProgram(stage.handle);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"shadowMap"),1);
+  gl.uniform1i(gl.getUniformLocation(stage.handle,"airliner"),2);
+  gl.uniform1i(gl.getUniformLocation(stage.handle,"printLayer"),3);
+  const landingUniform=gl.getUniformLocation(stage.handle,"landing");
   const atmosphere=gl.getUniformLocation(stage.handle,"atmosphere");
   const corners=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,corners);
@@ -188,7 +238,7 @@ async function prepare(gl) {
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   let lastShadow=-1, lastLift=-1, lastSlip=-1, lastAir=-1;
 
-  return function draw(t,w,h,paperPhase=t,lift=0,slip=0,air=0) {
+  return function draw(t,w,h,paperPhase=t,lift=0,slip=0,air=0,landing=0) {
     const groundPose=cameraPose(t);
     // The camera follows the rising sheet from the start. The retreating
     // sleeve stays in the wide frame briefly before passing the lower edge.
@@ -209,7 +259,7 @@ async function prepare(gl) {
       gl.uniform3f(pass.up,fz*ry,-fz*rx,fy*rx-fx*ry);
       gl.uniform2f(pass.lens,lensX,lensX*aspect);
     }
-    if(lastShadow!==paperPhase || lastLift!==lift || lastSlip!==slip || lastAir!==air) {
+    if(landing<1 && (lastShadow!==paperPhase || lastLift!==lift || lastSlip!==slip || (!landing && lastAir!==air))) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D,atlas);
       gl.activeTexture(gl.TEXTURE0);
@@ -226,11 +276,42 @@ async function prepare(gl) {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
     gl.activeTexture(gl.TEXTURE0);
+    if (landing>0 && landing<.93 && aspect!==capturedAspect) {
+      // Cache the actual three printed surfaces, including their lighting and
+      // silhouette. Power-of-two mip levels give a continuous optical blur.
+      const pot=n=>Math.min(2048,2**Math.ceil(Math.log2(n)));
+      const pw=pot(w), ph=pot(h);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D,printTexture);
+      if (pw!==printWidth || ph!==printHeight) {
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,pw,ph,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+        printWidth=pw; printHeight=ph;
+      }
+      gl.bindTexture(gl.TEXTURE_2D,null);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,printBuffer);
+      gl.viewport(0,0,pw,ph);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.disable(gl.DEPTH_TEST);
+      letter(paperPhase,camera,false,lift,slip,air);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D,printTexture);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      capturedAspect=aspect;
+    }
+    if (!landing) capturedAspect=0;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D,printTexture);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D,planeTexture);
+    gl.activeTexture(gl.TEXTURE0);
     gl.viewport(0,0,w,h);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     camera(stage);
     gl.uniform3f(atmosphere,lift,aspect,air);
+    gl.uniform1f(landingUniform,landing);
     gl.bindBuffer(gl.ARRAY_BUFFER,corners);
     gl.enableVertexAttribArray(stage.corner);
     gl.vertexAttribPointer(stage.corner,2,gl.FLOAT,false,0,0);
@@ -238,19 +319,64 @@ async function prepare(gl) {
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
-    letter(paperPhase,camera,false,lift,slip,air);
+    if (!landing) letter(paperPhase,camera,false,lift,slip,air);
   };
+}
+
+function trackCardHover(row, reader) {
+  // xy are viewport coordinates in clip space, z is contact strength.
+  const value = new Float32Array(3);
+  let inside = false, velocity = 0, lastTime = 0;
+  function leave() { inside = false; }
+  window.addEventListener("pointermove", event => {
+    if (event.pointerType !== "mouse" || row.inert || reader.open ||
+        event.target.closest?.(".site-header")) { leave(); return; }
+    const rect = row.getBoundingClientRect();
+    value[0] = 2 * (event.clientX - rect.left) / rect.width - 1;
+    value[1] = 1 - 2 * (event.clientY - rect.top) / rect.height;
+    inside = true;
+  }, {passive:true});
+  document.documentElement.addEventListener("pointerleave", leave);
+  window.addEventListener("blur", leave);
+  document.addEventListener("visibilitychange", leave);
+  reader.addEventListener("close", leave);
+
+  function update(time, active) {
+    const dt = Math.max(0, (time-lastTime)/1000);
+    lastTime = time;
+    if (!active || row.inert || reader.open) {
+      inside = false;
+      velocity = value[2] = 0;
+      return;
+    }
+    // A faster sample of the site's overdamped Glide spring. Carry velocity
+    // through a reversal so entering again during release stays continuous.
+    const target = inside ? 1 : 0;
+    const offset = value[2] - target;
+    const slowOffset = (velocity + 80*offset)/66;
+    const slow = slowOffset * Math.exp(-14*dt);
+    const fast = (offset - slowOffset) * Math.exp(-80*dt);
+    value[2] = target + slow + fast;
+    velocity = -14*slow - 80*fast;
+    if (Math.abs(value[2]-target) < .0001 && Math.abs(velocity) < .001) {
+      value[2] = target;
+      velocity = 0;
+    }
+  }
+  return {value, update};
 }
 
 export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const hover = trackCardHover(document.querySelector(".gift-card-row"), document.querySelector(".gift-reader"));
   let unavailable = false;
-  let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0;
+  let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
   let pixelBudget = 1600000, width = 1, height = 1;
 
   function render(now) {
-    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0);
+    hover.update(now, lift === 1 && slip === 1 && !landing);
+    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing);
     canvas.dataset.ready = "";
     dirty = false;
   }
@@ -265,7 +391,7 @@ export function setupStudio(canvas, download) {
           idleFrame = 0;
           return;
         }
-        if (time-last < 1000/30) { idleFrame = requestAnimationFrame(hover); return; }
+        if (time-last < 1000/(landing === 1 ? 20 : 30)) { idleFrame = requestAnimationFrame(hover); return; }
         idleFrame = 0;
         dirty = true;
         paint(time);
@@ -274,7 +400,7 @@ export function setupStudio(canvas, download) {
     }
   }
   function resize() {
-    const moving = position < 1 || (lift > 0 && slip < 1);
+    const moving = position < 1 || (lift > 0 && slip < 1) || (landing > 0 && landing < 1);
     const budget = moving ? pixelBudget : slip === 1 ? Math.min(1600000,pixelBudget*5) : 1600000;
     const scale = Math.min(devicePixelRatio,2,Math.sqrt(budget/(width*height)));
     const w = Math.max(1,Math.round(width*scale)), h = Math.max(1,Math.round(height*scale));
@@ -296,7 +422,7 @@ export function setupStudio(canvas, download) {
       resize();
     }
     const current = generation;
-    loading = prepare(gl).then(renderer=>{
+    loading = prepare(gl, hover.value).then(renderer=>{
       if (current !== generation || !renderer) return;
       draw = renderer;
       if (reducedMotion.matches) return;
@@ -329,12 +455,13 @@ export function setupStudio(canvas, download) {
     visible = entry.isIntersecting;
     if (visible) { warm(); paint(); }
   }).observe(canvas);
-  return (t,phase,rise=0,separation=0)=>{
-    dirty ||= position !== t || paperPhase !== phase || lift !== rise || slip !== separation;
+  return (t,phase,rise=0,separation=0,approach=0)=>{
+    dirty ||= position !== t || paperPhase !== phase || lift !== rise || slip !== separation || landing !== approach;
     position = t;
     paperPhase = phase;
     lift = rise;
     slip = separation;
+    landing = approach;
     warm();
     resize();
   };
