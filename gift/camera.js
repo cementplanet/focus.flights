@@ -4,6 +4,10 @@ const project = `
   uniform vec3 eye, right, up, forward;
   uniform vec2 lens;
 `;
+// Cross-section of the softbox beam, in metres relative to its centre line.
+const beam = `
+  vec2 beamOffset(vec3 p) { return p.xy + vec2(.51,.31)*p.z; }
+`;
 const modelVertex = `
   attribute vec3 position, normal;
   attribute float material;
@@ -60,13 +64,60 @@ const stageFragment = `
   uniform sampler2D lightmap;
   uniform vec3 eye;
   varying vec3 direction;
+  ${beam}
   void main() {
     float distance = direction.z < -.001 ? -eye.z/direction.z : 100000.;
     vec2 xy = eye.xy + distance*direction.xy;
     vec3 floorLight = texture2D(lightmap, clamp(xy/24.+.5,0.,1.)).rgb;
     float footprint = 1.-smoothstep(8.,11.9,max(abs(xy.x),abs(xy.y)));
     vec3 color = max(vec3(.011,.014,.019), floorLight*footprint);
+    // Closest approach of this view ray to the lit air above the floor.
+    vec3 origin = vec3(beamOffset(eye)/vec2(2.7,2.2), (eye.z-3.)/5.2);
+    vec3 ray = vec3(beamOffset(direction)/vec2(2.7,2.2), direction.z/5.2);
+    float along = -dot(origin,ray)/dot(ray,ray);
+    vec3 offset = origin + ray*along;
+    float haze = exp(-dot(offset,offset)) * smoothstep(0.,3.,along)
+               * smoothstep(-2.5,2.5,distance-along);
+    color += vec3(.095,.115,.143)*haze;
     gl_FragColor = vec4(color,1.);
+  }
+`;
+
+const dustVertex = `
+  attribute vec4 mote;
+  uniform float seconds, pixelLens;
+  varying mediump vec3 tint;
+  varying mediump float intensity, softness;
+  ${project}
+  ${beam}
+  void main() {
+    float seed = mote.w, phase = seed*58.;
+    float drift = seconds*(.11 + seed*.12);
+    vec3 p = mote.xyz + vec3(.24*sin(drift+phase), .16*cos(.81*drift+phase),
+                              .19*sin(.68*drift+phase*2.));
+    vec3 delta = p-eye;
+    float depth = dot(delta,forward);
+    gl_Position = vec4(dot(delta,right)*lens.x, dot(delta,up)*lens.y,
+                       1.002*depth-.1001, depth);
+    float defocus = smoothstep(2.,8.,abs(depth-15.));
+    float size = mix(.012,.036,seed*seed) * (1.+1.8*defocus);
+    gl_PointSize = clamp(size*pixelLens/max(.1,depth),1.3,12.);
+    vec2 offset = beamOffset(p)/vec2(2.7,2.2);
+    float lit = exp(-.65*dot(offset,offset));
+    intensity = (.032 + .83*lit) * mix(.48,1.,seed) * (1.-.47*defocus);
+    softness = mix(2.3,4.2,defocus);
+    tint = mix(vec3(.64,.77,.94),vec3(1.,.91,.76),lit*.8);
+  }
+`;
+const dustFragment = `
+  precision mediump float;
+  varying vec3 tint;
+  varying float intensity, softness;
+  void main() {
+    vec2 offset = gl_PointCoord*2.-1.;
+    float r2 = dot(offset,offset);
+    float glow = exp(-softness*r2)*(1.-smoothstep(.45,1.,r2));
+    gl_FragColor = vec4(tint,glow*intensity);
   }
 `;
 
@@ -124,6 +175,9 @@ async function prepare(gl) {
   if (gl.isContextLost()) return;
   const model = program(gl,modelVertex,modelFragment,["position","normal","material","uv"]);
   const stage = program(gl,stageVertex,stageFragment,["corner"]);
+  const dust = program(gl,dustVertex,dustFragment,["mote"]);
+  const seconds = gl.getUniformLocation(dust.handle,"seconds");
+  const pixelLens = gl.getUniformLocation(dust.handle,"pixelLens");
   function buffer(type, data) {
     const handle = gl.createBuffer();
     gl.bindBuffer(type,handle);
@@ -146,12 +200,25 @@ async function prepare(gl) {
   const corners = buffer(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]));
   const vertices = buffer(gl.ARRAY_BUFFER,new Uint8Array(mesh,8,vertexCount*16));
   const modelIndices = buffer(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(mesh,8+vertexCount*16,indexCount));
+  // Repeatable positions keep the still posters and the live scene in register.
+  let seed = 4583;
+  function random() {
+    seed = (Math.imul(1664525,seed)+1013904223) >>> 0;
+    return seed/4294967296;
+  }
+  const motes = new Float32Array(1050*4);
+  for (let i=0; i<motes.length; i+=4) {
+    motes[i] = (random()-.55)*15;
+    motes[i+1] = (random()-.56)*14;
+    motes[i+2] = .22+random()*8;
+    motes[i+3] = random();
+  }
+  const dustBuffer = buffer(gl.ARRAY_BUFFER,motes);
   const attributes = [
     [model.position,3,gl.SHORT,false,0],[model.normal,3,gl.BYTE,true,6],
     [model.material,1,gl.UNSIGNED_BYTE,false,9],[model.uv,2,gl.UNSIGNED_SHORT,true,10]
   ];
-  // Attribute zero is shared by both passes on some drivers.
-  return function draw(t,w,h) {
+  return function draw(t,w,h,time=0) {
     const {x,y,z,aimZ} = cameraPose(t);
     const distance = Math.hypot(x,y,aimZ-z), groundDistance = Math.hypot(x,y);
     const fx=-x/distance, fy=-y/distance, fz=(aimZ-z)/distance;
@@ -188,6 +255,20 @@ async function prepare(gl) {
     gl.bindTexture(gl.TEXTURE_2D,surfaceMap);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,modelIndices);
     gl.drawElements(gl.TRIANGLES,indexCount,gl.UNSIGNED_SHORT,0);
+    for (const [slot] of attributes) gl.disableVertexAttribArray(slot);
+    camera(dust);
+    gl.uniform1f(seconds,time);
+    gl.uniform1f(pixelLens,lensX*w*.5);
+    gl.bindBuffer(gl.ARRAY_BUFFER,dustBuffer);
+    gl.enableVertexAttribArray(dust.mote);
+    gl.vertexAttribPointer(dust.mote,4,gl.FLOAT,false,0,0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+    gl.depthMask(false);
+    gl.drawArrays(gl.POINTS,0,motes.length/4);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.disableVertexAttribArray(dust.mote);
   };
 }
 
@@ -195,13 +276,27 @@ export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let draw, loading, position = 1, visible = false, generation = 0, last = -1;
   let pixelBudget = 1600000, width = 1, height = 1, idleFrame = 0;
-  function paint() {
-    if (!draw || !visible || last === position || reducedMotion.matches) return;
-    draw(position,canvas.width,canvas.height);
+  let dustTimer = 0, dustTime = 0, previousPaint = 0;
+  function paint(animate = false) {
+    if (!draw || !visible || document.hidden || reducedMotion.matches) return;
+    if (!animate && last === position) return;
+    const now = performance.now();
+    if (previousPaint) dustTime += Math.min(.15,(now-previousPaint)/1000);
+    previousPaint = now;
+    draw(position,canvas.width,canvas.height,dustTime);
     canvas.dataset.ready = "";
     last = position;
   }
-  function resize(budget = pixelBudget) {
+  // The descent already supplies frames. Only run a separate clock at rest.
+  function scheduleDust() {
+    clearTimeout(dustTimer);
+    if (!draw || !visible || position !== 1 || document.hidden || reducedMotion.matches) return;
+    dustTimer = setTimeout(()=>{
+      paint(true);
+      scheduleDust();
+    },pixelBudget < 1600000 ? 80 : 40);
+  }
+  function resize(budget = position === 1 ? 1600000 : pixelBudget) {
     const scale = Math.min(devicePixelRatio,2,Math.sqrt(budget/(width*height)));
     canvas.width = Math.max(1,Math.round(width*scale));
     canvas.height = Math.max(1,Math.round(height*scale));
@@ -221,10 +316,12 @@ export function setupStudio(canvas, download) {
     loading = prepare(gl).then(renderer=>{
       if (current !== generation || !renderer) return;
       draw = renderer;
+      if (reducedMotion.matches) return;
       // Prime the driver while the sky is on screen, before the first gesture.
       draw(position,canvas.width,canvas.height);
       canvas.dataset.ready = "";
       last = position;
+      scheduleDust();
     }).catch(error=>console.warn("Gift studio:",error));
   }
   new ResizeObserver(([entry])=>{
@@ -238,6 +335,7 @@ export function setupStudio(canvas, download) {
     event.preventDefault();
     generation++;
     draw = loading = null;
+    scheduleDust();
     last = -1;
     delete canvas.dataset.ready;
   });
@@ -245,11 +343,14 @@ export function setupStudio(canvas, download) {
   reducedMotion.addEventListener("change",()=>{
     if (reducedMotion.matches) delete canvas.dataset.ready;
     else if (visible) { last = -1; warm(); paint(); }
+    scheduleDust();
   });
+  document.addEventListener("visibilitychange",scheduleDust);
   new IntersectionObserver(([entry])=>{
     if (canvas.closest("[data-gift-descent]")) return;
     visible = entry.isIntersecting;
     if (visible) { position = 1; warm(); paint(); }
+    scheduleDust();
   }).observe(canvas);
   return t=>{
     visible = true;
@@ -259,6 +360,7 @@ export function setupStudio(canvas, download) {
     cancelAnimationFrame(idleFrame);
     if (leavingRest && pixelBudget < 1600000) resize();
     else paint();
+    scheduleDust();
     // Software rasterizers use a smaller moving frame, then resolve once at rest.
     if (t === 1 && pixelBudget < 1600000) {
       idleFrame = requestAnimationFrame(()=>{ if (visible && position === 1) resize(1600000); });
