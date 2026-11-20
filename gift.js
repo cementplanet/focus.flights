@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-contact";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-ignition";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -7,12 +7,15 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
   const night = gift.querySelector(".gift-night");
   const runway = document.getElementById("runway");
   const runwayCopy = runway.querySelector(".runway-copy");
-  for (const heading of runwayCopy.querySelectorAll("h2")) prepareCopy(heading);
+  for (const column of runwayCopy.querySelectorAll(".runway-partners > div")) {
+    prepareCopy(...column.querySelectorAll("h2, p"));
+  }
+  prepareCopy(runwayCopy.querySelector(".runway-contact-label"));
 
   function revealRunwayCopy(approach, landing) {
     runway.toggleAttribute("data-copy-visible", approach >= .47);
     runway.style.setProperty("--copy-presence", ease(.46,.74,approach));
-    runway.style.setProperty("--contact-presence", ease(.60,.90,approach));
+    runway.style.setProperty("--contact-presence", ease(.57,.94,approach));
     runway.style.setProperty("--camera-offset", (landing-1)*100 + "dvh");
     runwayCopy.inert = approach < 1;
   }

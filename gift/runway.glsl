@@ -25,11 +25,12 @@ vec3 runwayColor(vec2 screen, float aspect, float travel, float seconds) {
   vec3 aircraft=vec3(spanAtRest*viewScale,spanAtRest*(502./1682.)*viewScale,
     wheelsAtRest-.48*(1.-travel));
   vec2 entrance=vec2(smoothstep(.05,.88,travel),smoothstep(.09,.77,travel));
-  vec2 lamps=vec2(smoothstep(.20,.98,travel),1.);
   float approach = mix(.962, 1., entrance.y);
   float span = aircraft.x * approach, height = aircraft.y * approach, wheels = aircraft.z;
   float eye = max(.017, height * .11);
   float horizon = wheels + eye;
+  // Start the sweep once the runway clears the bottom of the viewport.
+  float lampArrival = clamp((horizon - .015) / (wheelsAtRest + eye - .015), 0., 1.);
   float above = p.y - horizon;
   float skyY = max(above, 0.);
   float fieldHeight = max(.21, height * .92) * mix(.53, 1., entrance.x);
@@ -84,18 +85,18 @@ vec3 runwayColor(vec2 screen, float aspect, float travel, float seconds) {
     vec2 d = vec2(abs(p.x) - lamp.x, p.y - lamp.y);
     float r = max(.0006, min(.00155, height * .005) / z);
     // Each pair catches together, from the vanishing point toward the viewer.
-    float ignition = mix(.12, .79, 1. - log(z / .58) / log(7.04 / .58));
-    float age = lamps.x - ignition;
-    float lit = smoothstep(0., .075, age);
-    float flash = lit * (1. - smoothstep(.075, .20, age));
+    float ignition = mix(.22, .49, 1. - log(z / .58) / log(7.04 / .58));
+    float age = lampArrival - ignition;
+    float lit = smoothstep(0., .055, age);
+    float flash = lit * (1. - smoothstep(.07, .48, age));
     // Breathe over 4.8 seconds, with the foreground following the far end slightly.
     float phase = seconds * (6.283185 / 4.8) + float(i) * .055;
-    float breath = lamps.y * smoothstep(.14, .20, age) * sin(phase);
-    float bloom = 1. + 1.45 * flash + .42 * breath;
+    float breath = smoothstep(.32, .50, age) * sin(phase);
+    float bloom = 1. + 2.9 * flash + .42 * breath;
     float bulb = exp(-dot(d,d) / (r*r * bloom));
     float halo = exp(-length(d / vec2(3.5,2.6)) / (r * bloom));
     float spill = exp(-abs(d.x) / (r * 1.65) - abs(d.y) / (r * 12. * bloom)) * step(d.y, 0.);
-    float lampPower = lit * (1. + .80 * flash + .38 * breath);
+    float lampPower = lit * (1. + 1.65 * flash + .38 * breath);
     color += lampPower * vec3(1., .985, .953) * (.77 * bulb + .19 * halo + .12 * spill) / (1. + .13*z);
   }
   color += (hash(gl_FragCoord.xy) - .5) * (.008 + .012 * luminance);

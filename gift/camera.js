@@ -178,7 +178,7 @@ async function prepare(gl) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
     readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
-    fetch(new URL("./runway.glsl?v=contact",import.meta.url)).then(response=>{
+    fetch(new URL("./runway.glsl?v=ignition",import.meta.url)).then(response=>{
       if (!response.ok) throw Error("Runway lighting could not load");
       return response.text();
     }),
