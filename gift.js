@@ -1,10 +1,22 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=corner-press";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-contact";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
   const sequence = gift.parentElement;
   const content = download.querySelector(".download-layout");
   const night = gift.querySelector(".gift-night");
+  const runway = document.getElementById("runway");
+  const runwayCopy = runway.querySelector(".runway-copy");
+  prepareCopy(runwayCopy.querySelector("h2"));
+
+  function revealRunwayCopy(approach, landing) {
+    runway.toggleAttribute("data-copy-visible", approach >= .47);
+    runway.style.setProperty("--copy-presence", ease(.46,.74,approach));
+    runway.style.setProperty("--contact-presence", ease(.60,.90,approach));
+    runway.style.setProperty("--camera-offset", (landing-1)*100 + "dvh");
+    runwayCopy.inert = approach < 1;
+  }
+
   const render = setupStudio(gift.querySelector(".gift-camera"), download);
 
   const letter = document.querySelector("#letter");
@@ -86,6 +98,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
     const landing = sample(approach);
     gift.style.setProperty("--runway-arrival", landing);
+    revealRunwayCopy(approach, landing);
     render(1,1,lift,slip,landing);
   }
 
@@ -96,6 +109,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     gift.removeAttribute("data-airborne");
     gift.style.removeProperty("--letter-poster");
     gift.style.removeProperty("--runway-arrival");
+    revealRunwayCopy(0, 0);
     render(1,1);
   }
 

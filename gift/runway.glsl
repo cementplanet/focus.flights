@@ -18,10 +18,10 @@ float mist(vec2 p) {
 // The archived runway's aircraft, wet ground and lamps share one contact point.
 vec3 runwayColor(vec2 screen, float aspect, float travel, float seconds) {
   vec2 p=vec2(screen.x*aspect,screen.y+1.)*.5;
-  float spanAtRest=min(.93*aspect,1.58);
+  float spanAtRest=min(.74*aspect,.94);
   float settle=smoothstep(0.,1.,travel);
   float viewScale=mix(.86,1.,settle);
-  float wheelsAtRest=mix(.37,.255,smoothstep(.65,1.4,aspect));
+  float wheelsAtRest=mix(.205,.11,smoothstep(.65,1.4,aspect));
   vec3 aircraft=vec3(spanAtRest*viewScale,spanAtRest*(502./1682.)*viewScale,
     wheelsAtRest-.48*(1.-travel));
   vec2 entrance=vec2(smoothstep(.05,.88,travel),smoothstep(.09,.77,travel));
