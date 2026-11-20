@@ -19,8 +19,9 @@
 [data-window-flight] .shade-control { visibility: hidden; }
 [data-window-flight] .focus-copy {
   z-index: 1;
-  opacity: var(--cabin-copy);
-  transform: translateX(var(--copy-drift));
+  opacity: calc(1 - var(--copy-exit, 0));
+  transform: translateX(calc(clamp(-44px, -3vw, -16px) * var(--copy-exit, 0)));
+  --cabin-defocus: calc(6px * var(--copy-exit, 0));
 }
 
 /* Paint the soft glyph as ink, allowing its blur to extend past the line box. */

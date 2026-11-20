@@ -1,10 +1,6 @@
-export function prepareCopy(element) {
-  const readable = document.createElement("span");
-  readable.className = "motion-readable";
-  readable.append(...element.childNodes);
-  const visible = document.createElement("span");
-  visible.setAttribute("aria-hidden", "true");
-  const length = readable.textContent.replace(/\s/g, "").length;
+export function prepareCopy(...elements) {
+  const text = elements.map(element => element.textContent).join("");
+  const length = text.replace(/\s/g, "").length;
   let index = 0;
   function appendGlyphs(source, target) {
     for (const node of source.childNodes) {
@@ -33,8 +29,15 @@ export function prepareCopy(element) {
     }
   }
 
-  appendGlyphs(readable, visible);
-  element.append(readable, visible);
+  for (const element of elements) {
+    const readable = document.createElement("span");
+    readable.className = "motion-readable";
+    readable.append(...element.childNodes);
+    const visible = document.createElement("span");
+    visible.setAttribute("aria-hidden", "true");
+    appendGlyphs(readable, visible);
+    element.append(readable, visible);
+  }
 }
 
 export const unit = t => Math.min(1, Math.max(0, t));

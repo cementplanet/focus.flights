@@ -89,9 +89,9 @@
   from { --type-progress: 0; }
   to { --type-progress: 1; }
 }
-.motion-ready h1, .motion-ready p, .flight-feature-title, .flight-stage .earth-copy { --type-progress: 0; }
-.motion-ready h1 { animation: flight-type 720ms linear 90ms both; }
-.motion-ready p { animation: flight-type 660ms linear 220ms both; }
+.motion-ready:not([data-copy-motion]) :is(h1, p), .flight-feature-title, .flight-stage .earth-copy { --type-progress: 0; }
+.motion-ready:not([data-copy-motion]) h1 { animation: flight-type 720ms linear 90ms both; }
+.motion-ready:not([data-copy-motion]) p { animation: flight-type 660ms linear 220ms both; }
 .flight-feature-visible .flight-feature-title { animation: flight-type 670ms linear both; }
 .motion-readable {
   position: absolute;
@@ -101,13 +101,27 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+/* Opt in on any group prepared with prepareCopy; --type-progress remains reversible. */
+[data-copy-motion="soft-type"] {
+  --type-duration: 1500ms;
+  --type-stagger-scale: 1.38;
+  --type-resolve-rate: 2.87;
+  --type-blur: clamp(6px, .42em, 18px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-copy-motion="soft-type"][data-copy-entry="waiting"] { --type-progress: 0; }
+  [data-copy-motion="soft-type"][data-copy-entry="playing"] {
+    animation: flight-type var(--type-duration) linear both;
+  }
+}
+[data-copy-motion="soft-type"] .motion-glyph { --blur-progress: var(--glyph-t); }
 .motion-word { display: inline-block; }
 .motion-glyph {
   display: inline-block;
-  --glyph-t: clamp(0, (min(var(--type-progress), var(--hero-title-progress, 1)) - var(--glyph-delay)) * 2.12, 1);
+  --glyph-t: clamp(0, (min(var(--type-progress), var(--hero-title-progress, 1)) - var(--glyph-delay) * var(--type-stagger-scale, 1)) * var(--type-resolve-rate, 2.12), 1);
   --glyph-focus: calc(1 - (1 - var(--glyph-t)) * (1 - var(--glyph-t)) * (1 - var(--glyph-t)));
   opacity: var(--glyph-focus);
-  filter: blur(calc((1 - var(--glyph-focus)) * min(.16em, 8px)));
+  filter: blur(calc((1 - var(--blur-progress, var(--glyph-focus))) * var(--type-blur, min(.16em, 8px))));
   translate: 0 calc((1 - var(--glyph-focus)) * .16em);
 }
 

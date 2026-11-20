@@ -1,6 +1,5 @@
 import { setupGiftDescent } from "./gift.js?v=card-column";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
-import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
 import { prepareCopy, unit } from "./motion-copy.js";
@@ -247,7 +246,7 @@ const gift = document.getElementById("gift");
 const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
 const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), document.getElementById("runway")];
 const sequence = sky.parentElement;
-for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
+prepareCopy(...deepFocus.querySelectorAll(".focus-copy h2, .focus-description p"));
 
 const focusTitle = document.getElementById("deep-focus-title");
 const glow = document.createElement("span");
@@ -259,20 +258,35 @@ new IntersectionObserver(([entry]) => {
   glow.toggleAttribute("data-visible", entry.isIntersecting);
 }).observe(focusTitle);
 
-const ripple = setupFocusRipple(showcase);
+const copyGroups = sections.map(section => section.querySelector('[data-copy-motion="soft-type"]'));
+let copyVisit = -1;
+
+function beginCopyVisit(page) {
+  if (copyVisit === page) return;
+  copyVisit = page;
+  const group = copyGroups[page];
+  if (!group) return;
+  const replay = group.dataset.copyEntry === "playing";
+  group.dataset.copyEntry = "waiting";
+  // A hash jump or immediate reversal can leave and re-enter in one paint.
+  if (replay) group.getAnimations();
+}
+
+function revealCopy() {
+  const group = copyGroups[copyVisit];
+  if (group?.dataset.copyEntry === "waiting") group.dataset.copyEntry = "playing";
+}
+
+let departingFocus = false;
 
 function clearFocusHandoff() {
   if (!sequence.hasAttribute("data-focus-handoff")) return;
-  ripple.end();
+  deepFocus.style.removeProperty("--return-copy");
   sequence.removeAttribute("data-focus-handoff");
   deepFocus.style.removeProperty("--window-reveal");
 }
 
-const glazing = deepFocus.querySelector(".porthole-frame");
 function alignFocusScene() {
-  const glass = glazing.getBoundingClientRect();
-  const scene = deepFocus.getBoundingClientRect();
-  ripple.capture(glass.left + glass.width / 2 - scene.left, glass.top + glass.height / 2 - scene.top);
   deepFocus.style.setProperty("--focus-offset", (showcase.offsetTop - deepFocus.offsetTop) + "px");
 }
 
@@ -282,16 +296,28 @@ function paintFocusHandoff(progress) {
     sequence.setAttribute("data-focus-handoff", "");
     window.scrollTo({ top: showcase.offsetTop, behavior: "instant" });
   }
-  // Extend the spring's quiet tail so the last letters have room to resolve.
-  const t = 1 - Math.pow(1 - unit(progress - 1), .65);
-  ripple.draw(t);
-  const cabin = ease(.23, .88, t);
-  showcase.style.setProperty("--showcase-presence", 1 - ease(.1, .58, t));
-  deepFocus.style.setProperty("--cabin-reveal", cabin);
-  deepFocus.style.setProperty("--window-reveal", ease(.12, .92, t));
-  deepFocus.style.setProperty("--title-reveal", unit((t - .39) / .56));
-  siteHeader.toggleAttribute("data-on-showcase", cabin < .54);
-  siteHeader.toggleAttribute("data-on-focus", cabin >= .54);
+  const position = unit(progress - 1);
+  // The archived runway reveal moves a viewport-height feather from bottom to top.
+  const t = 1 - Math.pow(1 - position, .65);
+  const sweep = ease(0, .86, t);
+  const edge = -100 + 200 * sweep;
+  const presence = 1 - ease(.26, .70, t);
+  showcase.style.setProperty("--showcase-presence", presence);
+  showcase.style.setProperty("--showcase-defocus", ease(.16, .61, t));
+  deepFocus.style.setProperty("--focus-edge", edge + "%");
+  deepFocus.style.setProperty("--porthole-presence", ease(.39, .80, t));
+  deepFocus.style.setProperty("--window-reveal", ease(.19, .93, t));
+  if (departingFocus) {
+    // Stagger the two sets of copy during the return transition.
+    deepFocus.style.setProperty("--return-copy", ease(.61, .91, t));
+  }
+  // Start the visit's own type clock once the text can actually be seen.
+  if ((pageTarget === 2 && t >= (departingFocus ? .69 : .28)) ||
+      (pageTarget === 1 && t <= .47)) revealCopy();
+  const copyPhase = pageTarget === 2 ? 1 : ease(.08, .99, Math.sqrt(position));
+  deepFocus.style.setProperty("--title-reveal", copyPhase);
+  siteHeader.toggleAttribute("data-on-showcase", edge < 46);
+  siteHeader.toggleAttribute("data-on-focus", edge >= 46);
 }
 
 function saveSection(page) {
@@ -326,10 +352,13 @@ function paintHandoff(progress, travel) {
 function playPage(target, focusPage = false) {
   cancelLinkFade();
   if (target === pageTarget) return false;
-  deepFocus.removeAttribute("data-anchor-entry");
+  // Keep this choreography through interruptions so redirecting the spring
+  // samples the same image at the same position.
+  if (!handoffFrame) departingFocus = handoffProgress === 2;
   const leavingDownload = target === 4 && download.contains(document.activeElement);
   pageOrigin = pageTarget;
   pageTarget = target;
+  beginCopyVisit(target);
   deepFocus.inert = false;
   if (target >= 3 || handoffProgress > 2) setShadeActive(true, true);
   else if (target !== 2) setShadeActive(false);
@@ -367,6 +396,7 @@ function playPage(target, focusPage = false) {
     if (travel && progress > 2) {
       clearFocusHandoff();
       windowFlight.paint(unit(progress - 2), target === 3);
+      if (target === 2 && progress <= 2.45) revealCopy();
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
       return;
@@ -374,11 +404,12 @@ function playPage(target, focusPage = false) {
     if (!travel && target >= 3) giftDescent.holdSky(target === 3);
     else windowFlight.end(false);
     if (travel && progress > 1) {
-      if (progress >= 1.48) setShadeActive(target >= 2);
+      setShadeActive(target >= 2);
       paintFocusHandoff(progress);
       return;
     }
     clearFocusHandoff();
+    if ((target === 0 && progress < .52) || (target === 1 && progress >= .82)) revealCopy();
     const top = travel ? showcase.offsetTop * ease(.42, .985, progress) : sections[target].offsetTop;
     window.scrollTo({ top, behavior: "instant" });
   }
@@ -388,7 +419,9 @@ function playPage(target, focusPage = false) {
     handoffProgress = target;
     handoffVelocity = 0;
     setShadeActive(target >= 2);
+    revealCopy();
     paintPage(target, false);
+    if (target !== 2) deepFocus.removeAttribute("data-anchor-entry");
     syncHeader();
     hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
@@ -654,6 +687,8 @@ function syncScroll() {
   saveSection(page);
   pageTarget = pageOrigin = page;
   handoffProgress = page;
+  beginCopyVisit(page);
+  revealCopy();
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   giftDescent.end(page >= 4);
@@ -667,7 +702,9 @@ function syncScroll() {
 
 function restoreSection() {
   const page = sections.findIndex(section => section.id === location.hash.slice(1));
-  if (page < 0) { syncScroll(); return; }
+  if (page < 0) { syncScroll(); beginCopyVisit(pageTarget); revealCopy(); return; }
+  beginCopyVisit(page);
+  revealCopy();
   deepFocus.toggleAttribute("data-anchor-entry", page === 2);
   cancelAnimationFrame(handoffFrame);
   handoffFrame = handoffVelocity = 0;

@@ -75,37 +75,18 @@
 .flight-segment-label svg { width: 20px; height: 20px; }
 
 .deep-focus {
-  box-sizing: border-box;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   padding: var(--phone-top) var(--phone-gutter) var(--phone-bottom);
   row-gap: clamp(10px, 2dvh, 22px);
 }
-.focus-copy {
-  position: relative;
-  grid-row: 1;
-  text-align: center;
-}
-.focus-copy h2 {
-  position: static;
-  font-size: clamp(28px, 7.6vw, 38px);
-}
-.focus-copy p {
-  position: static;
-  display: block;
-  translate: none;
+.focus-copy { text-align: center; }
+.focus-copy h2 { font-size: clamp(28px, 7.6vw, 38px); }
+.focus-description {
   max-width: 31ch;
   margin: 10px auto 0;
   font-size: clamp(17px, 4.9vw, 23px);
-  line-height: 1.32;
-  text-wrap: balance;
 }
-.focus-sentence { display: inline; }
-.porthole {
-  grid-area: 2 / 1;
-  inset: 50% auto auto 50%;
-  height: min(118%, 138vw);
-}
+.focus-description p { line-height: 1.32; text-wrap: balance; }
+.porthole { height: min(118cqh, 143cqw); }
 
 .download-layout { padding: var(--phone-top) var(--phone-gutter) var(--phone-bottom); }
 .download-label { font-size: clamp(15px, 4vw, 18px); }
@@ -130,11 +111,8 @@
   .showcase-stage, .showcase-devices { grid-column: 2; }
   .showcase-devices { gap: 2px; }
   .deep-focus { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
-  .deep-focus { grid-template-rows: minmax(0, 1fr); }
-  .focus-copy { align-self: center; }
-  .porthole { grid-area: 1 / 2; height: min(118%, 57vw); }
   .focus-copy h2 { font-size: 23px; }
-  .focus-copy p { font-size: 15px; margin-top: 6px; }
+  .focus-description { font-size: 15px; margin-top: 6px; }
   .download-layout { grid-template-rows: 1fr; }
   .download-copy { grid-row: 1; }
   .download-copy h2 { font-size: 32px; }

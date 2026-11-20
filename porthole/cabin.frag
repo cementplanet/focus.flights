@@ -4,11 +4,10 @@ precision highp float;
 in vec3 point, surfaceNormal;
 in vec4 material;
 in vec3 windowLight;
-flat in vec3 skyLight, cloudLight;
+flat in vec3 skyLight;
 uniform float shade;
 out vec4 pixel;
 
-float saturate(float x) { return clamp(x, 0., 1.); }
 vec3 displayRGB(vec3 rgb) {
     rgb = clamp(rgb, 0., 1.);
     return mix(rgb*12.92, 1.055*pow(rgb, vec3(1./2.4))-.055, greaterThan(rgb, vec3(.0031308)));
@@ -22,55 +21,74 @@ void main() {
     vec4 surface = material;
     vec3 p = point;
     vec3 n = normalize(surfaceNormal);
-    vec3 view = normalize(vec3(0.0, 0.045, -3.25) - p);
 
     vec3 apertureCenter = vec3(0.0, 0.0, 0.48);
     vec3 toGlass = normalize(apertureCenter - p);
-    vec3 toSky = normalize(vec3(0.0, 0.61, 0.47) - p);
-    vec3 toCloud = normalize(vec3(0.0, -0.48, 0.47) - p);
     float exposure = surface.y;
     vec3 sky = skyLight;
-    vec3 cloud = cloudLight;
     if (surface.x > 3.9) {
-        float u = surface.z, h = surface.w;
-        float edge = exp(-h * 90.0);
-        vec2 recess = abs(vec2(u, h - 0.053)) - vec2(0.113, 0.009);
-        float roundedEdge = length(max(recess, vec2(0.0))) + min(max(recess.x, recess.y), 0.0) - 0.008;
-        float grip = 1.0 - smoothstep(-0.006, 0.010, roundedEdge);
-        float lip = 1.0 - smoothstep(0.004, 0.015, abs(roundedEdge));
-        // Cabin-side fill and diffuse light returning through the uncovered opening.
-        float opening = 1.0 - shade;
-        float spill = exp(-3.8 * h) * smoothstep(0.0, 0.42, opening);
-        float side = clamp((abs(u) - 0.24) / 0.31, 0.0, 1.0);
-        float wrap = 0.76 + 0.24 * max(dot(n, vec3(0.0, 0.55, -0.835)), 0.0);
-        vec3 reflected = mix(sky, cloud, 0.28);
-        vec3 light = sky * (0.045 + 0.12 * opening) + reflected * (0.18 * spill);
-        vec3 color = (vec3(0.002) + light * wrap * (1.0 - 0.30 * side * side))
-                   * (1.0 - 0.30 * grip);
-        color += reflected * spill * (0.020 * edge + 0.014 * lip * smoothstep(0.049, 0.067, h));
-        color *= 1.0 + 0.14 * moldedGrain(vec2(u, h) * vec2(185., 220.));
+        float u = surface.z, h = surface.w, recess = surface.y;
+        float opening = 1.-shade;
+        float left = smoothstep(-.53,.53,-u);
+        float underHood = smoothstep(.10,.212,(p.y-.017+.065*p.z)/(3.25+p.z));
+        float toTrack = pow(abs(u)/.54,2.90) + pow(abs(p.y)/.76,2.70);
+        float contact = 1. - .55*smoothstep(.77,1.03,toTrack);
+        float sideBounce = exp2(-abs(abs(u)-.52)/.125) * (.23+.77*left);
+        float lowerBounce = exp2(-h/.26) * (.68+.32*left);
+        float wrap = max(dot(n,normalize(vec3(-.50,-.77,-.40))),0.);
+        vec3 trimLight = mix(vec3(.69,.77,.87), vec3(1.,.89,.75), .30+.66*left);
+        vec3 spill = trimLight*(.105*sideBounce+.085*lowerBounce) + windowLight*.19;
+        vec3 light = vec3(.015,.015,.014) + sky*.035
+                   + spill*(.11+.89*opening)*(.56+.90*wrap)*(1.-.79*underHood);
+        // The finger well and rolled edge catch the same grazing light as the face.
+        vec3 color = vec3(.57,.55,.50)*light*contact*(1.-.47*recess);
+        float grazing = max(-n.y,0.);
+        float bevel = grazing*grazing;
+        color += trimLight*(.024*pow(wrap,4.) + .040*bevel)
+               * (.20+.80*opening)*(1.-.65*underHood);
+        color *= 1. + .050*moldedGrain(vec2(u,h)*vec2(185.,220.));
         pixel = vec4(displayRGB(color), 1.0);
         return;
     }
-    float finish = surface.x;
-    float bevel = smoothstep(.535, .551, surface.z);
-    vec3 base = mix(vec3(.027, .029, .032), vec3(.38, .39, .40), bevel);
+    float w = surface.z;
+    float left = smoothstep(-.60, .60, -p.x);
+    float low = smoothstep(-.76, .71, -p.y);
+    float sideLight = .23 + .51 * left + .43 * low;
+    float opening = 1. - shade;
+    float shadeEdge = .61 - shade * 1.43;
+    float visible = 1. - shade * (.62 + .36 * smoothstep(shadeEdge-.18, shadeEdge+.16, p.y));
 
-    // Scale the grain in object space and filter it on foreshortened surfaces.
-    vec2 uv = p.xy * vec2(190., 240.) + p.z * 95.;
-    float grain = moldedGrain(uv) + 0.45 * moldedGrain(uv * 2.17);
-    base *= 1.0 + grain * mix(0.15, 0.28, smoothstep(0.1, 1.0, finish));
-    // The deeper, glass-facing bevel sees a much larger portion of the sky.
-    float reach = exp2(-max(surface.z - .548, 0.) / .023);
-    float facing = max(dot(n, toGlass), 0.);
-    vec3 bounce = .15 * (sky * max(dot(n, toSky), 0.) + cloud * max(dot(n, toCloud), 0.));
-    float shadeEdge = .69 - shade * 1.51;
-    float occlusion = 1. - shade * (.75 + .22 * smoothstep(shadeEdge-.17, shadeEdge+.17, p.y));
-    vec3 incident = windowLight * (.26 + .76 * facing) + bounce;
-    float reflection = pow(max(dot(n, normalize(toGlass + view)), 0.), 22.);
-    vec3 diffuse = base * (incident * reach * occlusion + vec3(.00065)) * exposure;
-    vec3 sheen = windowLight * reflection * .10 * reach * occlusion;
-    float edge = clamp((surface.z - .551) / (.637 - .551), 0., 1.);
-    float coverage = 1.0 - edge*edge*edge * (edge*(edge*6.0 - 15.0) + 10.0);
-    pixel = vec4(displayRGB(diffuse + sheen) * coverage, coverage);
+    // Cast the upper housing's shadow across all its returns in the same projected plane.
+    float screenY = (p.y-.017+.065*p.z) / (3.25+p.z);
+    float penumbra = smoothstep(.568, .745, w);
+    float hood = smoothstep(mix(.169,.130,penumbra), mix(.198,.294,penumbra),
+                            screenY + .010*p.x*p.x);
+    vec3 sourceColor = mix(vec3(.72,.81,.93), vec3(1.,.88,.71), .22+.58*left+.14*low);
+    vec3 irradiance = (.68*sourceColor + .65*windowLight) * sideLight;
+    irradiance *= (.09 + .91*opening) * visible * (1.-.944*hood);
+
+    // The oblique liner faces the opening. Its outer skirt curves away from it.
+    float towardGlass = max(dot(n,toGlass),0.);
+    vec3 liner = vec3(.89,.87,.80) * irradiance * (.64+.36*towardGlass);
+    float rolledEdge = exp(-pow(abs(w-.575)/.003,2.));
+    float joint = exp(-pow(abs(w-.578)/.0018,2.));
+    liner += rolledEdge * .09 * irradiance;
+    float skirtLight = mix(.39,.065,smoothstep(.582,.656,w));
+    vec3 skirt = vec3(.83,.85,.82)*irradiance * skirtLight * (.75+.25*towardGlass);
+    vec3 body = mix(liner,skirt,smoothstep(.575,.578,w)) * (1.-.46*joint);
+    body *= .83+.17*exposure;
+    body += vec3(.0019,.0022,.0026);
+
+    // The seal sits in a narrow recess. Light scattered on the wall is strongest
+    // alongside the seal and dies away over a much greater distance than its width.
+    float seal = smoothstep(.650,.663,w);
+    body = mix(body, vec3(.0019,.0023,.0027) + .013*irradiance, seal);
+    float distanceToSeal = max(w-.673,0.);
+    float spill = .054*exp2(-distanceToSeal/.026) + .038*exp2(-distanceToSeal/.095);
+    vec3 wall = vec3(.0034,.0039,.0043) + irradiance*spill*(.35+.85*left+.35*low);
+    body = mix(body, wall, smoothstep(.670,.684,w));
+    float grain = moldedGrain(p.xy * 185. + p.z * 92.);
+    body *= 1. + grain * .052;
+    float coverage = 1. - smoothstep(.78,1.02,w);
+    pixel = vec4(displayRGB(body)*coverage, coverage);
 }

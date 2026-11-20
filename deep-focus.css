@@ -3,18 +3,23 @@
   inherits: true;
   initial-value: 0;
 }
+@property --window-entry {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
 @property --window-reveal {
   syntax: "<number>";
   inherits: true;
   initial-value: 1;
 }
 .deep-focus {
-  --window-height: min(94dvh, calc(100dvh - .3 * var(--focus-title-size)), 121vw);
-  --window-center: calc(var(--window-height) / 2 + 1dvh);
-  --window-origin: 50% var(--window-center);
-  --focus-title-size: min(15.5vw, 37dvh);
-  --focus-gutter: max(clamp(12px, 1.55vw, 38px), env(safe-area-inset-left), env(safe-area-inset-right));
-  --focus-title-inset: max(.45dvh, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, .44fr) minmax(0, .56fr);
+  column-gap: clamp(20px, 4vw, 80px);
+  padding: calc(var(--header-top) + var(--header-height) + 12px) var(--content-left)
+    max(clamp(22px, 5dvh, 64px), env(safe-area-inset-bottom));
   position: relative;
   isolation: isolate;
   height: 100dvh;
@@ -25,46 +30,51 @@
   background: var(--cabin-wall);
 }
 
+.focus-window-stage {
+  grid-area: 1 / 2;
+  position: relative;
+  container-type: size;
+  pointer-events: none;
+}
 .porthole {
   position: absolute;
-  top: var(--window-center);
+  top: 50%;
   left: 50%;
   translate: -50% -50%;
-  height: var(--window-height);
-
+  /* The visible trim occupies roughly three quarters of the canvas height. */
+  height: min(130cqh, 177cqw);
   aspect-ratio: 912 / 1144;
   pointer-events: none;
   user-select: none;
-  transform: translateY(calc((1 - var(--window-reveal)) * 1dvh)) scale(calc(.975 + .025 * var(--window-reveal)));
-  --shade-travel: 52.8%;
+  --window-progress: calc(var(--window-reveal) * var(--window-entry));
+  opacity: calc(.14 + .86 * var(--window-entry));
+  transform: scale(calc(.965 + .035 * var(--window-progress)));
+  --shade-travel: 50%;
   container-type: size;
 }
-/* Two broad, overlapping pools spread twilight from the opening across the cabin wall.
-   The long tail is sampled from 1 / (1 + r²)² in window-relative coordinates. */
+/* The bright liner sends a low, warm reflection into the surrounding wall. */
 .porthole::before {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
   translate: -50% -50%;
-  width: max(104vw, 165%);
+  width: max(152vw, 165%);
   height: max(200dvh, 165%);
   pointer-events: none;
-  opacity: calc(1 - .94 * var(--shade-drop));
+  opacity: calc(1 - .93 * var(--shade-drop));
   background:
-    radial-gradient(ellipse 43cqw 40cqh at 50% calc(50% - 14cqh),
-      rgb(73 90 135 / .66), rgb(73 90 135 / .42) 50%, rgb(73 90 135 / .165) 100%,
-      rgb(73 90 135 / .062) 150%, rgb(73 90 135 / .026) 200%, rgb(73 90 135 / .0066) 300%, transparent 500%),
-    radial-gradient(ellipse 48cqw 37cqh at 50% calc(50% + 17cqh),
-      rgb(120 99 120 / .57), rgb(120 99 120 / .365) 50%, rgb(120 99 120 / .143) 100%,
-      rgb(120 99 120 / .054) 150%, rgb(120 99 120 / .023) 200%, rgb(120 99 120 / .0057) 300%, transparent 500%);
+    radial-gradient(ellipse 38cqw 41cqh at 41% 58%, rgb(134 119 91 / .52),
+      rgb(126 112 94 / .30) 65%, rgb(87 78 74 / .095) 120%, transparent 255%),
+    radial-gradient(ellipse 47cqw 50cqh at 59% 47%, rgb(85 100 126 / .38),
+      rgb(79 91 118 / .19) 77%, rgb(60 69 90 / .055) 155%, transparent 295%);
 }
 .porthole-frame { position: absolute; inset: 0; }
-.porthole-frame { mask-image: linear-gradient(black 62%, rgb(0 0 0 / .78) 75%, transparent 96%); width: 100%; height: 100%; }
+.porthole-frame { width: 100%; height: 100%; }
 .shade-control {
   appearance: none;
   position: absolute;
-  top: 21.8%;
+  top: 24.6%;
   left: 32%;
   width: 35%;
   height: max(44px, calc(5.6% + var(--shade-drop) * var(--shade-travel)));
@@ -82,7 +92,7 @@
   content: "";
   position: absolute;
   left: 50%;
-  top: calc(23.8% + var(--shade-drop) * var(--shade-travel));
+  top: calc(26.6% + var(--shade-drop) * var(--shade-travel));
   translate: -50% -50%;
   width: 12%;
   height: 2.4%;
@@ -93,29 +103,18 @@
 [data-focus-handoff] .shade-control { pointer-events: none; }
 .focus-copy {
   --copy-progress: var(--type-progress);
-  position: absolute;
-  inset: 0;
+  grid-area: 1 / 1;
+  position: relative;
+  align-self: center;
   pointer-events: none;
 }
 .focus-copy h2 {
-  --type-progress: clamp(0, var(--copy-progress) * 1.65, 1);
-  position: absolute;
-  inset-inline: 0;
-  bottom: var(--focus-title-inset);
-  margin: 0;
   display: grid;
-  isolation: isolate;
-  color: #e0e1df;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
-  font-size: var(--focus-title-size);
-  font-weight: 540;
-  font-stretch: 132%;
-  font-variation-settings: "wdth" 132;
-  line-height: 1;
+  margin: 0;
+  font: 500 clamp(28px, 3.5vw, 64px)/1.08 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  font-stretch: 132%; /* SF Pro Expanded */
   letter-spacing: -.032em;
-  word-spacing: .035em;
-  white-space: nowrap;
-  text-align: center;
+  color: #edeef0;
   pointer-events: auto;
 }
 /* Both layers share the title's grid cell and wrap with the same measure. */
@@ -146,93 +145,88 @@
     animation: focus-title-breath 7s var(--button-press) infinite;
   }
 }
-.focus-copy h2 > [aria-hidden]:last-child {
-  mask-image: linear-gradient(black 48%, rgb(0 0 0 / .85) 65%, rgb(0 0 0 / .18) 100%);
+.focus-description {
+  margin-top: clamp(14px, 1.6vw, 28px);
+  max-width: 32ch;
+  font-size: var(--intro-font-size);
 }
-.focus-copy p {
-  position: absolute;
-  inset-inline: var(--focus-gutter);
-  top: var(--window-center);
-  translate: 0 -50%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.focus-description p {
   margin: 0;
-  color: #d4d6d9;
-  font-size: clamp(17px, min(1.85vw, 3.2dvh), 35px);
-  line-height: 1.24;
-  letter-spacing: -.012em;
-}
-.focus-sentence {
-  display: block;
-  width: min(25vw, 26ch);
-  text-wrap: balance;
+  font-size: inherit;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -.014em;
+  color: #b9bec8;
+  text-wrap: pretty;
   pointer-events: auto;
-  --type-progress: clamp(0, (var(--copy-progress) - .19) * 1.68, 1);
 }
-.focus-sentence + .focus-sentence {
-  color: #bcc1c7;
-  text-align: end;
-  --type-progress: clamp(0, (var(--copy-progress) - .39) * 1.68, 1);
+.focus-description strong {
+  color: #dce0e6;
+  font-weight: 700;
+  white-space: nowrap;
 }
-.focus-phrase { white-space: nowrap; }
-@media (max-aspect-ratio: 1/1) {
+.focus-copy :is(h2, p) { --type-progress: var(--copy-progress); }
+
+@media (max-width: 800px) {
   .deep-focus {
-    --window-height: min(82dvh, 121vw);
-    --window-center: 42%;
+    column-gap: clamp(14px, 3vw, 24px);
+    padding-inline-end: max(4.5vw, env(safe-area-inset-right));
   }
-  .focus-copy p {
-    top: auto;
-    bottom: calc(var(--focus-title-inset) + var(--focus-title-size) + clamp(16px, 3dvh, 32px));
-    translate: none;
-    align-items: start;
-    font-size: clamp(15px, 3.85vw, 26px);
-    line-height: 1.27;
+  .focus-copy h2 { font-size: clamp(23px, 5.2vw, 36px); }
+  .focus-description {
+    margin-top: 12px;
   }
-  .focus-sentence { width: min(46%, 25ch); }
 }
-@media (max-width: 540px) and (max-aspect-ratio: 1/1) {
-  .porthole-frame { mask-image: linear-gradient(black 60%, rgb(0 0 0 / .86) 72%, transparent 94%); }
+@media (max-width: 700px) and (orientation: portrait) {
+  .deep-focus {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: 12px;
+  }
+  .focus-window-stage { grid-area: 2 / 1; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .deep-focus { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 }
 @keyframes porthole-arrival {
-  from { --window-reveal: 0; opacity: .14; }
-  to { --window-reveal: 1; opacity: 1; }
+  from { --window-entry: 0; }
+  to { --window-entry: 1; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .deep-focus[data-anchor-entry] .porthole { animation: porthole-arrival 1.6s var(--button-press) both; }
-  .deep-focus[data-anchor-entry] .focus-copy { animation: flight-type 1.35s var(--button-press) .15s both; }
 }
 
 .site-header[data-on-focus] { color: #f1f5fc; text-shadow: none; }
 [data-focus-handoff] .deep-focus {
   z-index: 3;
   transform: translateY(var(--focus-offset));
-  background: transparent;
   pointer-events: none;
+  mask-image: linear-gradient(to top,
+    black var(--focus-edge),
+    rgb(0 0 0 / .9) calc(var(--focus-edge) + 20%),
+    rgb(0 0 0 / .5) calc(var(--focus-edge) + 50%),
+    rgb(0 0 0 / .1) calc(var(--focus-edge) + 80%),
+    transparent calc(var(--focus-edge) + 100%));
 }
-[data-focus-handoff] .deep-focus::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--cabin-wall);
-  opacity: var(--cabin-reveal);
+[data-focus-handoff] .showcase {
+  background-color: color-mix(in srgb, #151922, var(--flight-page) calc(100% * var(--showcase-presence)));
 }
-.focus-ripple {
-  display: none;
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
+[data-focus-handoff] .showcase::before,
+[data-focus-handoff] .showcase-stage { opacity: var(--showcase-presence); }
+[data-focus-handoff] .showcase-stage { filter: blur(calc(5px * var(--showcase-defocus))); }
+/* Bring the window into focus as the device silhouette clears. */
+[data-focus-handoff] .porthole {
+  opacity: calc(var(--window-entry) * var(--porthole-presence));
 }
-.showcase[data-ripple] .focus-ripple { display: block; }
-.showcase[data-ripple] :is(.showcase-stage, .showcase-copy) { opacity: 0; }
-[data-focus-handoff] :is(.flight-playback, .showcase-devices),
-[data-focus-handoff] .showcase:not([data-ripple]) :is(.showcase-stage, .showcase-copy) {
+[data-focus-handoff] .porthole-frame { filter: blur(calc(2px * (1 - var(--window-reveal)))); }
+[data-focus-handoff] .showcase-intro,
+[data-focus-handoff] .showcase-devices {
+  z-index: 2;
   opacity: var(--showcase-presence);
+  filter: blur(calc(4px * var(--showcase-defocus)));
 }
-[data-focus-handoff] .porthole { opacity: var(--window-reveal); }
-[data-focus-handoff] .focus-copy { --type-progress: var(--title-reveal); }
+[data-focus-handoff] .focus-copy {
+  --copy-progress: min(var(--type-progress), var(--title-reveal));
+  opacity: var(--return-copy, 1);
+}
 [data-focus-handoff] .showcase:focus { outline: none; }

@@ -1,5 +1,6 @@
 export function setupWindowFlight(cabin, download, ease, setCamera) {
   const host = cabin.querySelector(".porthole");
+  const copy = cabin.querySelector(".focus-copy");
   const sequence = cabin.parentElement;
   const content = download.querySelector(".download-layout");
   content.inert = true;
@@ -102,8 +103,7 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
     const nearFocus = ease(.24, .78, approach) * (1 - ease(.8, 1.14, approach));
     view.blur = 2.4 * nearFocus;
     cabin.style.setProperty("--wall-light", 1 - ease(.08, .95, approach));
-    cabin.style.setProperty("--cabin-copy", 1 - ease(0, .58, approach));
-    cabin.style.setProperty("--copy-drift", (-5 * ease(0, .68, approach)) + "vw");
+    copy.style.setProperty("--copy-exit", ease(0, .68, approach));
     setCamera(view, download);
   }
 

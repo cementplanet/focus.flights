@@ -23,21 +23,17 @@ section.querySelector(".showcase-devices").addEventListener("click", event => {
 
 prepareCopy(copy);
 copy.dataset.typeReady = "";
-new IntersectionObserver(([entry]) => {
-  const inView = entry.intersectionRatio >= .72;
+new IntersectionObserver(entries => {
+  const inView = entries.at(-1).intersectionRatio >= .72;
   if (inView === copy.hasAttribute("data-visible")) return;
-  // Establish the starting style when opening directly at #showcase.
-  getComputedStyle(copy).getPropertyValue("--type-progress");
   copy.toggleAttribute("data-visible", inView);
 }, { rootMargin: "-16px 0px -120px", threshold: .72 }).observe(copy);
 
-let stageVisible = false;
 const sequence = section.parentElement;
 function updatePlayback() {
-  syncPlayback(stageVisible && !sequence.hasAttribute("data-focus-handoff"));
+  const rect = stage.getBoundingClientRect();
+  const visibleHeight = Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top);
+  syncPlayback(sequence.hasAttribute("data-focus-handoff") || (rect.height > 0 && visibleHeight >= .25 * rect.height));
 }
 new MutationObserver(updatePlayback).observe(sequence, {attributes: true, attributeFilter: ["data-focus-handoff"]});
-new IntersectionObserver(([entry]) => {
-  stageVisible = entry.intersectionRatio >= .25;
-  updatePlayback();
-}, { threshold: .25 }).observe(stage);
+new IntersectionObserver(updatePlayback, {threshold: .25}).observe(stage);

@@ -3,6 +3,13 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   const bounds = [[1483, 189, 906, 1804], [1016, 94, 1788, 1878], [747, 227, 2401, 1738], [610, 298, 2471, 1610]];
   const centerY = [.52, .52, .515, .53];
   const firstVideo = stage.querySelector("video");
+  // The full-screen wave and the device positions use separate coordinate spaces.
+  const wave = document.createElement("div");
+  wave.className = "device-wave";
+  const orbit = document.createElement("div");
+  orbit.className = "device-orbit";
+  wave.append(orbit);
+  stage.append(wave);
   const items = buttons.map((button, index) => {
     const item = document.createElement("div");
     const media = document.createElement("div");
@@ -29,7 +36,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     if (index === 0) media.append(firstVideo);
     item.append(media);
     item.addEventListener("click", () => button.click());
-    stage.append(item);
+    orbit.append(item);
     return item;
   });
 

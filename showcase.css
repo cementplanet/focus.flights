@@ -4,6 +4,11 @@
   initial-value: #d4dfe7;
 }
 
+.flight-sequence {
+  --intro-width: clamp(350px, 41vw, 560px);
+  --intro-font-size: calc(var(--intro-width) * .09);
+}
+
 .showcase {
   --glass-tone: #d4dfe7;
   --content-top: calc(var(--header-top) + var(--header-height) + 16px);
@@ -40,8 +45,7 @@
 .showcase-intro {
   position: relative;
   z-index: 1;
-  width: min(560px, 41vw);
-  min-width: 350px;
+  width: var(--intro-width);
   container-type: inline-size;
   transform: translateY(-2svh);
 }
@@ -128,7 +132,13 @@
   font-weight: 650;
   line-height: 1;
 }
-.flight-segment-label svg { width: 16px; height: 16px; flex: none; fill: currentColor; }
+.flight-segment-label svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: currentColor;
+}
+.flight-plane-icon { scale: 1.2; }
 .flight-segment-label[data-filled] { color: #fff; clip-path: var(--fill-shape); }
 .flight-playback-action {
   position: relative;
@@ -190,7 +200,7 @@
 .showcase-copy {
   width: 100%;
   margin: 0;
-  font-size: 9cqw;
+  font-size: var(--intro-font-size);
   font-weight: 450;
   line-height: 1.12;
   letter-spacing: -.025em;
@@ -200,15 +210,6 @@
 .showcase-copy strong {
   font-weight: 700;
   white-space: nowrap;
-}
-
-.showcase-copy[data-type-ready] {
-  --type-progress: 0;
-  transition: --type-progress 480ms linear;
-}
-.showcase-copy[data-type-ready][data-visible] {
-  --type-progress: 1;
-  transition-duration: 1040ms;
 }
 
 .showcase-stage {
@@ -223,6 +224,8 @@
   position: relative;
   z-index: 1;
 }
+
+.device-wave, .device-orbit { position: absolute; inset: 0; }
 
 .device-orbit-item {
   position: absolute;
@@ -306,7 +309,11 @@
 
 .device-orbit-poster,
 .device-orbit-item video { opacity: var(--device-sharp, 1); }
-.device-orbit-blur { opacity: calc(1 - var(--device-sharp, 1)); }
+.device-orbit-blur {
+  opacity: calc(1 - var(--device-sharp, 1));
+  /* The blurred poster still has visible alpha along the export's top and bottom. */
+  mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
+}
 .device-orbit-item:has(video:not([data-buffering])) .device-orbit-poster { visibility: hidden; }
 .showcase-stage video[data-buffering] { opacity: 0; }
 
@@ -402,17 +409,21 @@
 }
 
 @media (max-width: 700px) {
+  .flight-sequence {
+    --showcase-gutter: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
+    --intro-width: min(520px, calc(100vw - 2 * var(--showcase-gutter)));
+    --intro-font-size: calc(var(--intro-width) * .0892);
+  }
   .showcase {
     height: 100dvh;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     justify-items: center;
-    padding-inline: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
+    padding-inline: var(--showcase-gutter);
   }
 
   .showcase-intro {
-    width: min(100%, 520px);
-    min-width: 0;
+    max-width: 100%;
     transform: none;
     display: grid;
     justify-items: center;
@@ -421,7 +432,7 @@
   .flight-segment-label { font-size: 11px; gap: 3px; }
   .flight-segment-label svg { width: 13px; height: 13px; }
 
-  .showcase-copy { font-size: 8.92cqw; text-align: left; }
+  .showcase-copy { text-align: left; }
 
   .showcase-stage {
     position: relative;
@@ -442,7 +453,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .showcase-copy[data-type-ready] { transition: none; }
+}
+
+@media (max-width: 700px) and (max-height: 500px) and (orientation: landscape) {
+  .flight-sequence { --intro-font-size: min(calc(var(--intro-width) * .0892), 8dvh); }
 }
 
 @container (max-width: 600px) {
