@@ -421,7 +421,8 @@ function playPage(target, focusPage = false) {
   const giftTime = phase => (phase - 4) * secondsPerPage(phase);
   const targetTime = giftTime(target);
   const timeOffset = giftTime(handoffProgress) - targetTime;
-  const playbackRate = pageOrigin === 5 && target === 3 ? 1.8 : 1;
+  const runwayHandoff = pageOrigin >= 5 && target >= 5;
+  const playbackRate = runwayHandoff ? 2.1 : (pageOrigin === 5 && target === 3 ? 1.8 : 1);
   const giftDuration = Math.max(.18 * secondsPerPage(Math.max(target, handoffProgress)), Math.abs(timeOffset)) / playbackRate;
   const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
