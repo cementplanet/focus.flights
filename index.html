@@ -330,7 +330,8 @@
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
   <link rel="stylesheet" href="download.css?v=sky-meteor">
-  <script src="sky.js?v=sky-meteor" type="module"></script>
+  <link rel="stylesheet" href="gift.css?v=spotlight">
+  <script src="sky.js?v=gift-descent" type="module"></script>
   <script src="showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
@@ -341,7 +342,7 @@
     </a>
     <div class="sky-nav">
       <span>Flight</span>
-      <span>Gift</span>
+      <a class="gift-link" href="#gift">Gift</a>
       <span>Creator</span>
       <a class="sky-get-app aqua-button" href="#download">
         <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
@@ -544,6 +545,21 @@
               <img src="brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" width="156" height="40">
             </a>
           </div>
+        </div>
+      </div>
+    </section>
+    <section class="gift" id="gift" aria-label="Gift" tabindex="-1">
+      <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+        <defs>
+          <filter id="gift-motion-blur" color-interpolation-filters="sRGB">
+            <feGaussianBlur stdDeviation="0"/>
+          </filter>
+        </defs>
+      </svg>
+      <div class="gift-stage">
+        <div class="gift-pool" aria-hidden="true"></div>
+        <div class="gift-box">
+          <img src="gift/box.webp" alt="An ivory FocusFlight gift box wrapped in a midnight-blue satin bow." width="1216" height="1000">
         </div>
       </div>
     </section>
