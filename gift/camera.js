@@ -140,7 +140,7 @@ function program(gl, vertex, fragment, attributes) {
 }
 
 async function readMesh() {
-  const response = await fetch(new URL("geometry.gz?v=unprinted",import.meta.url));
+  const response = await fetch(new URL("geometry.gz?v=square",import.meta.url));
   if (!response.ok) throw new Error("Gift geometry: " + response.status);
   const bytes = await response.arrayBuffer();
   // Hosts may serve .gz as either an encoded response or an ordinary file.
@@ -171,7 +171,7 @@ export function skyPitch(t) {
 }
 
 async function prepare(gl) {
-  const [mesh, paper, floor] = await Promise.all([readMesh(),readImage("paper-silk.webp?v=unprinted"),readImage("floor.webp?v=unprinted")]);
+  const [mesh, paper, floor] = await Promise.all([readMesh(),readImage("paper-silk.webp?v=square"),readImage("floor.webp?v=square")]);
   if (gl.isContextLost()) return;
   const model = program(gl,modelVertex,modelFragment,["position","normal","material","uv"]);
   const stage = program(gl,stageVertex,stageFragment,["corner"]);
