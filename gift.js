@@ -7,7 +7,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
   const night = gift.querySelector(".gift-night");
   const runway = document.getElementById("runway");
   const runwayCopy = runway.querySelector(".runway-copy");
-  prepareCopy(runwayCopy.querySelector("h2"));
+  for (const heading of runwayCopy.querySelectorAll("h2")) prepareCopy(heading);
 
   function revealRunwayCopy(approach, landing) {
     runway.toggleAttribute("data-copy-visible", approach >= .47);
