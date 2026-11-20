@@ -20,7 +20,8 @@
 .gift-camera[data-ready] { opacity: 1; }
 [data-gift-descent] .gift { translate: 0 -100%; z-index: 4; }
 [data-gift-descent] .gift-night { will-change: opacity; }
-[data-gift-descent] .download-layout { will-change: transform; }
+/* Let the copy complete its focus pull above the dimming sky. */
+[data-gift-descent] .download-layout { z-index: 5; will-change: transform; }
 [data-gift-descent] .download .flight-camera { transform-origin: center bottom; }
 
 .download-copy .motion-glyph { opacity: 1; filter: none; translate: none; }
@@ -29,21 +30,19 @@
   /* The three lines share the camera position. On ascent the first letters of
      the next line start resolving before the previous line finishes. */
   [data-gift-descent] .download-copy .motion-glyph {
-    --letter: clamp(0, (var(--gift-reveal) - var(--cue) * .85 - var(--glyph-delay) * .94) / .29, 1);
-    --focus: calc(var(--letter) * var(--letter) * (3 - 2 * var(--letter)));
-    opacity: var(--focus);
-    translate: 0 calc((1 - var(--focus)) * -.19em);
+    --letter: clamp(0, (var(--gift-reveal) - var(--cue) * .55 - var(--glyph-delay) * .54) / .57, 1);
+    /* The ink is already visible while the glyph is still out of focus. */
+    --ink-in: clamp(0, var(--letter) / .3, 1);
+    --sharp: clamp(0, (var(--letter) - .18) / .82, 1);
+    --defocus: calc(1 - var(--sharp) * var(--sharp) * (3 - 2 * var(--sharp)));
+    opacity: calc(var(--ink-in) * var(--ink-in) * (3 - 2 * var(--ink-in)));
+    filter: blur(calc(var(--defocus) * clamp(5px, .24em, 17px)));
+    translate: 0 calc(var(--defocus) * -.12em);
   }
   [data-gift-descent] :is(.download-sketches img, .download-awards img, .download-copy .hero-actions a) {
     --item: clamp(0, (var(--gift-reveal) - var(--cue)) / .44, 1);
     --focus: calc(var(--item) * var(--item) * (3 - 2 * var(--item)));
     opacity: calc(var(--ink, 1) * var(--focus));
     translate: var(--anchor, 0px) calc(var(--anchor, 0px) - (1 - var(--focus)) * 12px);
-  }
-}
-@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
-  [data-gift-descent] .download-copy .motion-glyph {
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 calc((1 - var(--focus)) * min(.22em, 7px)) currentColor;
   }
 }
