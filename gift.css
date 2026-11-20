@@ -18,20 +18,32 @@
 .gift-studio img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .gift-camera { width: 100%; height: 100%; opacity: 0; }
 .gift-camera[data-ready] { opacity: 1; }
-[data-gift-descent] .gift { translate: 0 -100%; z-index: 4; }
+[data-gift-descent] .gift { translate: 0 var(--camera-offset); z-index: 4; }
 [data-gift-descent] .gift-night { will-change: opacity; }
-[data-gift-descent] .download-layout { z-index: 5; will-change: transform; }
+[data-gift-descent] .download { overflow: visible; }
+[data-gift-descent] .download-layout { z-index: 5; }
+[data-gift-descent] .gift-studio { transform: translateY(var(--poster-offset, 0%)); }
+[data-gift-descent] .gift-camera[data-ready] { background: #030406; }
+[data-gift-descent] .download::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -100%;
+  background: linear-gradient(#1c3459, #506f97 50%, #506f97);
+}
 [data-gift-descent] .download::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -100%;
   z-index: 2;
   pointer-events: none;
-  background: linear-gradient(164deg, #10192c 8%, #23344b 58%, #384455);
+  background: linear-gradient(164deg, #0a101b 8%, #141d29 40%, #080b10 76%);
   opacity: var(--twilight, 0);
   will-change: opacity;
 }
-[data-gift-descent] .download .flight-camera { transform-origin: center bottom; }
+[data-gift-descent] .download .flight-camera {
+  transform-origin: center top;
+  transform: scaleY(var(--sky-stretch, 1));
+}
 
 .download-copy .motion-glyph { opacity: 1; filter: none; translate: none; }
 
@@ -52,10 +64,8 @@
     translate: 0 calc(-.14em * var(--soft));
   }
   [data-gift-descent] :is(.download-sketches img, .download-awards img, .download-copy .hero-actions a) {
+    filter: blur(calc(var(--defocus, 5px) * var(--soft)));
     opacity: calc(var(--ink, 1) * (1 - var(--soft)));
     translate: var(--anchor, 0px) calc(var(--anchor, 0px) - 9px * var(--soft));
-  }
-  [data-gift-descent] :is(.download-awards img, .download-copy .hero-actions a) {
-    filter: blur(calc(5px * var(--soft)));
   }
 }

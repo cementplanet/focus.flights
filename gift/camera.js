@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=ground-letter";
+import { prepareInvitation } from "./invitation.js?v=tracking-shot";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -83,23 +83,19 @@ async function readImage(file) {
   return image;
 }
 
-export function descent(t) {
-  return 1-Math.pow(1-t,3.8);
+// Distance below the optical centre, expressed in viewport heights. An identical
+// path in portrait and landscape brings the envelope through the bottom edge.
+export function framingOffset(t) {
+  return 1.80 * Math.pow(1-t, 2.35);
 }
 
 function cameraPose(t) {
-  const remaining=1-descent(t);
+  const remaining=Math.pow(1-t,1.85);
   const x=.14+2.65*remaining;
   const y=-1.86-6.65*remaining;
   const z=5.05+10.1*remaining;
   const aimY=.23+.21*t*t*(3-2*t);
-  const aimZ=.03+17.5*Math.pow(remaining,2.6);
-  return {x,y,z,aimY,aimZ};
-}
-
-export function skyPitch(t) {
-  const {x,y,z,aimY,aimZ}=cameraPose(t);
-  return Math.atan2(aimZ-z,Math.hypot(x,y-aimY));
+  return {x,y,z,aimY};
 }
 
 async function prepare(gl) {
@@ -144,12 +140,12 @@ async function prepare(gl) {
   let lastShadow=-1;
 
   return function draw(t,w,h) {
-    const {x,y,z,aimY,aimZ}=cameraPose(t);
+    const {x,y,z,aimY}=cameraPose(t);
     const horizontal=Math.hypot(x,aimY-y);
-    const distance=Math.hypot(horizontal,aimZ-z);
-    const fx=-x/distance, fy=(aimY-y)/distance, fz=(aimZ-z)/distance;
-    const rx=(aimY-y)/horizontal, ry=x/horizontal;
     const aspect=w/h, lensX=Math.min(3.58,3.34/aspect);
+    const pitch=Math.atan2(.03-z,horizontal) + Math.atan(2*framingOffset(t)/(lensX*aspect));
+    const rx=(aimY-y)/horizontal, ry=x/horizontal;
+    const fx=-ry*Math.cos(pitch), fy=rx*Math.cos(pitch), fz=Math.sin(pitch);
     function camera(pass) {
       gl.useProgram(pass.handle);
       gl.uniform3f(pass.eye,x,y,z);

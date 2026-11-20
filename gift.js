@@ -1,4 +1,4 @@
-import { setupStudio, skyPitch } from "./gift/camera.js?v=ground-letter";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=tracking-shot";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease) {
@@ -11,11 +11,22 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     prepareCopy(line);
   }
 
-  const initialPitch = skyPitch(0);
-  let skySurface;
+  let position = 0, start = 0, distance = 0;
+
+  function scrollCamera() {
+    const travel = position * (1.55 - .55 * position);
+    const offset = distance * travel;
+    // The sky and every object on it move through the viewport with the page.
+    // Keep only the ground camera viewport steady while its world-space eye descends.
+    gift.style.setProperty("--camera-offset", (offset - distance) + "px");
+    download.style.setProperty("--sky-stretch", 1 + travel);
+    window.scrollTo({ top: start + offset, behavior: "instant" });
+  }
 
   function align() {
-    window.scrollTo({ top: download.offsetTop, behavior: "instant" });
+    start = download.offsetTop;
+    distance = gift.offsetTop - start;
+    scrollCamera();
   }
 
   function holdSky(interactive) {
@@ -25,32 +36,31 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     content.inert = !interactive;
   }
 
-  function paint(position) {
+  function paint(t) {
+    position = t;
     if (!sequence.hasAttribute("data-gift-descent")) {
       holdSky(false);
-      skySurface = download.querySelector(".flight-camera:last-child") || download.querySelector(".flight-camera");
       sequence.setAttribute("data-gift-descent", "");
       align();
+    } else {
+      scrollCamera();
     }
-    render(position);
-    // Grade the sky before the ground comes through. Copy sits above both
-    // exposures so its ink can lose focus while it is still legible.
-    download.style.setProperty("--twilight", ease(0, .38, position));
-    night.style.opacity = ease(.105, .54, position);
-    content.style.setProperty("--gift-exit", Math.min(1, position / .44));
-    const tilt = Math.tanh(initialPitch - skyPitch(position));
-    content.style.transform = `translate3d(0, ${-6.8 * tilt}%, 0)`;
-    if (skySurface) skySurface.style.transform = `scaleY(${1 + .23 * tilt})`;
+    render(t);
+    download.style.setProperty("--twilight", ease(.055, .39, t));
+    night.style.opacity = ease(.12, .41, t);
+    night.style.setProperty("--poster-offset", (100 * framingOffset(t)) + "%");
+    content.style.setProperty("--gift-exit", Math.min(1, t / .57));
   }
 
   function end(atGift = false) {
     if (!sequence.hasAttribute("data-gift-descent")) return;
     sequence.removeAttribute("data-gift-descent");
-    content.style.removeProperty("transform");
     content.style.removeProperty("--gift-exit");
     download.style.removeProperty("--twilight");
+    download.style.removeProperty("--sky-stretch");
+    gift.style.removeProperty("--camera-offset");
     night.style.removeProperty("opacity");
-    skySurface?.style.removeProperty("transform");
+    night.style.removeProperty("--poster-offset");
     if (atGift) render(1);
   }
   return { paint, end, align, holdSky };

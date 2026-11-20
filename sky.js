@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=soft-descent";
+import { setupGiftDescent } from "./gift.js?v=tracking-shot";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -193,6 +193,26 @@ const springDecay = handoffSpring.damping / (2 * handoffSpring.mass);
 const springRoot = Math.sqrt(springDecay ** 2 - handoffSpring.stiffness / handoffSpring.mass);
 const springSlow = -springDecay + springRoot;
 const springFast = -springDecay - springRoot;
+// Integrate a Glide spring's release as a velocity profile. Run it backwards
+// into the crest, then forwards out: both sides meet at full speed with zero
+// acceleration. Remove the small terminal residue for a finite, exact stop.
+const springVelocity = t => (springFast*Math.exp(springSlow*t)-springSlow*Math.exp(springFast*t))/(springFast-springSlow);
+const endSpeed = springVelocity(1);
+const endSlope = springSlow*springFast*(Math.exp(springSlow)-Math.exp(springFast))/(springFast-springSlow);
+function releaseDistance(t) {
+  const integral = (springFast*Math.expm1(springSlow*t)/springSlow
+    - springSlow*Math.expm1(springFast*t)/springFast)/(springFast-springSlow);
+  return integral - endSpeed*t**3*(1-.5*t) - endSlope*t**3*(t/4-1/3);
+}
+const releaseLength = releaseDistance(1);
+function giftTravel(t) {
+  const peak = .44;
+  const s = t < peak ? 1-t/peak : (t-peak)/(1-peak);
+  const area = releaseDistance(s)/releaseLength;
+  const speed = springVelocity(s) - endSpeed*s*s*(3-2*s) - endSlope*s*s*(s-1);
+  return [peak + (t < peak ? -peak : 1-peak)*area, speed/releaseLength];
+}
+
 let handoffFrame = 0;
 let handoffProgress = 0;
 let handoffVelocity = 0;
@@ -381,42 +401,24 @@ function playPage(target, focusPage = false) {
   // A full sky-to-letter shot lasts 1.5 s, including the braking tail.
   // Scale the same spring to the distance remaining after a reversal.
   const giftDuration = giftTrack ? 1.5 * Math.max(.28, Math.sqrt(Math.abs(offset))) : 0;
-  const rate = giftTrack ? 5.9 / giftDuration : farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
+  const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
-
-  // Exact spring response to a target travelling at constant speed.
-  // With a stationary target this is the usual full-page Glide.
-  function segment(offset, velocity, drive) {
-    const lag = drive * (1 / slowRate + 1 / fastRate);
-    const slowOffset = (velocity - drive - fastRate * (offset - lag)) / (slowRate - fastRate);
-    const fastOffset = offset - lag - slowOffset;
-    return seconds => {
-      const slow = slowOffset * Math.exp(slowRate * seconds);
-      const fast = fastOffset * Math.exp(fastRate * seconds);
-      return [drive * seconds + lag + slow + fast, drive + slowRate * slow + fastRate * fast];
-    };
-  }
-
-  let glide = segment(offset, handoffVelocity, 0);
-  if (giftTrack) {
-    const driveTime = .81 * giftDuration;
-    const track = segment(0, handoffVelocity, -offset / driveTime);
-    const [distance, speed] = track(driveTime);
-    const brake = segment(offset + distance, speed, 0);
-    glide = seconds => {
-      if (seconds < driveTime) {
-        const [distance, speed] = track(seconds);
-        return [offset + distance, speed];
-      }
-      // Taper the spring's residual displacement to rest at the final frame.
-      // Carry its derivative too, so an interruption inherits the actual speed.
-      const tail = giftDuration - driveTime;
-      const u = unit((seconds - driveTime) / tail);
-      const weight = 1 - u*u*(3-2*u);
-      const [delta, velocity] = brake(seconds - driveTime);
-      return [delta*weight, velocity*weight - delta*6*u*(1-u)/tail];
-    };
+  const slowOffset = (handoffVelocity - fastRate*offset)/(slowRate-fastRate);
+  const fastOffset = offset-slowOffset;
+  const entryVelocity = handoffVelocity;
+  function glide(seconds) {
+    if (giftTrack) {
+      const t = unit(seconds/giftDuration);
+      const [distance,speed] = giftTravel(t);
+      // Carry momentum through a reversal and release it at the destination.
+      const tail = 1-t;
+      return [offset*(1-distance) + entryVelocity*giftDuration*t*tail**3,
+        -offset*speed/giftDuration + entryVelocity*tail**2*(1-4*t)];
+    }
+    const slow = slowOffset*Math.exp(slowRate*seconds);
+    const fast = fastOffset*Math.exp(fastRate*seconds);
+    return [slow+fast, slowRate*slow+fastRate*fast];
   }
 
   function play(now) {
