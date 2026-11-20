@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=flat-cards";
+import { prepareInvitation } from "./invitation.js?v=card-column";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -238,7 +238,13 @@ async function prepare(gl) {
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   let lastShadow=-1, lastLift=-1, lastSlip=-1, lastAir=-1;
 
-  return function draw(t,w,h,paperPhase=t,lift=0,slip=0,air=0,landing=0) {
+  let previousLayout;
+  return function draw(t,w,h,paperPhase,lift,slip,air,landing,cardLayout) {
+    if (cardLayout !== previousLayout) {
+      capturedAspect=0;
+      lastShadow=-1;
+      previousLayout=cardLayout;
+    }
     const groundPose=cameraPose(t);
     // The camera follows the rising sheet from the start. The retreating
     // sleeve stays in the wide frame briefly before passing the lower edge.
@@ -267,7 +273,7 @@ async function prepare(gl) {
       gl.viewport(0,0,size,size);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
-      letter(paperPhase,camera,true,lift,slip,air);
+      letter(paperPhase,camera,true,lift,slip,air,cardLayout);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -293,7 +299,7 @@ async function prepare(gl) {
       gl.viewport(0,0,pw,ph);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      letter(paperPhase,camera,false,lift,slip,air);
+      letter(paperPhase,camera,false,lift,slip,air,cardLayout);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.activeTexture(gl.TEXTURE3);
       gl.bindTexture(gl.TEXTURE_2D,printTexture);
@@ -319,19 +325,21 @@ async function prepare(gl) {
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
-    if (!landing) letter(paperPhase,camera,false,lift,slip,air);
+    if (!landing) letter(paperPhase,camera,false,lift,slip,air,cardLayout);
   };
 }
 
-export function setupStudio(canvas, download) {
+export function setupStudio(canvas, download, row) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
   let pixelBudget = 1600000, width = 1, height = 1;
 
+  let cardLayout = [0, 0, 0];
+
   function render(now) {
-    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing);
+    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing,cardLayout);
     canvas.dataset.ready = "";
     dirty = false;
   }
@@ -386,10 +394,20 @@ export function setupStudio(canvas, download) {
       paint();
     }).catch(error=>console.warn("Gift studio:",error));
   }
-  new ResizeObserver(([entry])=>{
-    ({width,height} = entry.contentRect);
+  const layoutObserver = new ResizeObserver(()=>{
+    const bounds = row.getBoundingClientRect();
+    const first = row.firstElementChild.getBoundingClientRect();
+    const last = row.lastElementChild.getBoundingClientRect();
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    cardLayout = [first.width / bounds.width,
+      (last.left - first.left) / (2 * bounds.width),
+      (first.top - last.top) / (2 * bounds.height)];
+    dirty = true;
     resize();
-  }).observe(canvas);
+  });
+  layoutObserver.observe(canvas);
+  layoutObserver.observe(row.firstElementChild);
   new IntersectionObserver(([entry])=>{
     if (entry.isIntersecting) warm();
   },{rootMargin:"100% 0px"}).observe(download);

@@ -6,6 +6,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
+    uniform vec3 cardLayout; // width and centre-to-centre steps in viewport units
     uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
@@ -22,7 +23,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       vec3 n=vec3(0.,0.,1.);
       bool card=panel==2. || panel>=6.;
       float stack=panel==6. ? -1. : (panel==7. ? 1. : 0.);
-      float column=panel==2. ? -1. : (panel==7. ? 1. : 0.);
+      float slot=panel==2. ? -1. : (panel==7. ? 1. : 0.);
       float fall=smoothstep(.26,.455,shot);
       float seated=smoothstep(.355,.48,shot);
       float open=smoothstep(.475,.81,shot);
@@ -69,11 +70,12 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           // to the screen so the printed baselines stay level.
           vec3 centre=vec3(0.,2.48,1.30);
           float depth=dot(centre-eye,forward);
-          // The three 3:4 sheets share the same width in the camera and CSS layout.
-          float width=2.*depth*min(.296/lens.x,.495/lens.y);
+          vec2 viewSize=2.*depth/lens;
+          float width=cardLayout.x*viewSize.x;
           float spread=smoothstep(.12,.95,release);
-          vec3 facing=centre+right*(column*1.07*width*spread+point.x*width/1.08)
-                            +up*(point.y*width/1.08+.012*(1.-release)*sin(air*.85));
+          vec2 offset=slot*spread*cardLayout.yz*viewSize;
+          vec3 facing=centre+right*(offset.x+point.x*width/1.08)
+                            +up*(offset.y+point.y*width/1.08+.012*(1.-release)*sin(air*.85));
           p=mix(p,facing,release);
           vec2 pocket=turn(.047+.095*release)*(p.xy-vec2(-.24,-2.75)*release);
           float clearLip=smoothstep(.64,.91,pocket.y);
@@ -155,6 +157,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       gl_FragColor=vec4(mix(surfaceColor,vec3(.84),.008*min(haze,2.)),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
+  const layout=gl.getUniformLocation(pass.handle,"cardLayout");
   const flight=gl.getUniformLocation(pass.handle,"flight");
   const shot=gl.getUniformLocation(pass.handle,"shot");
   const shadowPass=gl.getUniformLocation(pass.handle,"shadowPass");
@@ -219,8 +222,9 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
   const buffer=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
-  return (t,camera,shadow,lift,slip,air)=>{
+  return (t,camera,shadow,lift,slip,air,cardLayout)=>{
     camera(pass);
+    gl.uniform3fv(layout,cardLayout);
     gl.uniform3f(flight,lift,slip,air);
     gl.uniform1f(shot,t);
     gl.uniform1f(shadowPass,shadow?1:0);

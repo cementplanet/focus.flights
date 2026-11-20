@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=runway-invitation";
+import { setupGiftDescent } from "./gift.js?v=card-column";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";

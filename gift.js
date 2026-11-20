@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-ignition";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=card-column";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -20,10 +20,9 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     runwayCopy.inert = approach < 1;
   }
 
-  const render = setupStudio(gift.querySelector(".gift-camera"), download);
-
   const letter = document.querySelector("#letter");
   const row = letter.querySelector(".gift-card-row");
+  const render = setupStudio(gift.querySelector(".gift-camera"), download, row);
   const reader = letter.querySelector(".gift-reader");
   const enlarged = reader.querySelector(".gift-print");
   row.addEventListener("click", event => {
