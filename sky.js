@@ -1,4 +1,4 @@
-import { setupWindowFlight } from "./window-flight.js?v=download-page";
+import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
@@ -310,7 +310,7 @@ function playPage(target, focusPage = false) {
     }
     if (travel && progress > 2) {
       clearFocusHandoff();
-      windowFlight.paint(unit(progress - 2));
+      windowFlight.paint(unit(progress - 2), target === 3);
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
       return;
@@ -559,7 +559,7 @@ window.addEventListener("resize", () => {
   if (sequence.hasAttribute("data-window-flight")) {
     window.scrollTo({ top: download.offsetTop, behavior: "instant" });
     windowFlight.measure();
-    windowFlight.paint(unit(handoffProgress - 2));
+    windowFlight.paint(unit(handoffProgress - 2), pageTarget === 3);
   } else if (!handoffFrame && pageTarget === 3) {
     windowFlight.end(true);
   }

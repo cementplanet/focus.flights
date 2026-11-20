@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 100 8" fill="none">
+  <defs>
+    <linearGradient id="train">
+      <stop stop-color="#b0c7dc" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#c4d5e8" stop-opacity=".16"/>
+      <stop offset=".83" stop-color="#e9edf0" stop-opacity=".62"/>
+      <stop offset=".99" stop-color="#fff7e7"/>
+    </linearGradient>
+    <radialGradient id="light">
+      <stop stop-color="#fff8e9" stop-opacity=".64"/>
+      <stop offset=".28" stop-color="#f6eedf" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#cfdeee" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M0 0 97.7-.8Q99.6 0 97.7.8Z" fill="url(#train)"/>
+  <ellipse cx="97" rx="3" ry="2.8" fill="url(#light)"/>
+  <ellipse cx="97.8" rx="1.1" ry=".72" fill="#fff9ed"/>
+</svg>

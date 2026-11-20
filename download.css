@@ -23,6 +23,23 @@
   transform: translateX(var(--copy-drift));
 }
 
+/* Paint the soft glyph as ink, allowing its blur to extend past the line box. */
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .focus-copy .motion-glyph {
+    --ink-blur: calc((1 - var(--blur-progress, var(--glyph-focus))) * var(--type-blur, min(.16em, 8px)));
+    filter: none;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 calc(var(--ink-blur) + var(--cabin-defocus, 0px)) currentColor;
+  }
+}
+.sky-meteor {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 0 50%;
+}
+
 .download-layout {
   position: relative;
   z-index: 1;
