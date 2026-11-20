@@ -329,7 +329,7 @@
   <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
-  <link rel="stylesheet" href="download.css?v=download-page">
+  <link rel="stylesheet" href="download.css?v=aligned-devices">
   <script src="sky.js?v=download-page" type="module"></script>
   <script src="showcase.js?v=flight-chapters" type="module"></script>
 </head>
@@ -494,12 +494,19 @@
     <section class="download" id="download" aria-labelledby="download-title" tabindex="-1">
       <div class="download-layout">
         <div class="download-copy">
-          <img class="download-icon" src="brand/app-icon-ios27.png" alt="" width="152" height="152">
+          <span class="download-label">Download Now</span>
           <h2 id="download-title">FocusFlight</h2>
           <p>For iPhone, iPad, and Mac.</p>
+          <div class="download-awards">
+            <img src="brand/editors-choice.png" alt="App Store Editors’ Choice" width="305" height="88">
+            <img src="brand/app-of-the-day.png" alt="App Store App of the Day" width="913" height="263">
+          </div>
           <div class="hero-actions">
-            <a href="https://apps.apple.com/app/id6648771147">
+            <a href="https://apps.apple.com/app/id6648771147?platform=iphone">
               <img src="brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" width="120" height="40">
+            </a>
+            <a href="https://apps.apple.com/app/id6648771147?platform=mac">
+              <img src="brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" width="156" height="40">
             </a>
           </div>
         </div>
@@ -507,16 +514,22 @@
         <div class="download-devices" aria-hidden="true">
           <div class="device-family">
             <div class="download-device download-iphone">
-              <div class="device-display"></div>
-              <img src="download-devices/iphone.webp" width="391" height="800" alt="" draggable="false">
+              <div class="device-art">
+                <div class="device-display"></div>
+                <img src="download-devices/iphone.webp" width="391" height="800" alt="" draggable="false">
+              </div>
             </div>
             <div class="download-device download-ipad">
-              <div class="device-display"></div>
-              <img src="download-devices/ipad.webp" width="997" height="1400" alt="" draggable="false">
+              <div class="device-art">
+                <div class="device-display"></div>
+                <img src="download-devices/ipad.webp" width="997" height="1400" alt="" draggable="false">
+              </div>
             </div>
             <div class="download-device download-mac">
-              <div class="device-display"></div>
-              <img src="download-devices/mac.webp" width="2400" height="1559" alt="" draggable="false">
+              <div class="device-art">
+                <div class="device-display"></div>
+                <img src="download-devices/mac.webp" width="2400" height="1559" alt="" draggable="false">
+              </div>
             </div>
           </div>
         </div>
