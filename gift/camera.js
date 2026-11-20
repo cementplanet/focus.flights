@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=corner-press";
+import { prepareInvitation } from "./invitation.js?v=flat-cards";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -174,7 +174,7 @@ function cameraPose(t) {
   return {x,y,z,aimY};
 }
 
-async function prepare(gl, hover = new Float32Array(9)) {
+async function prepare(gl) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
     readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
@@ -209,7 +209,7 @@ async function prepare(gl, hover = new Float32Array(9)) {
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,printTexture,0);
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   let printWidth=0, printHeight=0, capturedAspect=0;
-  const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas,hover);
+  const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas);
   const stage=program(gl,stageVertex,stageFragment(runwaySource),["corner"]);
   gl.useProgram(stage.handle);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"shadowMap"),1);
@@ -323,73 +323,14 @@ async function prepare(gl, hover = new Float32Array(9)) {
   };
 }
 
-function trackCardPress(row, reader) {
-  const cards = [...row.querySelectorAll("button[data-print]")];
-  // Each sheet has two tilt components and one depth for a centred press.
-  const value = new Float32Array(cards.length * 3);
-  const target = new Float32Array(value.length);
-  const velocity = new Float32Array(value.length);
-  let lastTime = 0;
-  function release() { target.fill(0); }
-  function point(event) {
-    release();
-    if (event.pointerType !== "mouse" || row.inert || reader.open) return;
-    const card = event.target.closest("button[data-print]");
-    const index = cards.indexOf(card);
-    if (index < 0) return;
-    const rect = card.getBoundingClientRect();
-    const x = 2*(event.clientX-rect.left)/rect.width - 1;
-    const y = 1 - 2*(event.clientY-rect.top)/rect.height;
-    const edge = Math.min(1, Math.hypot(x,y));
-    const strength = event.buttons & 1 ? 1.25 : 1;
-    target[3*index] = x * .15 * strength;
-    target[3*index+1] = y * .15 * strength;
-    target[3*index+2] = .065 * (1-edge) * strength;
-  }
-  for (const type of ["pointerover","pointermove","pointerdown","pointerup"]) {
-    row.addEventListener(type, point, {passive:true});
-  }
-  row.addEventListener("pointerleave", release);
-  row.addEventListener("pointercancel", release);
-  window.addEventListener("blur", release);
-  document.addEventListener("visibilitychange", release);
-  reader.addEventListener("close", release);
-
-  function update(time, active) {
-    const dt = Math.max(0, (time-lastTime)/1000);
-    lastTime = time;
-    if (!active || row.inert || reader.open) {
-      release();
-      value.fill(0);
-      velocity.fill(0);
-      return;
-    }
-    const slowDecay = Math.exp(-14*dt), fastDecay = Math.exp(-80*dt);
-    for (let i=0; i<value.length; i++) {
-      const offset = value[i]-target[i];
-      const slowOffset = (velocity[i]+80*offset)/66;
-      const slow = slowOffset*slowDecay, fast = (offset-slowOffset)*fastDecay;
-      value[i] = target[i]+slow+fast;
-      velocity[i] = -14*slow-80*fast;
-      if (Math.abs(value[i]-target[i]) < .00001 && Math.abs(velocity[i]) < .0001) {
-        value[i] = target[i];
-        velocity[i] = 0;
-      }
-    }
-  }
-  return {value, update};
-}
-
 export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const hover = trackCardPress(document.querySelector(".gift-card-row"), document.querySelector(".gift-reader"));
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
   let pixelBudget = 1600000, width = 1, height = 1;
 
   function render(now) {
-    hover.update(now, lift === 1 && slip === 1 && !landing);
     draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing);
     canvas.dataset.ready = "";
     dirty = false;
@@ -436,7 +377,7 @@ export function setupStudio(canvas, download) {
       resize();
     }
     const current = generation;
-    loading = prepare(gl, hover.value).then(renderer=>{
+    loading = prepare(gl).then(renderer=>{
       if (current !== generation || !renderer) return;
       draw = renderer;
       if (reducedMotion.matches) return;

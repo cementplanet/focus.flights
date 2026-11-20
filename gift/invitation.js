@@ -1,12 +1,11 @@
 // The invitation lies in the XY plane. Its two render passes use the same
 // deformed paper surface, so a lifting flap casts its own moving shadow.
-export function prepareInvitation(gl, program, project, shadows, studioAir, atlas, hover) {
+export function prepareInvitation(gl, program, project, shadows, studioAir, atlas) {
   const vertex = `
     attribute vec3 point;
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
-    uniform vec3 press[3]; // per-card tilt vector and centre depth
     uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
@@ -83,20 +82,6 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           float order=panel==2. ? 2. : (panel==6. ? 1. : 0.);
           p-=forward*(order*.16*sin(3.14159*release)*clearLip);
           n=normalize(mix(n,-forward,release));
-          if (release==1.) {
-            vec3 pose=panel==2. ? press[0] : (panel==6. ? press[1] : press[2]);
-            float angle=length(pose.xy);
-            vec2 axis=pose.xy/max(angle,.00001);
-            vec3 toward=right*axis.x+up*axis.y;
-            // Rotate the whole printed plane about a line through the opposite
-            // edge or corner. One perspective projection keeps type and rules straight.
-            float arm=dot(point.xy,axis)+dot(vec2(.54,.72),abs(axis));
-            float lever=arm*width/1.08;
-            vec3 cardRay=(centre+right*column*1.07*width-eye)/depth;
-            p+=toward*(lever*(cos(angle)-1.))
-                +cardRay*(lever*sin(angle)+width*pose.z);
-            n=normalize(-forward*cos(angle)+toward*sin(angle));
-          }
         } else {
           // The sleeve stays at floor height while its weight carries it
           // down the frame. The flap, pocket and wax seal move together.
@@ -170,7 +155,6 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       gl_FragColor=vec4(mix(surfaceColor,vec3(.84),.008*min(haze,2.)),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
-  const press=gl.getUniformLocation(pass.handle,"press[0]");
   const flight=gl.getUniformLocation(pass.handle,"flight");
   const shot=gl.getUniformLocation(pass.handle,"shot");
   const shadowPass=gl.getUniformLocation(pass.handle,"shadowPass");
@@ -238,7 +222,6 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
   return (t,camera,shadow,lift,slip,air)=>{
     camera(pass);
     gl.uniform3f(flight,lift,slip,air);
-    gl.uniform3fv(press,hover);
     gl.uniform1f(shot,t);
     gl.uniform1f(shadowPass,shadow?1:0);
     gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
