@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=paper-settle";
+import { prepareInvitation } from "./invitation.js?v=floating-letter";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -27,8 +27,10 @@ const shadows = `
 const stageVertex = `
   attribute vec2 corner;
   varying highp vec3 direction;
+  varying highp vec2 screen;
   ${project}
   void main() {
+    screen=corner;
     direction=forward+right*corner.x/lens.x+up*corner.y/lens.y;
     gl_Position=vec4(corner,0.,1.);
   }
@@ -36,7 +38,9 @@ const stageVertex = `
 const stageFragment = `
   precision highp float;
   varying highp vec3 direction;
+  varying highp vec2 screen;
   uniform sampler2D grain;
+  uniform vec3 atmosphere; // lift, viewport aspect, breathing phase
   uniform vec3 eye;
   ${shadows}
   void main() {
@@ -54,7 +58,31 @@ const stageFragment = `
     vec4 broad=texture2D(shadowMap,uv,4.7);
     float floorShadow=.88*contact+.62*(broad.b-broad.g);
     floorColor*=1.-.62*floorShadow;
-    gl_FragColor=vec4(mix(vec3(.012,.016,.022),floorColor,1.-smoothstep(9.,28.,length(xy))),1.);
+    vec3 studio=mix(floorColor,vec3(.012,.016,.022),smoothstep(9.,28.,length(xy)));
+    // Soft-edged shaft expands away from a high, off-frame practical.
+    float depth=1.28-screen.y;
+    float lateral=screen.x*atmosphere.y;
+    float radius=.22+.29*depth;
+    float beam=exp(-lateral*lateral/(radius*radius));
+    float veil=texture2D(grain,screen*vec2(.32,.12)+vec2(.007*atmosphere.z,0.)).r;
+    vec3 space=vec3(.020,.029,.049)+vec3(.246,.211,.155)*beam*exp(-.50*depth)*(.88+.24*veil);
+    vec2 rim=(screen-vec2(0.,-.42))*vec2(.86,1.15);
+    space+=vec3(.038,.066,.091)*exp(-2.*dot(rim,rim));
+    space+=floorColor*.19+textureValue*.009;
+    if (atmosphere.x>.001) {
+      // Sparse motes catch the shaft at different depths. Use height units
+      // so their diameter stays the same in portrait and landscape.
+      vec2 cell=screen*vec2(atmosphere.y,1.)*5.;
+      cell+=vec2(.041,-.069)*atmosphere.z;
+      vec2 id=floor(cell);
+      vec3 seed=fract(vec3(id.xyx)*vec3(.1031,.1030,.0973));
+      seed+=dot(seed,seed.yzx+33.33);
+      vec2 center=.12+.76*fract((seed.xx+seed.yz)*seed.zy);
+      vec2 d=fract(cell)-center;
+      float mote=exp(-dot(d,d)*mix(830.,2300.,center.x));
+      space+=vec3(.40,.32,.21)*mote*beam*center.y*center.y;
+    }
+    gl_FragColor=vec4(mix(studio,space,atmosphere.x),1.);
   }
 `;
 
@@ -118,6 +146,7 @@ async function prepare(gl) {
   const stage=program(gl,stageVertex,stageFragment,["corner"]);
   gl.useProgram(stage.handle);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"shadowMap"),1);
+  const atmosphere=gl.getUniformLocation(stage.handle,"atmosphere");
   const corners=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,corners);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
@@ -137,13 +166,19 @@ async function prepare(gl) {
   gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
   if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE) throw Error("Invitation shadow buffer unavailable");
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
-  let lastShadow=-1;
+  let lastShadow=-1, lastLift=-1, lastSlip=-1, lastAir=-1;
 
-  return function draw(t,w,h,paperPhase=t) {
-    const {x,y,z,aimY}=cameraPose(t);
+  return function draw(t,w,h,paperPhase=t,lift=0,slip=0,air=0) {
+    const groundPose=cameraPose(t);
+    // The camera follows the rising sheet from the start. The retreating
+    // sleeve stays in the wide frame briefly before passing the lower edge.
+    const x=groundPose.x+.38*lift-.48*slip;
+    const y=groundPose.y+1.85*lift;
+    const z=groundPose.z+1.32*lift-.54*slip;
+    const aimY=groundPose.aimY+2.04*slip+.64*slip*(1-slip);
     const horizontal=Math.hypot(x,aimY-y);
     const aspect=w/h, lensX=Math.min(3.58,3.34/aspect);
-    const pitch=Math.atan2(.03-z,horizontal) + Math.atan(2*framingOffset(t)/(lensX*aspect));
+    const pitch=Math.atan2(.03+1.27*slip+.36*lift*(1-slip)-z,horizontal) + Math.atan(2*framingOffset(t)/(lensX*aspect));
     const rx=(aimY-y)/horizontal, ry=x/horizontal;
     const fx=-ry*Math.cos(pitch), fy=rx*Math.cos(pitch), fz=Math.sin(pitch);
     function camera(pass) {
@@ -154,7 +189,7 @@ async function prepare(gl) {
       gl.uniform3f(pass.up,fz*ry,-fz*rx,fy*rx-fx*ry);
       gl.uniform2f(pass.lens,lensX,lensX*aspect);
     }
-    if(lastShadow!==paperPhase) {
+    if(lastShadow!==paperPhase || lastLift!==lift || lastSlip!==slip || lastAir!==air) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D,atlas);
       gl.activeTexture(gl.TEXTURE0);
@@ -162,11 +197,11 @@ async function prepare(gl) {
       gl.viewport(0,0,size,size);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
-      letter(paperPhase,camera,true);
+      letter(paperPhase,camera,true,lift,slip,air);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
       gl.generateMipmap(gl.TEXTURE_2D);
-      lastShadow=paperPhase;
+      lastShadow=paperPhase; lastLift=lift; lastSlip=slip; lastAir=air;
     }
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
@@ -175,6 +210,7 @@ async function prepare(gl) {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     camera(stage);
+    gl.uniform3f(atmosphere,lift,aspect,air);
     gl.bindBuffer(gl.ARRAY_BUFFER,corners);
     gl.enableVertexAttribArray(stage.corner);
     gl.vertexAttribPointer(stage.corner,2,gl.FLOAT,false,0,0);
@@ -182,26 +218,51 @@ async function prepare(gl) {
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
-    letter(paperPhase,camera,false);
+    letter(paperPhase,camera,false,lift,slip,air);
   };
 }
 
 export function setupStudio(canvas, download) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let unavailable = false;
-  let draw, loading, position = 1, paperPhase = 1, visible = false, generation = 0, last = -1;
-  let pixelBudget = 1600000, width = 1, height = 1, idleFrame = 0;
-  function paint() {
-    if (!draw || !visible || document.hidden || reducedMotion.matches || last === position) return;
-    draw(position,canvas.width,canvas.height,paperPhase);
+  let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0;
+  let visible = false, generation = 0, dirty = true, idleFrame = 0;
+  let pixelBudget = 1600000, width = 1, height = 1;
+
+  function render(now) {
+    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0);
     canvas.dataset.ready = "";
-    last = position;
+    dirty = false;
   }
-  function resize(budget = position === 1 ? 1600000 : pixelBudget) {
+  function paint(now = performance.now()) {
+    if (reducedMotion.matches) { delete canvas.dataset.ready; return; }
+    if (!draw || !visible || document.hidden) return;
+    if (dirty) render(now);
+    if (slip === 1 && !idleFrame) {
+      const last = now;
+      function hover(time) {
+        if (!visible || document.hidden || reducedMotion.matches || !draw || slip !== 1) {
+          idleFrame = 0;
+          return;
+        }
+        if (time-last < 1000/30) { idleFrame = requestAnimationFrame(hover); return; }
+        idleFrame = 0;
+        dirty = true;
+        paint(time);
+      }
+      idleFrame = requestAnimationFrame(hover);
+    }
+  }
+  function resize() {
+    const moving = position < 1 || (lift > 0 && slip < 1);
+    const budget = moving ? pixelBudget : slip === 1 ? Math.min(1600000,pixelBudget*5) : 1600000;
     const scale = Math.min(devicePixelRatio,2,Math.sqrt(budget/(width*height)));
-    canvas.width = Math.max(1,Math.round(width*scale));
-    canvas.height = Math.max(1,Math.round(height*scale));
-    last = -1;
+    const w = Math.max(1,Math.round(width*scale)), h = Math.max(1,Math.round(height*scale));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      dirty = true;
+    }
     paint();
   }
   function warm() {
@@ -220,9 +281,8 @@ export function setupStudio(canvas, download) {
       draw = renderer;
       if (reducedMotion.matches) return;
       // Prime the driver while the sky is on screen, before the first gesture.
-      draw(position,canvas.width,canvas.height,paperPhase);
-      canvas.dataset.ready = "";
-      last = position;
+      render(performance.now());
+      paint();
     }).catch(error=>console.warn("Gift studio:",error));
   }
   new ResizeObserver(([entry])=>{
@@ -236,33 +296,26 @@ export function setupStudio(canvas, download) {
     event.preventDefault();
     generation++;
     draw = loading = null;
-    last = -1;
+    dirty = true;
     delete canvas.dataset.ready;
   });
   canvas.addEventListener("webglcontextrestored",warm);
   reducedMotion.addEventListener("change",()=>{
     if (reducedMotion.matches) delete canvas.dataset.ready;
-    else if (visible) { last = -1; warm(); paint(); }
+    else if (visible) { dirty = true; warm(); paint(); }
   });
-  document.addEventListener("visibilitychange",paint);
+  document.addEventListener("visibilitychange",()=>paint());
   new IntersectionObserver(([entry])=>{
-    if (canvas.closest("[data-gift-descent]")) return;
     visible = entry.isIntersecting;
-    if (visible) { position = paperPhase = 1; warm(); paint(); }
+    if (visible) { warm(); paint(); }
   }).observe(canvas);
-  return (t,phase)=>{
-    visible = true;
-    const leavingRest = position === 1 && t < 1;
-    if (phase !== paperPhase) last = -1;
-    paperPhase = phase;
+  return (t,phase,rise=0,separation=0)=>{
+    dirty ||= position !== t || paperPhase !== phase || lift !== rise || slip !== separation;
     position = t;
+    paperPhase = phase;
+    lift = rise;
+    slip = separation;
     warm();
-    cancelAnimationFrame(idleFrame);
-    if (leavingRest && pixelBudget < 1600000) resize();
-    else paint();
-    // Software rasterizers use a smaller moving frame, then resolve once at rest.
-    if (t === 1 && pixelBudget < 1600000) {
-      idleFrame = requestAnimationFrame(()=>{ if (visible && position === 1) resize(1600000); });
-    }
+    resize();
   };
 }

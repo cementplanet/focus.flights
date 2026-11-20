@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=paper-settle";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=floating-letter";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -55,6 +55,24 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     content.style.setProperty("--gift-exit", Math.min(1, travel / .57));
   }
 
+  // Overlapping samples of Glide start together. The sheet leads the camera
+  // slightly, then the camera finishes framing it after the sleeve clears.
+  function floatLetter(phase) {
+    const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
+    const lift = sample(phase);
+    const slip = sample(phase/.94);
+    gift.toggleAttribute("data-airborne", phase > 0);
+    gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
+    render(1,1,lift,slip);
+  }
+
+  function resetLetter() {
+    if (!gift.hasAttribute("data-airborne")) return;
+    gift.removeAttribute("data-airborne");
+    gift.style.removeProperty("--letter-poster");
+    render(1,1);
+  }
+
   function end(atGift = false) {
     if (!sequence.hasAttribute("data-gift-descent")) return;
     sequence.removeAttribute("data-gift-descent");
@@ -66,5 +84,5 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     night.style.removeProperty("--poster-offset");
     if (atGift) render(1, 1);
   }
-  return { paint, end, align, holdSky };
+  return { paint, end, align, holdSky, floatLetter, resetLetter };
 }

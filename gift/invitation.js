@@ -6,6 +6,7 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
+    uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
     varying mediump vec3 normal;
@@ -49,6 +50,31 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
       n.xy=turn(yaw)*n.xy;
       p.xy+=vec2(-.32,.22)*(1.-seated);
       p.z+=.91*(1.-fall)+1.24*sin(bank)+.865*sin(tilt)+.009;
+      float rise=flight.x, release=flight.y, air=flight.z;
+      if (rise>0. || release>0.) {
+        if (panel==2.) {
+          // Slide along the sleeve from the first frame. The lower edge
+          // takes the weight later, as it passes the pocket lip.
+          float seatedHeight=p.z;
+          p.y+=.98*release;
+          p.z+=.61*rise+.065*(1.-point.y*point.y/.5184)*sin(3.14159*release);
+          // Resolve into the camera plane. Final drift is entirely parallel
+          // to the screen so the printed baselines stay level.
+          vec3 centre=vec3(0.,2.48,1.30)+up*(.021*sin(air*.85));
+          vec3 facing=centre+right*point.x+up*point.y;
+          p=mix(p,facing,release);
+          vec2 pocket=turn(.047+.095*release)*(p.xy-vec2(-.24,-2.75)*release);
+          float clearLip=smoothstep(.64,.91,pocket.y);
+          p.z=mix(seatedHeight,p.z,clearLip);
+          n=normalize(mix(n,-forward,release));
+        } else {
+          // The sleeve stays at floor height while its weight carries it
+          // down the frame. The flap, pocket and wax seal move together.
+          p.xy=turn(-.095*release)*p.xy;
+          n.xy=turn(-.095*release)*n.xy;
+          p.xy+=vec2(-.24,-2.75)*release;
+        }
+      }
       world=p;
       normal=n;
       texCoord=uv;
@@ -70,6 +96,7 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     uniform sampler2D surface;
     uniform float shadowPass;
     uniform vec3 eye;
+    uniform vec3 flight;
     ${shadows}
     void main() {
       vec4 texel=texture2D(surface,texCoord);
@@ -81,22 +108,27 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
       vec3 n=normalize(normal);
       vec3 view=normalize(eye-world);
       if(dot(n,view)<0.) n=-n;
-      vec3 key=normalize(vec3(-.54,.73,1.));
+      vec3 key=normalize(mix(vec3(-.54,.73,1.),vec3(0.,.88,1.),flight.x));
       float light=dot(n,key);
       float shade=.76+.34*max(light,0.);
       vec3 color=texel.rgb;
-      if (face!=2. && face!=5.) {
+      if (abs(face-2.)>.25 && face<4.5) {
         float paper=.108+.032*texCoord.y+.028*(1.-texCoord.x)+texel.r*.53;
-        if (face==1.) paper*=.82;
-        if (face==3.) paper+=.016*(1.-texCoord.x);
-        if (face==4.) paper+=.023;
+        if (abs(face-1.)<.25) paper*=.82;
+        if (abs(face-3.)<.25) paper+=.016*(1.-texCoord.x);
+        if (abs(face-4.)<.25) paper+=.023;
         color=vec3(1.055,1.,.94)*paper;
         shade+=.08*pow(max(0.,dot(n,normalize(view+key))),12.);
       }
+      // The overhead light grazes the upper centre of the paper.
+      vec2 spot=world.xy-vec2(0.,3.08);
+      float glow=exp(-dot(spot*vec2(.86,.52),spot*vec2(.86,.52)));
+      color*=mix(vec3(1.),vec3(.91,.89,.87)+vec3(.23,.195,.14)*glow,flight.x);
       float shadow=paperShadow(world,.028);
       gl_FragColor=vec4(color*shade*(1.-.32*shadow),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
+  const flight=gl.getUniformLocation(pass.handle,"flight");
   const shot=gl.getUniformLocation(pass.handle,"shot");
   const shadowPass=gl.getUniformLocation(pass.handle,"shadowPass");
   gl.useProgram(pass.handle);
@@ -152,8 +184,9 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
   const buffer=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
-  return (t,camera,shadow)=>{
+  return (t,camera,shadow,lift,slip,air)=>{
     camera(pass);
+    gl.uniform3f(flight,lift,slip,air);
     gl.uniform1f(shot,t);
     gl.uniform1f(shadowPass,shadow?1:0);
     gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
