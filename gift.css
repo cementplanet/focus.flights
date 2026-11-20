@@ -20,30 +20,42 @@
 .gift-camera[data-ready] { opacity: 1; }
 [data-gift-descent] .gift { translate: 0 -100%; z-index: 4; }
 [data-gift-descent] .gift-night { will-change: opacity; }
-[data-gift-descent] .download-layout { will-change: transform; }
+[data-gift-descent] .download-layout { z-index: 5; will-change: transform; }
+[data-gift-descent] .download::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(164deg, #10192c 8%, #23344b 58%, #384455);
+  opacity: var(--twilight, 0);
+  will-change: opacity;
+}
 [data-gift-descent] .download .flight-camera { transform-origin: center bottom; }
 
 .download-copy .motion-glyph { opacity: 1; filter: none; translate: none; }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* The three lines share the camera position. On ascent the first letters of
-     the next line start resolving before the previous line finishes. */
+  /* Blur each line once. Stagger only opacity and vertical travel per glyph. */
+  [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p,
+      .download-awards img, .download-copy .hero-actions a, .download-sketches img) {
+    --exit: clamp(0, (var(--gift-exit, 0) - var(--cue, 0) * .35) / .76, 1);
+    --soft: calc(var(--exit) * var(--exit) * (3 - 2 * var(--exit)));
+  }
+  [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p) > [aria-hidden] {
+    display: inline-block;
+    filter: blur(calc(var(--soft) * clamp(6px, .14em, 12px)));
+  }
   [data-gift-descent] .download-copy .motion-glyph {
-    --letter: clamp(0, (var(--gift-reveal) - var(--cue) * .85 - var(--glyph-delay) * .94) / .29, 1);
-    --focus: calc(var(--letter) * var(--letter) * (3 - 2 * var(--letter)));
-    opacity: var(--focus);
-    translate: 0 calc((1 - var(--focus)) * -.19em);
+    --fade: clamp(0, (var(--exit) - .14 - var(--glyph-delay) * .42) / .66, 1);
+    opacity: calc(1 - var(--fade) * var(--fade) * (3 - 2 * var(--fade)));
+    translate: 0 calc(-.14em * var(--soft));
   }
   [data-gift-descent] :is(.download-sketches img, .download-awards img, .download-copy .hero-actions a) {
-    --item: clamp(0, (var(--gift-reveal) - var(--cue)) / .44, 1);
-    --focus: calc(var(--item) * var(--item) * (3 - 2 * var(--item)));
-    opacity: calc(var(--ink, 1) * var(--focus));
-    translate: var(--anchor, 0px) calc(var(--anchor, 0px) - (1 - var(--focus)) * 12px);
+    opacity: calc(var(--ink, 1) * (1 - var(--soft)));
+    translate: var(--anchor, 0px) calc(var(--anchor, 0px) - 9px * var(--soft));
   }
-}
-@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
-  [data-gift-descent] .download-copy .motion-glyph {
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 calc((1 - var(--focus)) * min(.22em, 7px)) currentColor;
+  [data-gift-descent] :is(.download-awards img, .download-copy .hero-actions a) {
+    filter: blur(calc(5px * var(--soft)));
   }
 }

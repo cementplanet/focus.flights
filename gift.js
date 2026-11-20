@@ -1,4 +1,4 @@
-import { setupStudio, skyPitch, descent } from "./gift/camera.js?v=ground-letter";
+import { setupStudio, skyPitch } from "./gift/camera.js?v=ground-letter";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease) {
@@ -33,20 +33,22 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
       align();
     }
     render(position);
-    // The distant sky loses exposure as the camera looks down into the studio.
-    night.style.opacity = ease(0, .56, descent(position));
-    content.style.setProperty("--gift-reveal", 1 - ease(.006, .55, descent(position)));
-    const tilt = Math.tan(Math.min(.60,initialPitch - skyPitch(position)));
-    // Keep the resolving letters below the fixed header during the tilt.
-    content.style.transform = `translate3d(0, ${-26 * tilt}%, 0)`;
-    if (skySurface) skySurface.style.transform = `scaleY(${1 + .48 * tilt})`;
+    // Grade the sky before the ground comes through. Copy sits above both
+    // exposures so its ink can lose focus while it is still legible.
+    download.style.setProperty("--twilight", ease(0, .38, position));
+    night.style.opacity = ease(.105, .54, position);
+    content.style.setProperty("--gift-exit", Math.min(1, position / .44));
+    const tilt = Math.tanh(initialPitch - skyPitch(position));
+    content.style.transform = `translate3d(0, ${-6.8 * tilt}%, 0)`;
+    if (skySurface) skySurface.style.transform = `scaleY(${1 + .23 * tilt})`;
   }
 
   function end(atGift = false) {
     if (!sequence.hasAttribute("data-gift-descent")) return;
     sequence.removeAttribute("data-gift-descent");
     content.style.removeProperty("transform");
-    content.style.removeProperty("--gift-reveal");
+    content.style.removeProperty("--gift-exit");
+    download.style.removeProperty("--twilight");
     night.style.removeProperty("opacity");
     skySurface?.style.removeProperty("transform");
     if (atGift) render(1);

@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=ground-letter";
+import { setupGiftDescent } from "./gift.js?v=soft-descent";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -368,7 +368,10 @@ function playPage(target, focusPage = false) {
   // Reversing a running spring carries its current position and velocity.
   const farthest = Math.max(pageOrigin, target);
   const giftTrack = (target >= 3 && handoffProgress >= 3) || (target === 4 && handoffProgress > 2.9);
-  const rate = giftTrack ? 1.85 : farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
+  // A full sky-to-letter shot lasts 1.5 s, including the braking tail.
+  // Scale the same spring to the distance remaining after a reversal.
+  const giftDuration = giftTrack ? 1.5 * Math.max(.28, Math.sqrt(Math.abs(offset))) : 0;
+  const rate = giftTrack ? 5.9 / giftDuration : farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
 
@@ -386,16 +389,23 @@ function playPage(target, focusPage = false) {
   }
 
   let glide = segment(offset, handoffVelocity, 0);
-  if (giftTrack && Math.abs(offset) > .002) {
-    // Pull the camera through the shot, then let the same spring settle on the invitation.
-    const duration = 2.68 * Math.sqrt(Math.abs(offset));
-    const track = segment(0, handoffVelocity, -offset / duration);
-    const [distance, speed] = track(duration);
+  if (giftTrack) {
+    const driveTime = .81 * giftDuration;
+    const track = segment(0, handoffVelocity, -offset / driveTime);
+    const [distance, speed] = track(driveTime);
     const brake = segment(offset + distance, speed, 0);
     glide = seconds => {
-      if (seconds >= duration) return brake(seconds - duration);
-      const [distance, speed] = track(seconds);
-      return [offset + distance, speed];
+      if (seconds < driveTime) {
+        const [distance, speed] = track(seconds);
+        return [offset + distance, speed];
+      }
+      // Taper the spring's residual displacement to rest at the final frame.
+      // Carry its derivative too, so an interruption inherits the actual speed.
+      const tail = giftDuration - driveTime;
+      const u = unit((seconds - driveTime) / tail);
+      const weight = 1 - u*u*(3-2*u);
+      const [delta, velocity] = brake(seconds - driveTime);
+      return [delta*weight, velocity*weight - delta*6*u*(1-u)/tail];
     };
   }
 
@@ -404,7 +414,9 @@ function playPage(target, focusPage = false) {
     const [displacement, speed] = glide(seconds);
     handoffVelocity = speed;
 
-    if (reducedMotion.matches || (Math.abs(displacement) < .002 && Math.abs(handoffVelocity) < .022)) {
+    const finished = giftTrack ? seconds >= giftDuration
+      : Math.abs(displacement) < .002 && Math.abs(handoffVelocity) < .022;
+    if (reducedMotion.matches || finished) {
       settle();
       return;
     }
