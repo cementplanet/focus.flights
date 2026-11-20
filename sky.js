@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=silk-slide";
+import { setupGiftDescent } from "./gift.js?v=ground-letter";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -388,7 +388,7 @@ function playPage(target, focusPage = false) {
   let glide = segment(offset, handoffVelocity, 0);
   if (giftTrack && Math.abs(offset) > .002) {
     // Pull the camera through the shot, then let the same spring settle on the invitation.
-    const duration = 3.18 * Math.sqrt(Math.abs(offset));
+    const duration = 2.68 * Math.sqrt(Math.abs(offset));
     const track = segment(0, handoffVelocity, -offset / duration);
     const [distance, speed] = track(duration);
     const brake = segment(offset + distance, speed, 0);

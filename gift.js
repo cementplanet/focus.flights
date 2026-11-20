@@ -1,4 +1,4 @@
-import { setupStudio, skyPitch, descent } from "./gift/camera.js?v=silk-slide";
+import { setupStudio, skyPitch, descent } from "./gift/camera.js?v=ground-letter";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease) {
@@ -36,7 +36,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     // The distant sky loses exposure as the camera looks down into the studio.
     night.style.opacity = ease(0, .56, descent(position));
     content.style.setProperty("--gift-reveal", 1 - ease(.006, .55, descent(position)));
-    const tilt = Math.tan(initialPitch - skyPitch(Math.min(.42,position)));
+    const tilt = Math.tan(Math.min(.60,initialPitch - skyPitch(position)));
     // Keep the resolving letters below the fixed header during the tilt.
     content.style.transform = `translate3d(0, ${-26 * tilt}%, 0)`;
     if (skySurface) skySurface.style.transform = `scaleY(${1 + .48 * tilt})`;
