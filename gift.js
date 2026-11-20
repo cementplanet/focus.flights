@@ -35,7 +35,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     render(position);
     // The distant sky loses exposure as the camera looks down into the studio.
     night.style.opacity = ease(0, .56, position);
-    content.style.setProperty("--gift-reveal", 1 - ease(.006, .66, position));
+    content.style.setProperty("--gift-reveal", 1 - ease(.006, .55, position));
     const tilt = Math.tan(initialPitch - skyPitch(position));
     // Keep the resolving letters below the fixed header during the tilt.
     content.style.transform = `translate3d(0, ${-26 * tilt}%, 0)`;
