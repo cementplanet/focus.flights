@@ -118,7 +118,35 @@
   text-align: center;
   pointer-events: auto;
 }
-.focus-copy h2 > [aria-hidden] {
+/* Both layers share the title's grid cell and wrap with the same measure. */
+.focus-copy h2 > [aria-hidden] { grid-area: 1 / 1; }
+.focus-title-glow {
+  align-self: start;
+  color: transparent;
+  opacity: clamp(0, (var(--type-progress) - .52) * 2.5, 1);
+  pointer-events: none;
+  user-select: none;
+}
+.focus-title-glow::before {
+  content: attr(data-title);
+  display: inline-block;
+  font-kerning: none;
+  text-shadow:
+    0 0 min(.065em, 5px) rgb(246 250 255 / .72),
+    0 0 min(.22em, 18px) rgb(204 222 244 / .54),
+    0 0 min(.52em, 44px) rgb(161 191 226 / .36);
+  opacity: .48;
+}
+@keyframes focus-title-breath {
+  0%, 100% { opacity: .32; }
+  46% { opacity: .94; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .focus-title-glow[data-visible]::before {
+    animation: focus-title-breath 7s var(--button-press) infinite;
+  }
+}
+.focus-copy h2 > [aria-hidden]:last-child {
   mask-image: linear-gradient(black 48%, rgb(0 0 0 / .85) 65%, rgb(0 0 0 / .18) 100%);
 }
 .focus-copy p {

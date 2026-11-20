@@ -230,6 +230,16 @@ const sections = [sky, showcase, deepFocus, download, gift];
 const sequence = sky.parentElement;
 for (const copy of deepFocus.querySelectorAll("h2, .focus-sentence")) prepareCopy(copy);
 
+const focusTitle = document.getElementById("deep-focus-title");
+const glow = document.createElement("span");
+glow.className = "focus-title-glow";
+glow.setAttribute("aria-hidden", "true");
+glow.dataset.title = focusTitle.querySelector(".motion-readable").textContent;
+focusTitle.prepend(glow);
+new IntersectionObserver(([entry]) => {
+  glow.toggleAttribute("data-visible", entry.isIntersecting);
+}).observe(focusTitle);
+
 const ripple = setupFocusRipple(showcase);
 
 function clearFocusHandoff() {
