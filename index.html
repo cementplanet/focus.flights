@@ -47,8 +47,14 @@
 
     .sky[data-handoff] + .showcase {
       position: relative;
+      overflow: clip visible;
       background: transparent;
       opacity: var(--showcase-reveal, 0);
+    }
+
+    /* Keep the backdrop on the viewport as the devices rise through it. */
+    .sky[data-handoff] + .showcase::before {
+      position: fixed;
     }
 
     .stars {
