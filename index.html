@@ -325,13 +325,13 @@
   </style>
   <link rel="stylesheet" href="earth.css?v=plane-return">
   <link rel="stylesheet" href="journey.css?v=reversible-titles">
-  <link rel="stylesheet" href="showcase.css?v=device-aqua">
+  <link rel="stylesheet" href="showcase.css?v=device-ink">
   <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
   <link rel="stylesheet" href="download.css?v=sky-meteor">
   <script src="sky.js?v=sky-meteor" type="module"></script>
-  <script src="showcase.js?v=device-aqua" type="module"></script>
+  <script src="showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
   <header class="site-header">
@@ -450,20 +450,16 @@
               <feBlend in="SourceGraphic" in2="highlight" mode="screen"/>
             </filter>
             <symbol id="device-aqua-disc" viewBox="0 0 44 44">
-              <g filter="url(#device-aqua)">
-                <circle cx="22" cy="22" r="21" fill="url(#device-glass-tone)"/>
-                <circle cx="22" cy="22" r="21" fill="var(--device-tint)" fill-opacity="var(--device-selection, 0)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65"/>
-              </g>
+              <circle cx="22" cy="22" r="21.75" fill="url(#device-glass-tone)" filter="url(#device-aqua)"/>
+              <circle cx="22" cy="22" r="21.75" fill="#000" fill-opacity="var(--device-selection, 0)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".5"/>
             </symbol>
             <linearGradient id="device-bridge-tint" gradientUnits="userSpaceOnUse"><stop/><stop offset="1"/></linearGradient>
           </defs>
-          <g filter="url(#device-aqua)">
-            <g fill="url(#device-glass-tone)">
-              <path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/>
-            </g>
-            <g stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65">
-              <path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/>
-            </g>
+          <g fill="url(#device-glass-tone)" filter="url(#device-aqua)">
+            <path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/>
+          </g>
+          <g stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".5">
+            <path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/>
           </g>
         </svg>
         <button class="aqua-button" type="button" data-device="iphone" data-boarding-cues="2.643,5.695,9.196" data-chapters="11.967,16.7,21.767,27.467,30.967" data-media="films/iphone" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">

@@ -313,7 +313,6 @@
 .showcase-devices {
   position: absolute;
   z-index: 2;
-  --device-tint: #364256;
   inset-inline-end: max(12px, calc(var(--content-left) - 38px));
   inset-block: 5% 0;
   height: max-content;
@@ -368,8 +367,7 @@
   stroke-linejoin: round;
 }
 
-.showcase-devices button[aria-pressed="true"] { --device-selection: .85; color: #fff; }
-#device-bridge-tint stop { stop-color: var(--device-tint); }
+.showcase-devices button[aria-pressed="true"] { --device-selection: 1; color: #fff; }
 .showcase-devices :is(.aqua-button-surface, .device-liquid) {
   filter: drop-shadow(0 1.25px 0 rgb(104 119 139 / .16));
 }
