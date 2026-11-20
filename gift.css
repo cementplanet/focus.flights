@@ -78,26 +78,68 @@
 /* One camera stays in view while the two gift anchors pass underneath it. */
 .gift[data-airborne] { overflow: visible; z-index: 1; }
 .gift[data-airborne] .gift-night { position: fixed; }
-.gift-letter { height: 100dvh; outline: none; pointer-events: none; }
+.gift-letter { position: relative; height: 100dvh; outline: none; pointer-events: none; }
 .gift-letter-poster {
   position: absolute;
   inset: 0;
   opacity: var(--letter-poster, 0);
-  display: grid;
-  place-items: center;
   background:
-    radial-gradient(ellipse at 50% -12%, #4e4538, transparent 60%),
-    radial-gradient(ellipse at 50% 69%, #1c2835, transparent 68%), #080c13;
+    radial-gradient(ellipse at 38% 24%, #303237, transparent 54%),
+    radial-gradient(ellipse at 55% 62%, #22272d, transparent 68%), #080c13;
 }
-/* Use the same printed area of the atlas as the live sheet mesh. */
-.gift-letter-poster::after {
-  content: "";
-  width: min(82vw, 75dvh);
-  aspect-ratio: 1022 / 644;
-  border-radius: 2.85% / 4.5%;
-  background: url("gift/invitation.webp") 50% .0712% / 100.196% 318.012% no-repeat;
+/* These dimensions match the camera-facing rectangles at the end of the flight. */
+.gift-letter-poster, .gift-card-row {
+  --print-width: min(29.6vw, 49.5dvh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--print-width) * .07);
 }
-
+.gift-print, .gift-card-row button {
+  width: var(--print-width);
+  aspect-ratio: 3 / 4;
+  border-radius: 2.4% / 1.8%;
+}
+.gift-print {
+  background-image: url("gift/invitation.webp?v=lit-cards");
+  background-size: 304.7619% 228.5714%;
+  background-repeat: no-repeat;
+  background-position: var(--print-x) .347222%;
+}
+.welcome-print { --print-x: .290698%; }
+.black-week-print { --print-x: 50%; }
+.sharing-print { --print-x: 99.709302%; }
+.gift-card-row { position: absolute; inset: 0; z-index: 2; }
+.gift-card-row button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: zoom-in;
+}
+.gift-card-row button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.gift-reader {
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  pointer-events: auto;
+}
+.gift-reader::backdrop { background: rgba(7, 10, 15, .88); }
+.gift-reader .gift-print { --print-width: min(92vw, 64dvh, 680px); }
+.gift-reader button {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: #252a30;
+  color: white;
+  font: 26px/1 system-ui;
+  cursor: pointer;
+}
 @media (prefers-reduced-motion: reduce) {
   .gift-camera { visibility: hidden; }
 }

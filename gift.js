@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=floating-letter";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=lit-cards";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -6,6 +6,25 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
   const content = download.querySelector(".download-layout");
   const night = gift.querySelector(".gift-night");
   const render = setupStudio(gift.querySelector(".gift-camera"), download);
+
+  const letter = document.querySelector("#letter");
+  const row = letter.querySelector(".gift-card-row");
+  const reader = letter.querySelector(".gift-reader");
+  const enlarged = reader.querySelector(".gift-print");
+  row.addEventListener("click", event => {
+    const card = event.target.closest("button[data-print]");
+    if (!card) return;
+    enlarged.className = "gift-print " + card.dataset.print;
+    enlarged.setAttribute("aria-label", card.getAttribute("aria-description"));
+    reader.showModal();
+  });
+  reader.addEventListener("click", event => {
+    if (event.target === reader || event.target.closest("button")) reader.close();
+  });
+  // Keep the document's slide navigation idle while a card is being read.
+  for (const event of ["keydown", "wheel", "touchstart", "touchmove"]) {
+    reader.addEventListener(event, e => e.stopPropagation());
+  }
 
   for (const line of content.querySelectorAll(".download-label, .download-copy h2, .download-copy p")) {
     prepareCopy(line);
@@ -61,6 +80,8 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
     const lift = sample(phase);
     const slip = sample(phase/.94);
+    row.inert = phase < 1;
+    if (row.inert && reader.open) reader.close();
     gift.toggleAttribute("data-airborne", phase > 0);
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
     render(1,1,lift,slip);
@@ -68,6 +89,8 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
 
   function resetLetter() {
     if (!gift.hasAttribute("data-airborne")) return;
+    row.inert = true;
+    if (reader.open) reader.close();
     gift.removeAttribute("data-airborne");
     gift.style.removeProperty("--letter-poster");
     render(1,1);

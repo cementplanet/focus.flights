@@ -1,6 +1,6 @@
 // The invitation lies in the XY plane. Its two render passes use the same
 // deformed paper surface, so a lifting flap casts its own moving shadow.
-export function prepareInvitation(gl, program, project, shadows, atlas) {
+export function prepareInvitation(gl, program, project, shadows, studioAir, atlas) {
   const vertex = `
     attribute vec3 point;
     attribute vec2 uv;
@@ -20,6 +20,9 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     void main() {
       vec3 p=point;
       vec3 n=vec3(0.,0.,1.);
+      bool card=panel==2. || panel>=6.;
+      float stack=panel==6. ? -1. : (panel==7. ? 1. : 0.);
+      float column=panel==2. ? -1. : (panel==7. ? 1. : 0.);
       float fall=smoothstep(.26,.455,shot);
       float seated=smoothstep(.355,.48,shot);
       float open=smoothstep(.475,.81,shot);
@@ -32,11 +35,15 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
         p.y=.865-reach*cos(angle)+camber*sin(angle);
         p.z+=reach*sin(angle)+camber*cos(angle)-.033*open;
         n=vec3(0.,sin(angle),cos(angle));
-      } else if (panel==2.) {
-        p.y+=.57*extract;
+      } else if (card) {
+        p.xy=turn(-stack*.085)*p.xy;
+        p.x+=stack*.15;
+        p.y+=(.57+.08*abs(stack))*extract;
         // The insert stays beneath the pocket up to its lip. Only the exposed
         // sheet lifts clear of the opened flap.
-        p.z+=smoothstep(.64,.91,p.y)*(.087*extract+.075*sin(extract*3.14159));
+        float lip=smoothstep(.64,.91,p.y);
+        float layerHeight=panel==2. ? .038 : (panel==6. ? .019 : 0.);
+        p.z+=lip*((.087+layerHeight)*extract+.075*sin(extract*3.14159));
       }
       // The lower corner meets the ground first; the far edge settles after it.
       float bank=.165*(1.-seated);
@@ -52,7 +59,7 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
       p.z+=.91*(1.-fall)+1.24*sin(bank)+.865*sin(tilt)+.009;
       float rise=flight.x, release=flight.y, air=flight.z;
       if (rise>0. || release>0.) {
-        if (panel==2.) {
+        if (card) {
           // Slide along the sleeve from the first frame. The lower edge
           // takes the weight later, as it passes the pocket lip.
           float seatedHeight=p.z;
@@ -60,12 +67,20 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
           p.z+=.61*rise+.065*(1.-point.y*point.y/.5184)*sin(3.14159*release);
           // Resolve into the camera plane. Final drift is entirely parallel
           // to the screen so the printed baselines stay level.
-          vec3 centre=vec3(0.,2.48,1.30)+up*(.021*sin(air*.85));
-          vec3 facing=centre+right*point.x+up*point.y;
+          vec3 centre=vec3(0.,2.48,1.30);
+          float depth=dot(centre-eye,forward);
+          // The three 3:4 sheets share the same width in the camera and CSS layout.
+          float width=2.*depth*min(.296/lens.x,.495/lens.y);
+          float spread=smoothstep(.12,.95,release);
+          vec3 facing=centre+right*(column*1.07*width*spread+point.x*width/1.08)
+                            +up*(point.y*width/1.08+.012*sin(air*.85));
           p=mix(p,facing,release);
           vec2 pocket=turn(.047+.095*release)*(p.xy-vec2(-.24,-2.75)*release);
           float clearLip=smoothstep(.64,.91,pocket.y);
           p.z=mix(seatedHeight,p.z,clearLip);
+          // Preserve a little depth between the leaves until their edges part.
+          float order=panel==2. ? 2. : (panel==6. ? 1. : 0.);
+          p-=forward*(order*.16*sin(3.14159*release)*clearLip);
           n=normalize(mix(n,-forward,release));
         } else {
           // The sleeve stays at floor height while its weight carries it
@@ -98,6 +113,7 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     uniform vec3 eye;
     uniform vec3 flight;
     ${shadows}
+    ${studioAir}
     void main() {
       vec4 texel=texture2D(surface,texCoord);
       if (texel.a<.46) discard;
@@ -108,9 +124,12 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
       vec3 n=normalize(normal);
       vec3 view=normalize(eye-world);
       if(dot(n,view)<0.) n=-n;
-      vec3 key=normalize(mix(vec3(-.54,.73,1.),vec3(0.,.88,1.),flight.x));
-      float light=dot(n,key);
-      float shade=.76+.34*max(light,0.);
+      // A broad source on the viewer's side lights the print and the wax.
+      vec3 toLamp=vec3(-2.3,-3.2,7.4)-world;
+      vec3 key=normalize(toLamp);
+      float diffuse=max(dot(n,key),0.);
+      float irradiance=1./(1.+.0025*dot(toLamp,toLamp));
+      float shade=.87+.155*diffuse*irradiance;
       vec3 color=texel.rgb;
       if (abs(face-2.)>.25 && face<4.5) {
         float paper=.108+.032*texCoord.y+.028*(1.-texCoord.x)+texel.r*.53;
@@ -120,12 +139,16 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
         color=vec3(1.055,1.,.94)*paper;
         shade+=.08*pow(max(0.,dot(n,normalize(view+key))),12.);
       }
-      // The overhead light grazes the upper centre of the paper.
-      vec2 spot=world.xy-vec2(0.,3.08);
-      float glow=exp(-dot(spot*vec2(.86,.52),spot*vec2(.86,.52)));
-      color*=mix(vec3(1.),vec3(.91,.89,.87)+vec3(.23,.195,.14)*glow,flight.x);
+      if (abs(face-6.)<.25) {
+        // Brushed silver catches the softbox while black printing absorbs it.
+        float reflection=pow(max(dot(n,normalize(view+key)),0.),18.);
+        color+=vec3(.018*reflection*texel.g);
+      }
       float shadow=paperShadow(world,.028);
-      gl_FragColor=vec4(color*shade*(1.-.32*shadow),1.);
+      vec3 surfaceColor=color*shade*(1.-.32*shadow);
+      float haze=airLight(eye,-view,length(world-eye),flight.x);
+      // Keep the print close to the original stock even under the shaft.
+      gl_FragColor=vec4(mix(surfaceColor,vec3(.84),.008*min(haze,2.)),1.);
     }`;
   const pass=program(gl,vertex,fragment,["point","uv","panel"]);
   const flight=gl.getUniformLocation(pass.handle,"flight");
@@ -134,13 +157,13 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
   gl.useProgram(pass.handle);
   gl.uniform1i(gl.getUniformLocation(pass.handle,"shadowMap"),1);
   const vertices=[];
-  const stock=[2,662,1020,756], card=[1,1,1022,644], seal=[5,1440,384,372];
+  const stock=[2,962,1020,756], seal=[1088,960,384,372];
   const envelope=[-1.24,-.865,1.24,.865];
   function polygon(points,layer,height,region=stock,bounds=envelope) {
     const [left,bottom,right,top]=bounds;
     for(let i=1;i<points.length-1;i++) {
       for(const [x,y] of [points[0],points[i],points[i+1]]) {
-        const u=(region[0]+region[2]*(x-left)/(right-left))/1024;
+        const u=(region[0]+region[2]*(x-left)/(right-left))/2048;
         const v=1-(region[1]+region[3]*(top-y)/(top-bottom))/2048;
         vertices.push(x,y,height,u,v,layer);
       }
@@ -152,16 +175,21 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
   }
   rectangle(envelope,0,0,stock);
   // Horizontal sections let the insert and flap bend along their paper grain.
-  const insert=[-1.14,-.72,1.14,.72];
-  const radius=.065;
+  const insert=[-.54,-.72,.54,.72];
+  const radius=.026;
   function cardWidth(y) {
     const dy=Math.max(0,Math.abs(y)-(.72-radius));
-    return 1.14-radius+Math.sqrt(Math.max(0,radius*radius-dy*dy));
+    return .54-radius+Math.sqrt(Math.max(0,radius*radius-dy*dy));
   }
-  function strips(rows,layer,z,region,bounds) {
+  function strips(rows,layer,z,region,bounds,columns=1) {
     for(let i=1;i<rows.length;i++) {
       const [y0,w0]=rows[i-1], [y1,w1]=rows[i];
-      polygon([[-w0,y0],[w0,y0],[w1,y1],[-w1,y1]],layer,z,region,bounds);
+      // Fanned sheets cross the sleeve lip diagonally. Sample across each row
+      // as well as along it so a rear corner cannot bridge through the front.
+      for(let col=0;col<columns;col++) {
+        const left=2*col/columns-1, right=2*(col+1)/columns-1;
+        polygon([[left*w0,y0],[right*w0,y0],[right*w1,y1],[left*w1,y1]],layer,z,region,bounds);
+      }
     }
   }
   const cardRows=[];
@@ -169,7 +197,10 @@ export function prepareInvitation(gl, program, project, shadows, atlas) {
     const y=.72*Math.sin((i/48-.5)*Math.PI);
     cardRows.push([y,cardWidth(y)]);
   }
-  strips(cardRows,2,.021,card,insert);
+  // Welcome on top, brushed silver and airmail stock just behind its edges.
+  strips(cardRows,7,.013,[1372,4,672,896],insert,12);
+  strips(cardRows,6,.021,[688,4,672,896],insert,12);
+  strips(cardRows,2,.029,[4,4,672,896],insert,12);
   for(const side of [-1,1]) {
     polygon([[side*1.24,-.865],[side*1.24,.65],[side*1.14,.63],[0,-.29]],1,.039);
   }

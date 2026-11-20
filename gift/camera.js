@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=floating-letter";
+import { prepareInvitation } from "./invitation.js?v=lit-cards";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -9,7 +9,7 @@ const project = `
 const shadows = `
   uniform sampler2D shadowMap;
   vec2 shadowUV(vec3 p) {
-    return (p.xy+vec2(.54,-.73)*p.z)/6.+.5;
+    return (p.xy+vec2(.32,.49)*p.z)/6.+.5;
   }
   float blocks(vec2 uv,float height) {
     return smoothstep(.006,.032,2.4*texture2D(shadowMap,uv).r-height);
@@ -22,6 +22,28 @@ const shadows = `
     return .28*blocks(uv,h)+.18*(blocks(uv+stepUV*vec2(.83,.55),h)
       +blocks(uv-stepUV*vec2(.83,.55),h)+blocks(uv+stepUV*vec2(-.55,.83),h)
       +blocks(uv-stepUV*vec2(-.55,.83),h));
+  }
+`;
+// Integrate neutral haze only along the visible ray. A card terminates the
+// ray before the floor, so only air in front of its printed face contributes.
+const studioAir = `
+  float airLight(vec3 eyePos, vec3 ray, float distanceToSurface, float lift) {
+    vec3 aim=mix(vec3(-.05,.42,.18),vec3(0.,2.48,1.3),lift);
+    vec3 source=aim+vec3(-1.18,-.30,2.85);
+    vec3 axis=normalize(aim-source);
+    float nearT=max(0.,dot(source-eyePos,ray)-1.);
+    float farT=min(distanceToSurface,dot(aim-eyePos,ray)+2.8);
+    float stepT=max(0.,farT-nearT)/8.;
+    float density=0.;
+    for(int i=0;i<8;i++) {
+      vec3 delta=eyePos+ray*(nearT+(float(i)+.5)*stepT)-source;
+      float depth=dot(delta,axis);
+      vec3 radial=delta-depth*axis;
+      float radius=.34+.28*max(depth,0.);
+      float profile=exp(-dot(radial,radial)/(radius*radius));
+      density+=profile*smoothstep(-.3,.55,depth)*exp(-.30*max(depth,0.));
+    }
+    return density*stepT;
   }
 `;
 const stageVertex = `
@@ -43,6 +65,7 @@ const stageFragment = `
   uniform vec3 atmosphere; // lift, viewport aspect, breathing phase
   uniform vec3 eye;
   ${shadows}
+  ${studioAir}
   void main() {
     vec2 xy=eye.xy+eye.z/max(.001,-direction.z)*direction.xy;
     vec2 offset=xy-vec2(-.62,.68);
@@ -59,13 +82,8 @@ const stageFragment = `
     float floorShadow=.88*contact+.62*(broad.b-broad.g);
     floorColor*=1.-.62*floorShadow;
     vec3 studio=mix(floorColor,vec3(.012,.016,.022),smoothstep(9.,28.,length(xy)));
-    // Soft-edged shaft expands away from a high, off-frame practical.
-    float depth=1.28-screen.y;
-    float lateral=screen.x*atmosphere.y;
-    float radius=.22+.29*depth;
-    float beam=exp(-lateral*lateral/(radius*radius));
-    float veil=texture2D(grain,screen*vec2(.32,.12)+vec2(.007*atmosphere.z,0.)).r;
-    vec3 space=vec3(.020,.029,.049)+vec3(.246,.211,.155)*beam*exp(-.50*depth)*(.88+.24*veil);
+    float haze=airLight(eye,normalize(direction),length(vec3(xy,0.)-eye),atmosphere.x);
+    vec3 space=vec3(.025,.030,.039);
     vec2 rim=(screen-vec2(0.,-.42))*vec2(.86,1.15);
     space+=vec3(.038,.066,.091)*exp(-2.*dot(rim,rim));
     space+=floorColor*.19+textureValue*.009;
@@ -80,9 +98,11 @@ const stageFragment = `
       vec2 center=.12+.76*fract((seed.xx+seed.yz)*seed.zy);
       vec2 d=fract(cell)-center;
       float mote=exp(-dot(d,d)*mix(830.,2300.,center.x));
-      space+=vec3(.40,.32,.21)*mote*beam*center.y*center.y;
+      space+=vec3(.22,.23,.24)*mote*min(haze,1.)*center.y*center.y;
     }
-    gl_FragColor=vec4(mix(studio,space,atmosphere.x),1.);
+    vec3 scene=mix(studio,space,atmosphere.x);
+    scene+=vec3(.082,.084,.087)*haze*mix(.48,1.,atmosphere.x);
+    gl_FragColor=vec4(scene,1.);
   }
 `;
 
@@ -127,7 +147,7 @@ function cameraPose(t) {
 }
 
 async function prepare(gl) {
-  const [invitation,floor]=await Promise.all([readImage("invitation.webp?v=silk-slide"),readImage("graphite.webp")]);
+  const [invitation,floor]=await Promise.all([readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp")]);
   if (gl.isContextLost()) return;
   function texture(image,repeat=false) {
     const handle=gl.createTexture();
@@ -142,7 +162,7 @@ async function prepare(gl) {
     return handle;
   }
   const atlas=texture(invitation), ground=texture(floor,true);
-  const letter=prepareInvitation(gl,program,project,shadows,atlas);
+  const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas);
   const stage=program(gl,stageVertex,stageFragment,["corner"]);
   gl.useProgram(stage.handle);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"shadowMap"),1);
