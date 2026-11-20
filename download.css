@@ -81,17 +81,9 @@
   background: transparent;
   pointer-events: none;
 }
-[data-window-flight] .download-layout { opacity: var(--download-arrival, 0); }
 [data-window-flight] .download-layout:not([inert]) a { pointer-events: auto; }
 .download-copy .hero-actions a { animation: none; }
 
-@media (prefers-reduced-motion: no-preference) {
-  [data-window-flight] .download-copy {
-    --remaining: calc(1 - var(--download-arrival, 0));
-    transform: translateY(calc(20px * var(--remaining))) scale(calc(1 - .025 * var(--remaining)));
-    filter: blur(calc(4px * var(--remaining)));
-  }
-}
 @media (max-height: 520px) and (orientation: landscape) {
   .download-layout {
     padding-top: calc(var(--header-top) + var(--header-height) + 8px);
@@ -147,6 +139,56 @@
 .star-west { --x: 11%; --y: 66%; --size: clamp(10px, 1.05vw, 17px); --delay: -5s; }
 .star-south { --x: 67%; --y: 80%; --size: clamp(15px, 1.55vw, 25px); --tilt: -10deg; --delay: -8s; }
 .star-high { --x: 64%; --y: 23%; --size: clamp(9px, .85vw, 14px); --tilt: 9deg; }
+
+/* The climbing camera pitches up, so the sky travels down the screen.
+   Each cue is a position on that same reversible camera path. */
+@media (prefers-reduced-motion: no-preference) {
+  .star-high { --cue: 0; }
+  .sketch-cloud { --cue: .025; }
+  .star-rise { --cue: .06; }
+  .sketch-iphone { --cue: .095; }
+  .download-label { --cue: .12; }
+  .download-copy h2 { --cue: .18; --travel: clamp(26px, 5dvh, 54px); --defocus: 11px; }
+  .star-east { --cue: .21; }
+  .sketch-mac { --cue: .25; }
+  .download-copy p { --cue: .30; }
+  .star-west { --cue: .34; }
+  .download-awards img { --cue: .38; }
+  .download-awards img + img { --cue: .415; }
+  .sketch-ipad { --cue: .445; }
+  .sketch-plane { --cue: .475; }
+  .download-copy .hero-actions a { --cue: .50; }
+  .download-copy .hero-actions a + a { --cue: .535; }
+  .star-south { --cue: .56; }
+
+  .download-sketches img {
+    --anchor: -50%;
+    --travel: clamp(34px, 7dvh, 76px);
+    --defocus: 8px;
+    --ink: .84;
+  }
+  .download-sketches .sketch-star {
+    --travel: clamp(16px, 3.5dvh, 36px);
+    --defocus: 4px;
+    --ink: .91;
+  }
+  [data-window-flight] :is(.download-sketches img, .download-label, .download-copy h2,
+      .download-copy p, .download-awards img, .download-copy .hero-actions a) {
+    --p: clamp(0, (var(--download-arrival, 0) - var(--cue)) / .44, 1);
+    --rest: calc((1 - var(--p)) * (1 - var(--p)));
+    opacity: calc(var(--ink, 1) * var(--p) * var(--p) * (3 - 2 * var(--p)));
+    translate: var(--anchor, 0px) calc(var(--anchor, 0px) - var(--travel, clamp(20px, 4dvh, 42px)) * var(--rest));
+    filter: blur(calc(var(--defocus, 7px) * var(--rest)));
+  }
+  @media (max-width: 700px) and (orientation: portrait) {
+    .sketch-mac { --cue: .045; }
+    .star-east { --cue: .08; }
+    .star-west { --cue: .44; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-window-flight] .download-layout { opacity: var(--download-arrival, 0); }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .download-sketches img {
