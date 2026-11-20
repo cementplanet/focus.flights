@@ -416,7 +416,9 @@ function playPage(target, focusPage = false) {
   const giftStart = Math.min(3, handoffProgress);
   // The open envelope is zero on the shared clock. Each side retains
   // its authored duration, including when one gesture crosses both shots.
-  const descentSeconds = 2.55, unfoldSeconds = 3.25;
+  const descentSeconds = 2.55;
+  const openingLetter = target === 5 && handoffProgress < 5;
+  const unfoldSeconds = openingLetter ? 2.75 : 3.25;
   const secondsPerPage = phase => phase > 4 ? unfoldSeconds : descentSeconds;
   const giftTime = phase => (phase - 4) * secondsPerPage(phase);
   const targetTime = giftTime(target);
