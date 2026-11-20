@@ -1,41 +1,49 @@
+import { setupStudio, skyPitch } from "./gift/camera.js";
+
 export function setupGiftDescent(download, gift, windowFlight, ease) {
   const sequence = gift.parentElement;
-  const motionBlur = gift.querySelector("feGaussianBlur");
   const content = download.querySelector(".download-layout");
+  const night = gift.querySelector(".gift-night");
+  const render = setupStudio(gift.querySelector(".gift-camera"), download);
+
+  const initialPitch = skyPitch(0);
+  let skySurface;
 
   function align() {
     window.scrollTo({ top: download.offsetTop, behavior: "instant" });
   }
 
-  function paint(position, velocity) {
-    if (!sequence.hasAttribute("data-gift-descent")) {
+  function holdSky(interactive) {
+    if (sequence.hasAttribute("data-window-flight") || !download.querySelector(".flight-camera")) {
       windowFlight.end(true);
-      sequence.setAttribute("data-gift-descent", "");
-      content.inert = true;
-      align();
     }
-    // Stretch the Glide tail so the pool of light and the box resolve in sequence.
-    const t = 1 - Math.pow(1 - position, .49);
-    const travel = ease(0, .95, t);
-    const speed = Math.min(1, Math.abs(velocity) * .95);
-    download.style.setProperty("--sky-travel", travel);
-    download.style.setProperty("--sky-copy", 1 - ease(.04, .54, t));
-    download.style.setProperty("--sky-stars", 1 - ease(.06, .62, t));
-    const streak = 10 * speed * ease(0, .18, t);
-    motionBlur.setAttribute("stdDeviation", `${streak * .16} ${streak}`);
-    gift.style.setProperty("--blackout", ease(.01, .66, t));
-    gift.style.setProperty("--spotlight", ease(.20, .72, t));
-    gift.style.setProperty("--stage-travel", 1 - travel);
-    gift.style.setProperty("--box-light", ease(.32, .83, t));
-    gift.style.setProperty("--box-blur", (7 * speed * (1 - ease(.65, .94, t))) + "px");
+    content.inert = !interactive;
   }
 
-  function end() {
+  function paint(position) {
+    if (!sequence.hasAttribute("data-gift-descent")) {
+      holdSky(false);
+      skySurface = download.querySelector(".flight-camera:last-child") || download.querySelector(".flight-camera");
+      sequence.setAttribute("data-gift-descent", "");
+      align();
+    }
+    render(position);
+    // The distant sky loses exposure as the camera looks down into the studio.
+    night.style.opacity = ease(0, .56, position);
+    content.style.opacity = 1 - ease(.10, .56, position);
+    const tilt = Math.tan(initialPitch - skyPitch(position));
+    content.style.transform = `translate3d(0, ${-92 * tilt}%, 0)`;
+    if (skySurface) skySurface.style.transform = `scaleY(${1 + .48 * tilt})`;
+  }
+
+  function end(atGift = false) {
     if (!sequence.hasAttribute("data-gift-descent")) return;
     sequence.removeAttribute("data-gift-descent");
-    for (const name of ["blackout", "spotlight", "stage-travel", "box-light", "box-blur"]) {
-      gift.style.removeProperty("--" + name);
-    }
+    content.style.removeProperty("transform");
+    content.style.removeProperty("opacity");
+    night.style.removeProperty("opacity");
+    skySurface?.style.removeProperty("transform");
+    if (atGift) render(1);
   }
-  return { paint, end, align };
+  return { paint, end, align, holdSky };
 }

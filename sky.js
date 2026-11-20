@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js";
+import { setupGiftDescent } from "./gift.js?v=studio";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -314,12 +314,12 @@ function playPage(target, focusPage = false) {
     }
     if (travel && progress > 3) {
       clearFocusHandoff();
-      giftDescent.paint(unit(progress - 3), handoffVelocity);
+      giftDescent.paint(unit(progress - 3));
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
       return;
     }
-    giftDescent.end();
+    giftDescent.end(!travel && target === 4);
     if (travel && progress > 2) {
       clearFocusHandoff();
       windowFlight.paint(unit(progress - 2), target === 3);
@@ -327,7 +327,8 @@ function playPage(target, focusPage = false) {
       siteHeader.setAttribute("data-on-focus", "");
       return;
     }
-    windowFlight.end(!travel && target === 3);
+    if (!travel && target >= 3) giftDescent.holdSky(target === 3);
+    else windowFlight.end(false);
     if (travel && progress > 1) {
       if (progress >= 1.48) setShadeActive(target >= 2);
       paintFocusHandoff(progress);
@@ -366,18 +367,42 @@ function playPage(target, focusPage = false) {
   const offset = handoffProgress - target;
   // Reversing a running spring carries its current position and velocity.
   const farthest = Math.max(pageOrigin, target);
-  const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
+  const giftTrack = (target >= 3 && handoffProgress >= 3) || (target === 4 && handoffProgress > 2.9);
+  const rate = giftTrack ? 1.85 : farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
-  const slowOffset = (handoffVelocity - fastRate * offset) / (slowRate - fastRate);
-  const fastOffset = offset - slowOffset;
+
+  // Exact spring response to a target travelling at constant speed.
+  // With a stationary target this is the usual full-page Glide.
+  function segment(offset, velocity, drive) {
+    const lag = drive * (1 / slowRate + 1 / fastRate);
+    const slowOffset = (velocity - drive - fastRate * (offset - lag)) / (slowRate - fastRate);
+    const fastOffset = offset - lag - slowOffset;
+    return seconds => {
+      const slow = slowOffset * Math.exp(slowRate * seconds);
+      const fast = fastOffset * Math.exp(fastRate * seconds);
+      return [drive * seconds + lag + slow + fast, drive + slowRate * slow + fastRate * fast];
+    };
+  }
+
+  let glide = segment(offset, handoffVelocity, 0);
+  if (giftTrack && Math.abs(offset) > .002) {
+    // Pull the camera through the shot, then let the same spring brake at the box.
+    const duration = 1.58 / rate * Math.sqrt(Math.abs(offset));
+    const track = segment(0, handoffVelocity, -offset / duration);
+    const [distance, speed] = track(duration);
+    const brake = segment(offset + distance, speed, 0);
+    glide = seconds => {
+      if (seconds >= duration) return brake(seconds - duration);
+      const [distance, speed] = track(seconds);
+      return [offset + distance, speed];
+    };
+  }
 
   function play(now) {
     const seconds = Math.max(0, (now - start) / 1000);
-    const slow = slowOffset * Math.exp(slowRate * seconds);
-    const fast = fastOffset * Math.exp(fastRate * seconds);
-    const displacement = slow + fast;
-    handoffVelocity = slowRate * slow + fastRate * fast;
+    const [displacement, speed] = glide(seconds);
+    handoffVelocity = speed;
 
     if (reducedMotion.matches || (Math.abs(displacement) < .002 && Math.abs(handoffVelocity) < .022)) {
       settle();
@@ -537,8 +562,9 @@ function syncScroll() {
   handoffProgress = page;
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
-  giftDescent.end();
-  windowFlight.end(page === 3);
+  giftDescent.end(page === 4);
+  if (page >= 3) giftDescent.holdSky(page === 3);
+  else windowFlight.end(false);
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
 }
@@ -553,8 +579,9 @@ function restoreSection() {
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   clearFocusHandoff();
-  giftDescent.end();
-  windowFlight.end(page === 3);
+  giftDescent.end(page === 4);
+  if (page >= 3) giftDescent.holdSky(page === 3);
+  else windowFlight.end(false);
   sky.removeAttribute("data-handoff");
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
@@ -576,8 +603,9 @@ window.addEventListener("resize", () => {
     window.scrollTo({ top: download.offsetTop, behavior: "instant" });
     windowFlight.measure();
     windowFlight.paint(unit(handoffProgress - 2), pageTarget === 3);
-  } else if (!handoffFrame && pageTarget === 3) {
+  } else if (!handoffFrame && pageTarget >= 3) {
     windowFlight.end(true);
+    giftDescent.holdSky(pageTarget === 3);
   }
   if (!handoffFrame && pageTarget > 0) {
     window.scrollTo({ top: sections[pageTarget].offsetTop, behavior: "instant" });
