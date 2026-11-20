@@ -313,6 +313,7 @@
 .showcase-devices {
   position: absolute;
   z-index: 2;
+  --device-tint: #364256;
   inset-inline-end: max(12px, calc(var(--content-left) - 38px));
   inset-block: 5% 0;
   height: max-content;
@@ -341,7 +342,7 @@
   touch-action: manipulation;
 }
 
-:is(.showcase-devices, .flight-playback-action):not([data-liquid]) button::before {
+.flight-playback-action:not([data-liquid]) button::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -350,7 +351,7 @@
   background: var(--contact-background);
 }
 
-.showcase-devices button svg {
+.showcase-devices button svg:not(.aqua-button-surface) {
   position: relative;
   width: 22px;
   height: 22px;
@@ -359,7 +360,7 @@
   scale: var(--device-scale, 1);
 }
 
-.showcase-devices button svg {
+.showcase-devices button svg:not(.aqua-button-surface) {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.55;
@@ -367,14 +368,17 @@
   stroke-linejoin: round;
 }
 
-.showcase-devices button[aria-pressed="true"] { color: #fff; }
-.showcase-devices:not([data-liquid]) button[aria-pressed="true"]::before {
-  background: #000;
-  border-color: transparent;
+.showcase-devices button[aria-pressed="true"] { --device-selection: .85; color: #fff; }
+#device-bridge-tint stop { stop-color: var(--device-tint); }
+.showcase-devices :is(.aqua-button-surface, .device-liquid) {
+  filter: drop-shadow(0 1.25px 0 rgb(104 119 139 / .16));
 }
+.showcase-devices[data-liquid] .aqua-button-surface { display: none; }
+/* The liquid shape supplies the hover and press motion. */
+.showcase-devices[data-liquid] .aqua-button { scale: 1; }
 
 .showcase-devices[data-liquid] button { touch-action: none; -webkit-user-select: none; user-select: none; }
-.showcase-devices[data-liquid] button svg { scale: none; transition: none; }
+.showcase-devices[data-liquid] button svg:not(.aqua-button-surface) { scale: none; transition: none; }
 
 .showcase-devices[data-liquid] button {
   color: color-mix(in srgb, #fff var(--device-icon-fill, 0%), #1d1d1f);
@@ -392,7 +396,7 @@
   pointer-events: none;
 }
 
-:is(.showcase-devices, .flight-playback-action)[data-liquid] .device-liquid { display: block; }
+.showcase-devices .device-liquid, .flight-playback-action[data-liquid] .device-liquid { display: block; }
 .flight-playback-action[data-liquid] button { touch-action: none; -webkit-user-select: none; user-select: none; }
 
 @media (prefers-reduced-motion: no-preference) {

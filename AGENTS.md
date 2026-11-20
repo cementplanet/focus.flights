@@ -15,8 +15,8 @@
 
 ## 控件材质
 
-- **Aqua** 对应页眉的 Get the App 和首屏的 Explore。复用 `aqua-button` 和 `aqua-button-surface`，保留冷白灰弧面、柔和高光和轻微贴面阴影。
-- **Contact** 对应设备切换、飞行进度和播放／暂停。复用 `contact-material` 的配色，普通控件使用 `contact-surface`，液态控件使用 SVG 的 `contact-face` 渐变与同色细线。最外沿为连续的中性灰细线，高光和明暗过渡收在轮廓内侧，整体无投影。
+- **Aqua** 对应页眉的 Get the App、首屏的 Explore 和设备切换按钮。复用 `aqua-button` 和 `aqua-button-surface`，保留冷白灰弧面、柔和高光和轻微贴面阴影。
+- **Contact** 对应飞行进度和播放／暂停。复用 `contact-material` 的配色，普通控件使用 `contact-surface`，液态控件使用 SVG 的 `contact-face` 渐变与同色细线。最外沿为连续的中性灰细线，高光和明暗过渡收在轮廓内侧，整体无投影。
 - 后续需求提到 Aqua 或 Contact 时，沿用对应材质和现有实现。
 
 ## 预览视频

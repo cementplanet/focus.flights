@@ -1,11 +1,10 @@
 export function setupDeviceLiquid(container, initial, reducedMotion) {
   const svg = container.querySelector('.device-liquid');
-  const faces = [...svg.querySelectorAll('.contact-face')];
-  const inks = [...svg.querySelectorAll('.contact-ink')];
+  const faces = [...svg.querySelectorAll('.liquid-face')];
+  const inks = [...svg.querySelectorAll('.liquid-ink')];
   const gradient = container.querySelector('#device-bridge-tint');
   const buttons = [...container.querySelectorAll('button')];
-  // Center the half-pixel Contact stroke just inside the 44px button.
-  const shapeRadius = 21.75;
+  const shapeRadius = gradient ? 21 : 21.75;
   const bodies = buttons.map(button => ({ button, base: [0, 0], p: [0, 0, 1, 1], v: [0, 0, 0, 0] }));
   const stops = [...(gradient?.children ?? [])];
   let connected = [0, 1], connection = 0, connectionSpeed = 0;
@@ -68,7 +67,8 @@ export function setupDeviceLiquid(container, initial, reducedMotion) {
       }
       const left = point(body, Math.PI), right = point(body, 0);
       const circle = `M ${left} ${arc(body, right)} ${arc(body, left)} Z`;
-      paintShape(i, circle, `rgb(0 0 0 / ${fills[i]})`);
+      paintShape(i, circle, gradient ? 'var(--device-tint)' : 'none');
+      inks[i].setAttribute('fill-opacity', fills[i] * .85);
     });
     if (fusion > .035) {
       const a = bodies[pair[0]], b = bodies[pair[1]];
@@ -82,6 +82,7 @@ export function setupDeviceLiquid(container, initial, reducedMotion) {
       const joined = `M ${p} ${arc(a, q)} C ${add(q, tangent(a, ab, handle))} ${add(r, tangent(b, bb, handle), -1)} ${r}
         ${arc(b, s)} C ${add(s, tangent(b, bt, handle))} ${add(p, tangent(a, at, handle), -1)} ${p} Z`;
       paintShape(pair[0], joined, 'url(#device-bridge-tint)');
+      inks[pair[0]].setAttribute('fill-opacity', .85);
       // Each fused pair owns its tint; a dragged stop cannot slice through another sphere.
       const start = add(ac, add(bc, ac, -1).map(v => v * .3));
       const end = add(ac, add(bc, ac, -1).map(v => v * .7));
@@ -93,7 +94,7 @@ export function setupDeviceLiquid(container, initial, reducedMotion) {
     bodies.forEach((body, i) => {
       const fill = fills[i];
       body.button.style.setProperty('--device-icon-fill', `${Math.min(1, fill * 1.65) * 100}%`);
-      body.button.querySelectorAll('svg').forEach(icon => {
+      body.button.querySelectorAll('svg:not(.aqua-button-surface)').forEach(icon => {
         icon.style.transform = `translate(${body.p[0]}px, ${body.p[1]}px) scale(${body.p[2]}, ${body.p[3]})`;
       });
     });

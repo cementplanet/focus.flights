@@ -325,13 +325,13 @@
   </style>
   <link rel="stylesheet" href="earth.css?v=plane-return">
   <link rel="stylesheet" href="journey.css?v=reversible-titles">
-  <link rel="stylesheet" href="showcase.css?v=flight-chapters">
+  <link rel="stylesheet" href="showcase.css?v=device-aqua">
   <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=refracted-handoff">
   <link rel="stylesheet" href="download.css?v=crayon-stars">
   <script src="sky.js?v=download-page" type="module"></script>
-  <script src="showcase.js?v=flight-chapters" type="module"></script>
+  <script src="showcase.js?v=device-aqua" type="module"></script>
 </head>
 <body>
   <header class="site-header">
@@ -412,7 +412,15 @@
           </div>
           <div class="flight-playback-action">
             <svg class="device-liquid" aria-hidden="true" focusable="false">
-              <path class="contact-face"/><path class="contact-ink"/>
+              <defs>
+                <linearGradient id="contact-face" x2="0%" y2="100%">
+                  <stop stop-color="var(--contact-highlight)"/>
+                  <stop offset=".07" stop-color="var(--contact-tone)"/>
+                  <stop offset=".94" stop-color="var(--contact-tone)"/>
+                  <stop offset="1" stop-color="var(--contact-lowlight)"/>
+                </linearGradient>
+              </defs>
+              <path class="liquid-face contact-face"/><path class="liquid-ink contact-ink"/>
             </svg>
             <button class="flight-playback-toggle" type="button" aria-label="Play preview" aria-controls="device-preview" disabled>
               <svg class="playback-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5a1 1 0 0 0-1.5.86v11.28a1 1 0 0 0 1.5.86l10-5.64a1 1 0 0 0 0-1.72z"/></svg>
@@ -424,7 +432,7 @@
       <div class="showcase-stage" data-device="iphone">
         <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="device-media/films/iphone.png" preload="none" muted playsinline></video>
       </div>
-      <div class="showcase-devices contact-material" role="group" aria-label="Device">
+      <div class="showcase-devices" role="group" aria-label="Device">
         <svg class="device-liquid" aria-hidden="true" focusable="false">
           <defs>
             <radialGradient id="device-glass-tone" cx="32%" cy="18%" r="90%">
@@ -441,37 +449,55 @@
               <feComposite in="light" in2="SourceAlpha" operator="in" result="highlight"/>
               <feBlend in="SourceGraphic" in2="highlight" mode="screen"/>
             </filter>
-            <linearGradient id="contact-face" x2="0%" y2="100%">
-              <stop stop-color="var(--contact-highlight)"/>
-              <stop offset=".07" stop-color="var(--contact-tone)"/>
-              <stop offset=".94" stop-color="var(--contact-tone)"/>
-              <stop offset="1" stop-color="var(--contact-lowlight)"/>
-            </linearGradient>
-            <linearGradient id="device-bridge-tint" gradientUnits="userSpaceOnUse"><stop stop-color="#000"/><stop offset="1" stop-color="#000"/></linearGradient>
+            <symbol id="device-aqua-disc" viewBox="0 0 44 44">
+              <g filter="url(#device-aqua)">
+                <circle cx="22" cy="22" r="21" fill="url(#device-glass-tone)"/>
+                <circle cx="22" cy="22" r="21" fill="var(--device-tint)" fill-opacity="var(--device-selection, 0)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65"/>
+              </g>
+            </symbol>
+            <linearGradient id="device-bridge-tint" gradientUnits="userSpaceOnUse"><stop/><stop offset="1"/></linearGradient>
           </defs>
-          <path class="contact-face"/><path class="contact-face"/><path class="contact-face"/><path class="contact-face"/>
-          <path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/><path class="contact-ink"/>
+          <g filter="url(#device-aqua)">
+            <g fill="url(#device-glass-tone)">
+              <path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/>
+            </g>
+            <g stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65">
+              <path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/>
+            </g>
+          </g>
         </svg>
-        <button type="button" data-device="iphone" data-boarding-cues="2.643,5.695,9.196" data-chapters="11.967,16.7,21.767,27.467,30.967" data-media="films/iphone" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">
+        <button class="aqua-button" type="button" data-device="iphone" data-boarding-cues="2.643,5.695,9.196" data-chapters="11.967,16.7,21.767,27.467,30.967" data-media="films/iphone" aria-controls="device-preview" aria-pressed="true" aria-label="iPhone" title="iPhone">
+          <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+            <use href="#device-aqua-disc"/>
+          </svg>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="6.25" y="2.5" width="11.5" height="19" rx="2.6"/>
             <path d="M10.85 5.2h2.3" stroke-width="1.4"/>
             <path d="M10.1 19h3.8" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="iphone-duo" data-boarding-cues="2.654,5.723,9.208" data-chapters="11.9,16.567,21.6,27.167,30.667" data-media="films/iphone-duo" aria-controls="device-preview" aria-pressed="false" aria-label="iPhone Duo" title="iPhone Duo">
+        <button class="aqua-button" type="button" data-device="iphone-duo" data-boarding-cues="2.654,5.723,9.208" data-chapters="11.9,16.567,21.6,27.167,30.667" data-media="films/iphone-duo" aria-controls="device-preview" aria-pressed="false" aria-label="iPhone Duo" title="iPhone Duo">
+          <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+            <use href="#device-aqua-disc"/>
+          </svg>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7.45 4.25h9.1a2.6 2.6 0 0 1 2.6 2.6v6.1l2.2 5.65c.22.55-.18 1.15-.78 1.15H3.43c-.6 0-1-.6-.78-1.15l2.2-5.65v-6.1a2.6 2.6 0 0 1 2.6-2.6Z"/>
             <path d="M9.6 17.35h4.8" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="ipad" data-boarding-cues="2.678,5.774,9.227" data-chapters="11.967,16.667,21.667,27.4,30.9" data-media="films/ipad" aria-controls="device-preview" aria-pressed="false" aria-label="iPad" title="iPad">
+        <button class="aqua-button" type="button" data-device="ipad" data-boarding-cues="2.678,5.774,9.227" data-chapters="11.967,16.667,21.667,27.4,30.9" data-media="films/ipad" aria-controls="device-preview" aria-pressed="false" aria-label="iPad" title="iPad">
+          <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+            <use href="#device-aqua-disc"/>
+          </svg>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="2" y="4.65" width="20" height="14.7" rx="2.3"/>
             <path d="M8.9 17h6.2" stroke-width="1"/>
           </svg>
         </button>
-        <button type="button" data-device="macbook" data-boarding-cues="2.519,5.557,9.014" data-chapters="12.1,16.8,21.833,27.4,30.9" data-media="films/macbook" aria-controls="device-preview" aria-pressed="false" aria-label="MacBook" title="MacBook">
+        <button class="aqua-button" type="button" data-device="macbook" data-boarding-cues="2.519,5.557,9.014" data-chapters="12.1,16.8,21.833,27.4,30.9" data-media="films/macbook" aria-controls="device-preview" aria-pressed="false" aria-label="MacBook" title="MacBook">
+          <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
+            <use href="#device-aqua-disc"/>
+          </svg>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3.55 18.1V7.3a1.65 1.65 0 0 1 1.65-1.65h13.6a1.65 1.65 0 0 1 1.65 1.65v10.8"/>
             <path d="M9.95 5.65h4.1v.95a.6.6 0 0 1-.6.6h-2.9a.6.6 0 0 1-.6-.6Z" fill="currentColor" stroke="none"/>
