@@ -132,11 +132,20 @@
   --x: 81%; --y: 71%; --size: clamp(76px, 11vw, 170px);
   --tilt: 9deg; --period: 8.2s; --delay: -7s;
 }
-.download-sketches .sketch-star { opacity: .82; }
-.star-rise { --x: 27%; --y: 29%; --size: clamp(14px, 1.7vw, 27px); --tilt: 9deg; }
-.star-east { --x: 85%; --y: 42%; --size: clamp(10px, 1.2vw, 20px); --tilt: -8deg; --delay: -3s; }
-.star-west { --x: 12%; --y: 67%; --size: clamp(9px, .9vw, 16px); --delay: -5s; }
-.star-south { --x: 35%; --y: 80%; --size: clamp(13px, 1.4vw, 23px); --tilt: -13deg; --delay: -8s; }
+.sketch-cloud {
+  --x: 14%; --y: 32%; --size: clamp(42px, 5vw, 82px);
+  --tilt: -6deg; --period: 8s; --delay: -3s;
+}
+.sketch-plane {
+  --x: 28%; --y: 77%; --size: clamp(55px, 6.4vw, 102px);
+  --tilt: 6deg; --period: 7.6s; --delay: -5s;
+}
+.download-sketches .sketch-star { opacity: .91; }
+.star-rise { --x: 26%; --y: 30%; --size: clamp(27px, 3.4vw, 51px); --tilt: -8deg; }
+.star-east { --x: 86%; --y: 44%; --size: clamp(21px, 2.6vw, 40px); --tilt: 14deg; --delay: -3s; }
+.star-west { --x: 11%; --y: 66%; --size: clamp(10px, 1.05vw, 17px); --delay: -5s; }
+.star-south { --x: 67%; --y: 80%; --size: clamp(15px, 1.55vw, 25px); --tilt: -10deg; --delay: -8s; }
+.star-high { --x: 64%; --y: 23%; --size: clamp(9px, .85vw, 14px); --tilt: 9deg; }
 
 @media (prefers-reduced-motion: no-preference) {
   .download-sketches img {
@@ -154,23 +163,29 @@
   .download-copy { grid-row: 2; }
   /* Anchor drawings in the free rows above and below the actual copy. */
   .download-sketches img { grid-row: 1 / 2; --y: calc(50% + (var(--header-top) + var(--header-height)) / 2); }
-  .download-sketches :is(.sketch-ipad, .star-west, .star-south) { grid-row: 3 / 4; --y: 47%; }
+  .download-sketches :is(.sketch-ipad, .sketch-plane, .star-west, .star-south) { grid-row: 3 / 4; --y: 47%; }
   .sketch-mac { --x: 22%; --size: min(22vw, 13dvh); }
   .sketch-iphone { --x: 79%; --size: min(10vw, 6.6dvh); }
   .sketch-ipad { --x: 68%; --size: min(22vw, 14dvh); }
-  .star-rise { --x: 43%; --size: 12px; }
+  .sketch-cloud { --x: 50%; --size: min(12vw, 6dvh); margin-top: -15px; }
+  .sketch-plane { --x: 26%; --size: min(17vw, 10dvh); }
+  .star-rise { --x: 43%; --size: 22px; }
   .download-sketches .star-rise { margin-top: 14px; }
-  .star-east { --x: 87%; --size: 8px; }
+  .star-east { --x: 91%; --size: 16px; }
   .download-sketches .star-east { margin-top: -20px; }
-  .star-west { --x: 22%; --size: 17px; }
-  .star-south { --x: 27%; --size: 8px; }
+  .star-west { --x: 13%; --size: 11px; margin-top: 22px; }
+  .star-south { --x: 85%; --size: 12px; }
+  .download-sketches .star-high { --x: 57%; margin-top: 12px; }
   .download-sketches .star-south { margin-top: 14px; }
 }
 @media (max-height: 520px) and (orientation: landscape) {
   .sketch-mac { --x: 14%; --y: 58%; --size: min(14vw, 30dvh); }
   .sketch-iphone { --x: 82%; --y: 40%; --size: min(5.3vw, 10dvh); }
   .sketch-ipad { --x: 86%; --y: 78%; --size: min(12vw, 23dvh); }
+  .sketch-cloud { --x: 12%; --y: 33%; --size: min(8vw, 12dvh); }
+  .sketch-plane { --x: 24%; --y: 85%; --size: min(8vw, 13dvh); }
+  .star-high { --x: 68%; --y: 33%; }
   .star-east { --x: 92%; --y: 54%; }
   .star-west { --x: 11%; --y: 82%; }
-  .star-south { --x: 26%; --y: 89%; }
+  .star-south { --x: 73%; --y: 90%; }
 }
