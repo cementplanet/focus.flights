@@ -49,27 +49,9 @@ const stageVertex = `
   precision highp float;
   attribute vec2 corner;
   varying vec3 direction;
-  varying float haze;
   ${project}
   void main() {
     direction = forward + right*corner.x/lens.x + up*corner.y/lens.y;
-    vec3 ray = normalize(direction);
-    float ground = ray.z < -.001 ? -eye.z/ray.z : 100000.;
-    // Integrate the soft radial beam along the viewing ray on a coarse grid.
-    // The low-frequency air light is interpolated across the receiving floor.
-    vec3 lamp = vec3(-3.1,-2.8,7.8);
-    vec3 axis = normalize(vec3(.1,.3,0.)-lamp);
-    vec3 origin = eye-lamp;
-    float angle = dot(ray,axis), perpendicular = max(.015,1.-angle*angle);
-    float alongRay = (angle*dot(origin,axis)-dot(origin,ray))/perpendicular;
-    vec3 nearest = origin + ray*alongRay;
-    float alongBeam = dot(nearest,axis);
-    float radius = max(.05,alongBeam*.51);
-    vec3 radial = nearest-axis*alongBeam;
-    float core = max(0.,1.-dot(radial,radial)/(radius*radius));
-    haze = core*core*sqrt(core) * radius / (3.+alongBeam*alongBeam)
-         * inversesqrt(perpendicular) * smoothstep(0.,1.6,alongBeam)
-         * smoothstep(-1.4,1.4,ground-alongRay) * step(0.,alongRay);
     gl_Position = vec4(corner,0.,1.);
   }
 `;
@@ -78,14 +60,13 @@ const stageFragment = `
   uniform sampler2D lightmap;
   uniform vec3 eye;
   varying vec3 direction;
-  varying float haze;
   void main() {
     float distance = direction.z < -.001 ? -eye.z/direction.z : 100000.;
     vec2 xy = eye.xy + distance*direction.xy;
     vec3 floorLight = texture2D(lightmap, clamp(xy/24.+.5,0.,1.)).rgb;
     float footprint = 1.-smoothstep(8.,11.9,max(abs(xy.x),abs(xy.y)));
     vec3 color = max(vec3(.011,.014,.019), floorLight*footprint);
-    gl_FragColor = vec4(color + vec3(.91,.90,.85)*haze,1.);
+    gl_FragColor = vec4(color,1.);
   }
 `;
 
@@ -108,7 +89,7 @@ function program(gl, vertex, fragment, attributes) {
 }
 
 async function readMesh() {
-  const response = await fetch(new URL("geometry.gz",import.meta.url));
+  const response = await fetch(new URL("geometry.gz?v=unprinted",import.meta.url));
   if (!response.ok) throw new Error("Gift geometry: " + response.status);
   const bytes = await response.arrayBuffer();
   // Hosts may serve .gz as either an encoded response or an ordinary file.
@@ -139,7 +120,7 @@ export function skyPitch(t) {
 }
 
 async function prepare(gl) {
-  const [mesh, paper, floor] = await Promise.all([readMesh(),readImage("paper-silk.webp"),readImage("floor.webp")]);
+  const [mesh, paper, floor] = await Promise.all([readMesh(),readImage("paper-silk.webp?v=unprinted"),readImage("floor.webp?v=unprinted")]);
   if (gl.isContextLost()) return;
   const model = program(gl,modelVertex,modelFragment,["position","normal","material","uv"]);
   const stage = program(gl,stageVertex,stageFragment,["corner"]);
@@ -162,19 +143,7 @@ async function prepare(gl) {
   }
   const surfaceMap = texture(paper,true), floorMap = texture(floor,false);
   const [vertexCount,indexCount] = new Uint32Array(mesh,0,2);
-  const columns = 48, rows = 32;
-  const grid = [], triangles = [];
-  for (let y = 0; y <= rows; y++) {
-    for (let x = 0; x <= columns; x++) {
-      grid.push(2*x/columns-1, 2*y/rows-1);
-      if (x < columns && y < rows) {
-        const i = y*(columns+1)+x;
-        triangles.push(i,i+1,i+columns+1, i+1,i+columns+2,i+columns+1);
-      }
-    }
-  }
-  const corners = buffer(gl.ARRAY_BUFFER,new Float32Array(grid));
-  const gridIndices = buffer(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(triangles));
+  const corners = buffer(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]));
   const vertices = buffer(gl.ARRAY_BUFFER,new Uint8Array(mesh,8,vertexCount*16));
   const modelIndices = buffer(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(mesh,8+vertexCount*16,indexCount));
   const attributes = [
@@ -207,8 +176,7 @@ async function prepare(gl) {
     gl.enableVertexAttribArray(stage.corner);
     gl.vertexAttribPointer(stage.corner,2,gl.FLOAT,false,0,0);
     gl.bindTexture(gl.TEXTURE_2D,floorMap);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gridIndices);
-    gl.drawElements(gl.TRIANGLES,triangles.length,gl.UNSIGNED_SHORT,0);
+    gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
     camera(model);

@@ -1,10 +1,15 @@
-import { setupStudio, skyPitch } from "./gift/camera.js";
+import { setupStudio, skyPitch } from "./gift/camera.js?v=unprinted";
+import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease) {
   const sequence = gift.parentElement;
   const content = download.querySelector(".download-layout");
   const night = gift.querySelector(".gift-night");
   const render = setupStudio(gift.querySelector(".gift-camera"), download);
+
+  for (const line of content.querySelectorAll(".download-label, .download-copy h2, .download-copy p")) {
+    prepareCopy(line);
+  }
 
   const initialPitch = skyPitch(0);
   let skySurface;
@@ -30,9 +35,10 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     render(position);
     // The distant sky loses exposure as the camera looks down into the studio.
     night.style.opacity = ease(0, .56, position);
-    content.style.opacity = 1 - ease(.10, .56, position);
+    content.style.setProperty("--gift-reveal", 1 - ease(.006, .55, position));
     const tilt = Math.tan(initialPitch - skyPitch(position));
-    content.style.transform = `translate3d(0, ${-92 * tilt}%, 0)`;
+    // Keep the resolving letters below the fixed header during the tilt.
+    content.style.transform = `translate3d(0, ${-26 * tilt}%, 0)`;
     if (skySurface) skySurface.style.transform = `scaleY(${1 + .48 * tilt})`;
   }
 
@@ -40,7 +46,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease) {
     if (!sequence.hasAttribute("data-gift-descent")) return;
     sequence.removeAttribute("data-gift-descent");
     content.style.removeProperty("transform");
-    content.style.removeProperty("opacity");
+    content.style.removeProperty("--gift-reveal");
     night.style.removeProperty("opacity");
     skySurface?.style.removeProperty("transform");
     if (atGift) render(1);
