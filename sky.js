@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=letter-return";
+import { setupGiftDescent } from "./gift.js?v=gift-rewind";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupFocusRipple } from "./focus-ripple.js";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
@@ -217,7 +217,6 @@ let handoffProgress = 0;
 let handoffVelocity = 0;
 let pageTarget = 0;
 let pageOrigin = 0;
-let letterReturnStart = 0;
 const wheelQuietPeriod = 140;
 const deviceWheelQuietPeriod = 80;
 const returnWheelThreshold = 32;
@@ -328,11 +327,6 @@ function playPage(target, focusPage = false) {
   if (target === pageTarget) return false;
   deepFocus.removeAttribute("data-anchor-entry");
   const leavingDownload = target === 4 && download.contains(document.activeElement);
-  // Keep the current paper pose on the direct flight back to Download.
-  if (pageTarget === 5 && target === 3 && !letterReturnStart && handoffProgress > 4) {
-    letterReturnStart = handoffProgress;
-  }
-  if (target === 4) letterReturnStart = 0;
   pageOrigin = pageTarget;
   pageTarget = target;
   deepFocus.inert = false;
@@ -347,13 +341,6 @@ function playPage(target, focusPage = false) {
       sky.toggleAttribute("data-handoff", travel && progress < 1);
       paintHandoff(unit(progress), travel && progress < 1);
     }
-    if (travel && progress >= 3 && progress <= letterReturnStart) {
-      clearFocusHandoff();
-      giftDescent.returnToDownload(unit((progress-3)/(letterReturnStart-3)), letterReturnStart-4);
-      siteHeader.removeAttribute("data-on-showcase");
-      siteHeader.setAttribute("data-on-focus", "");
-      return;
-    }
     if (progress >= 4) {
       clearFocusHandoff();
       giftDescent.end(true);
@@ -366,7 +353,6 @@ function playPage(target, focusPage = false) {
       return;
     }
     giftDescent.resetLetter();
-    if (gift.hasAttribute("data-letter-return")) giftDescent.end();
     if (travel && (progress > 3 || (progress === 3 && (target === 4 || sequence.hasAttribute("data-gift-descent"))))) {
       clearFocusHandoff();
       giftDescent.paint(unit(progress - 3));
@@ -395,7 +381,6 @@ function playPage(target, focusPage = false) {
   }
 
   function settle() {
-    letterReturnStart = 0;
     handoffFrame = 0;
     handoffProgress = target;
     handoffVelocity = 0;
@@ -427,9 +412,15 @@ function playPage(target, focusPage = false) {
   // Page progress is the reversible shot clock; the camera and the paper
   // sample independent tracks so the flap doesn't inherit the camera's peak speed.
   const giftStart = Math.min(3, handoffProgress);
-  const shotDuration = letterReturnStart ? 2.55 / (letterReturnStart-3)
-    : Math.max(target,handoffProgress) > 4 ? 3.25 : 2.55;
-  const giftDuration = giftTrack ? shotDuration * Math.max(.18, Math.abs(offset)) : 0;
+  // The open envelope is zero on the shared clock. Each side retains
+  // its authored duration, including when one gesture crosses both shots.
+  const descentSeconds = 2.55, unfoldSeconds = 3.25;
+  const secondsPerPage = phase => phase > 4 ? unfoldSeconds : descentSeconds;
+  const giftTime = phase => (phase - 4) * secondsPerPage(phase);
+  const targetTime = giftTime(target);
+  const timeOffset = giftTime(handoffProgress) - targetTime;
+  const playbackRate = pageOrigin === 5 && target === 3 ? 1.8 : 1;
+  const giftDuration = Math.max(.18 * secondsPerPage(Math.max(target, handoffProgress)), Math.abs(timeOffset)) / playbackRate;
   const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
@@ -439,13 +430,13 @@ function playPage(target, focusPage = false) {
   function glide(seconds) {
     if (giftTrack) {
       const t = unit(seconds/giftDuration);
-      const velocity = -offset/giftDuration;
-      // Ease the change of direction from the current phase velocity. At an
-      // endpoint the camera and both paper tracks already have zero velocity.
-      const inertia = entryVelocity ? entryVelocity-velocity : 0;
+      const velocity = -timeOffset/giftDuration;
+      const incoming = entryVelocity * secondsPerPage(handoffProgress);
+      const inertia = incoming ? incoming-velocity : 0;
       const tail = 1-t;
-      return [offset*tail + inertia*giftDuration*t*tail**6,
-        velocity + inertia*tail**5*(1-7*t)];
+      const time = targetTime + timeOffset*tail + inertia*giftDuration*t*tail**6;
+      const scale = time > 0 ? unfoldSeconds : descentSeconds;
+      return [4 + time/scale - target, (velocity + inertia*tail**5*(1-7*t))/scale];
     }
     const slow = slowOffset*Math.exp(slowRate*seconds);
     const fast = fastOffset*Math.exp(fastRate*seconds);
@@ -487,7 +478,7 @@ function stepPage(down, focusPage = false) {
   const nearingNextScreen = (pageTarget === 2 || pageTarget === 3) && Math.abs(handoffProgress - pageTarget) <= .10;
   if (handoffFrame && !onShowcase() && !nearingNextScreen && down === (pageTarget > pageOrigin)) return true;
   if (pageTarget === 5 && !down) return playPage(3, focusPage);
-  if (letterReturnStart && pageTarget === 3 && down) return playPage(5, focusPage);
+  if (handoffFrame && pageOrigin === 5 && pageTarget === 3 && down) return playPage(5, focusPage);
   const target = Math.max(0, Math.min(sections.length - 1, pageTarget + (down ? 1 : -1)));
   return playPage(target, focusPage);
 }
@@ -633,7 +624,6 @@ function restoreSection() {
   if (page < 0) { syncScroll(); return; }
   deepFocus.toggleAttribute("data-anchor-entry", page === 2);
   cancelAnimationFrame(handoffFrame);
-  letterReturnStart = 0;
   handoffFrame = handoffVelocity = 0;
   handoffProgress = pageOrigin = pageTarget = page;
   setShadeActive(page >= 2);

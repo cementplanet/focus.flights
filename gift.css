@@ -78,12 +78,6 @@
 /* One camera stays in view while the two gift anchors pass underneath it. */
 .gift[data-airborne] { overflow: visible; z-index: 1; }
 .gift[data-airborne] .gift-night { position: fixed; }
-.gift[data-letter-return] { z-index: 4; }
-.gift[data-letter-return] .gift-night {
-  --edge: calc(-14% + 114% * var(--return-progress, 0));
-  mask-image: linear-gradient(transparent var(--edge), black calc(var(--edge) + 14%));
-}
-.gift[data-letter-return] .gift-letter-poster { translate: 0 calc(12dvh * var(--return-progress, 0)); }
 .gift-letter { height: 100dvh; outline: none; pointer-events: none; }
 .gift-letter-poster {
   position: absolute;
