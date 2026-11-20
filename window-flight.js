@@ -8,7 +8,7 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
   function measure() {
     const screen = cabin.getBoundingClientRect();
     const window = host.getBoundingClientRect();
-    download.style.setProperty("--download-offset", (cabin.offsetTop - download.offsetTop) + "px");
+    cabin.style.setProperty("--cabin-offset", (download.offsetTop - cabin.offsetTop) + "px");
     layout = {
       x: (window.left + window.width / 2 - screen.left) / screen.width,
       y: (window.top + window.height / 2 - screen.top) / screen.height,
@@ -18,7 +18,13 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
   }
 
   function camera(t) {
-    const path = 1 - (1 - t) ** .58;
+    const remaining = (1 - t) ** .58;
+    // Log distance is linear in time in the spring's exponential tail.
+    // A quadratic stop matches the incoming speed and reaches zero before settle().
+    const tail = .24;
+    const distance = remaining >= tail ? remaining
+      : tail * Math.max(0, 1 + .5 * Math.log(remaining / tail)) ** 2;
+    const path = 1 - distance;
     const center = ease(0, .43, path);
     const climb = .68 * path + .32 * ease(0, 1, path);
     const width = layout.width, aspect = layout.aspect;
@@ -38,9 +44,9 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
 
   function paint(t) {
     if (!sequence.hasAttribute("data-window-flight")) {
-      window.scrollTo({top: cabin.offsetTop, behavior: "instant"});
-      sequence.setAttribute("data-window-flight", "");
       measure();
+      sequence.setAttribute("data-window-flight", "");
+      window.scrollTo({top: download.offsetTop, behavior: "instant"});
     }
     const view = camera(t);
     const arrival = ease(.46, .97, view.rise / 1250);
@@ -52,7 +58,7 @@ export function setupWindowFlight(cabin, download, ease, setCamera) {
     cabin.style.setProperty("--wall-light", 1 - ease(.08, .95, approach));
     cabin.style.setProperty("--cabin-copy", 1 - ease(0, .58, approach));
     cabin.style.setProperty("--copy-drift", (-5 * ease(0, .68, approach)) + "vw");
-    setCamera(view, cabin);
+    setCamera(view, download);
   }
 
   function end(atDownload = false) {

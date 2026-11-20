@@ -74,9 +74,10 @@
 .download-copy .hero-actions { margin-top: clamp(18px, 2.8dvh, 34px); }
 .download-copy .hero-actions img { width: auto; }
 
+/* Keep the sky and download content in their final viewport throughout the flight. */
+[data-window-flight] .deep-focus { translate: 0 var(--cabin-offset); }
 [data-window-flight] .download {
   z-index: 3;
-  translate: 0 var(--download-offset);
   background: transparent;
   pointer-events: none;
 }

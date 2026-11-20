@@ -557,7 +557,7 @@ window.addEventListener("resize", () => {
     window.scrollTo({ top: showcase.offsetTop, behavior: "instant" });
   }
   if (sequence.hasAttribute("data-window-flight")) {
-    window.scrollTo({ top: deepFocus.offsetTop, behavior: "instant" });
+    window.scrollTo({ top: download.offsetTop, behavior: "instant" });
     windowFlight.measure();
     windowFlight.paint(unit(handoffProgress - 2));
   } else if (!handoffFrame && pageTarget === 3) {
