@@ -1,9 +1,9 @@
-.sky-nav .gift-link {
+.sky-nav .section-link {
   color: inherit;
   text-decoration: none;
   pointer-events: auto;
 }
-.gift-link:hover, .gift-link:focus-visible { text-decoration: underline; text-underline-offset: .3em; }
+.section-link:hover, .section-link:focus-visible { text-decoration: underline; text-underline-offset: .3em; }
 
 .gift {
   position: relative;

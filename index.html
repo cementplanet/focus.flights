@@ -289,6 +289,15 @@
       white-space: nowrap;
     }
 
+    .section-fade {
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .sky-nav-surface { display: none; }
 
     .sky-get-app {
@@ -338,25 +347,26 @@
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=focus-title-glow">
   <link rel="stylesheet" href="download.css?v=sky-meteor">
-  <link rel="stylesheet" href="gift.css?v=runway-invitation">
+  <link rel="stylesheet" href="gift.css?v=section-fade">
   <link rel="stylesheet" href="mobile.css" media="(max-width: 520px)">
-  <script src="sky.js?v=runway-invitation" type="module"></script>
+  <script src="sky.js?v=section-fade" type="module"></script>
   <script src="showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
+  <div class="section-fade" aria-hidden="true"></div>
   <header class="site-header">
     <a class="sky-brand" href="#flight" aria-label="FocusFlight home">
       <img src="brand/app-icon-ios27.png" alt="" width="38" height="38">
       <span>FocusFlight</span>
     </a>
-    <div class="sky-nav">
+    <nav class="sky-nav" aria-label="Main navigation">
       <svg class="sky-nav-surface aqua-button-surface" aria-hidden="true" focusable="false">
         <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
         <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
       </svg>
-      <span>Flight</span>
-      <a class="gift-link" href="#gift">Gift</a>
-      <span>Creator</span>
+      <a class="section-link" href="#showcase">Flight</a>
+      <a class="section-link gift-link" href="#gift">Gift</a>
+      <a class="section-link" href="#runway">Creator</a>
       <a class="sky-get-app aqua-button" href="#download">
         <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
           <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
@@ -364,7 +374,7 @@
         </svg>
         Get the App
       </a>
-    </div>
+    </nav>
   </header>
   <main class="flight-sequence" id="flight-sequence" tabindex="-1" aria-label="FocusFlight">
     <div class="sky" id="flight">

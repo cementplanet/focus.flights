@@ -324,6 +324,7 @@ function paintHandoff(progress, travel) {
 }
 
 function playPage(target, focusPage = false) {
+  cancelLinkFade();
   if (target === pageTarget) return false;
   deepFocus.removeAttribute("data-anchor-entry");
   const leavingDownload = target === 4 && download.contains(document.activeElement);
@@ -469,13 +470,53 @@ function playPage(target, focusPage = false) {
   return true;
 }
 
-for (const link of [siteHeader.querySelector(".sky-brand"), siteHeader.querySelector(".gift-link"), hero.querySelector(".hero-explore")]) {
+const fadeLayer = document.querySelector(".section-fade");
+let linkFade;
+let linkTarget;
+
+function cancelLinkFade() {
+  if (!linkFade) return;
+  linkFade.onfinish = null;
+  linkFade.cancel();
+  linkFade = null;
+}
+
+function showLinkedSection() {
+  saveSection(linkTarget);
+  restoreSection();
+  (linkTarget === 0 ? sequence : sections[linkTarget]).focus({preventScroll:true});
+}
+
+function fadeToSection(target) {
+  linkTarget = target;
+  if (reducedMotion.matches) {
+    cancelLinkFade();
+    showLinkedSection();
+    return;
+  }
+  if (linkFade) {
+    // A second click during fade-out changes the destination. During reveal,
+    // turn the same animation back toward black from its current opacity.
+    if (linkFade.playbackRate < 0) linkFade.reverse();
+    return;
+  }
+  linkFade = fadeLayer.animate([{opacity:0}, {opacity:1}], {
+    duration:250, easing:getComputedStyle(fadeLayer).getPropertyValue("--button-press").trim(), fill:"both"
+  });
+  linkFade.onfinish = () => {
+    if (linkFade.playbackRate < 0) { cancelLinkFade(); return; }
+    showLinkedSection();
+    linkFade.reverse();
+  };
+}
+
+for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-explore')) {
   link.addEventListener("click", event => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = sections.findIndex(section => "#" + section.id === link.hash);
-    if (target < 0 || (target === pageTarget && !handoffFrame)) return;
+    if (target < 0) return;
     event.preventDefault();
-    playPage(target, true);
+    if (target !== pageTarget || handoffFrame || linkFade) fadeToSection(target);
   });
 }
 
@@ -647,7 +688,7 @@ function restoreSection() {
 }
 
 restoreSection();
-window.addEventListener("hashchange", restoreSection);
+window.addEventListener("hashchange", () => { cancelLinkFade(); restoreSection(); });
 window.addEventListener("pageshow", restoreSection);
 window.addEventListener("resize", () => {
   if (sequence.hasAttribute("data-focus-handoff")) {
