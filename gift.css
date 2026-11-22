@@ -49,14 +49,13 @@
 
 @media (prefers-reduced-motion: no-preference) {
   [data-gift-descent] :is(.download-copy h2, .star-rise, .star-east, .sketch-cloud, .sketch-mac) { --lag: var(--gift-lag-0); }
-  [data-gift-descent] :is(.download-heading + p, .sketch-iphone, .star-west) { --lag: var(--gift-lag-1); }
-  [data-gift-descent] :is(.download-awards img, .sketch-ipad, .star-south) { --lag: var(--gift-lag-2); }
+  [data-gift-descent] :is(.download-copy p, .sketch-iphone, .star-west) { --lag: var(--gift-lag-1); }
+  [data-gift-descent] :is(.download-awards img, .download-annotation, .sketch-ipad, .star-south) { --lag: var(--gift-lag-2); }
   [data-gift-descent] :is(.download-copy .hero-actions a, .sketch-plane) { --lag: var(--gift-lag-3); }
-  [data-gift-descent] .download-tagline { --lag: var(--gift-lag-0); }
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p) { translate: 0 var(--lag, 0px); }
   /* Blur each line once. Stagger only opacity and vertical travel per glyph. */
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p,
-      .download-awards img, .download-copy .hero-actions a, .download-sketches img) {
+      .download-awards img, .download-copy .hero-actions a, .download-sketches img, .download-annotation) {
     --exit: clamp(0, (var(--gift-exit, 0) - var(--cue, 0) * .35) / .76, 1);
     --soft: calc(var(--exit) * var(--exit) * (3 - 2 * var(--exit)));
   }
@@ -69,7 +68,7 @@
     opacity: calc(1 - var(--fade) * var(--fade) * (3 - 2 * var(--fade)));
     translate: 0 calc(-.14em * var(--soft));
   }
-  [data-gift-descent] :is(.download-sketches img, .download-awards img, .download-copy .hero-actions a) {
+  [data-gift-descent] :is(.download-sketches img, .download-annotation, .download-awards img, .download-copy .hero-actions a) {
     filter: blur(calc(var(--defocus, 5px) * var(--soft)));
     opacity: calc(var(--ink, 1) * (1 - var(--soft)));
     translate: var(--anchor, 0px) calc(var(--anchor, 0px) + var(--lag, 0px) - 9px * var(--soft));
