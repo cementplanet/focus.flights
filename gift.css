@@ -51,7 +51,7 @@
   [data-gift-descent] :is(.download-copy h2, .star-rise, .star-east, .sketch-cloud, .sketch-mac) { --lag: var(--gift-lag-0); }
   [data-gift-descent] :is(.download-copy p, .sketch-iphone, .star-west) { --lag: var(--gift-lag-1); }
   [data-gift-descent] :is(.download-awards img, .sketch-ipad, .star-south) { --lag: var(--gift-lag-2); }
-  [data-gift-descent] :is(.download-copy .hero-actions a, .sketch-plane) { --lag: var(--gift-lag-3); }
+  [data-gift-descent] :is(.download-copy .download-tagline, .download-copy .hero-actions a, .sketch-plane) { --lag: var(--gift-lag-3); }
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p) { translate: 0 var(--lag, 0px); }
   /* Blur each line once. Stagger only opacity and vertical travel per glyph. */
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p,
@@ -208,12 +208,16 @@
   text-wrap: balance;
 }
 .runway-sentence { display: block; }
-.runway-contact {
-  --contact-height: clamp(44px, 3vw, 48px);
-  --aqua-radius: calc(var(--contact-height) / 2 - 1px);
+.runway-actions {
+  display: flex;
+  gap: clamp(10px, 1.2vw, 18px);
+}
+.runway-action {
+  --action-height: clamp(44px, 3vw, 48px);
+  --aqua-radius: calc(var(--action-height) / 2 - 1px);
   display: inline-grid;
   place-items: center;
-  min-height: var(--contact-height);
+  min-height: var(--action-height);
   padding-inline: clamp(23px, 1.6vw, 29px);
   border-radius: 999px;
   color: #191b1e;
@@ -221,15 +225,15 @@
   font-weight: 600;
   letter-spacing: -.02em;
   text-decoration: none;
-  opacity: var(--contact-presence, 0);
+  opacity: var(--actions-presence, 0);
 }
-.runway-copy:not([inert]) .runway-contact { pointer-events: auto; }
-.runway-contact:focus-visible { outline: 2px solid white; outline-offset: 4px; }
+.runway-copy:not([inert]) .runway-action { pointer-events: auto; }
+.runway-action:focus-visible { outline: 2px solid white; outline-offset: 4px; }
 @media (prefers-reduced-motion: no-preference) {
   .runway[data-copy-visible] .runway-partners > div { animation: flight-type 980ms linear both; }
-  .runway[data-copy-visible] .runway-contact-label { animation: flight-type 620ms linear 220ms both; }
-  .runway .runway-contact {
-    --unresolved: calc(1 - var(--contact-presence, 0));
+  .runway[data-copy-visible] .runway-action-label { animation: flight-type 620ms linear 220ms both; }
+  .runway .runway-action {
+    --unresolved: calc(1 - var(--actions-presence, 0));
     transform: translateY(calc(13px * var(--unresolved))) scale(calc(1 - .085 * var(--unresolved)));
     filter: blur(calc(6px * var(--unresolved)));
   }

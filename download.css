@@ -89,7 +89,12 @@
   width: auto;
   height: calc(.88 * var(--badge-height));
 }
-.download-copy .hero-actions { margin-top: clamp(18px, 2.8dvh, 34px); }
+.download-copy .download-tagline {
+  margin-top: clamp(18px, 2.8dvh, 34px);
+  color: inherit;
+  font-size: clamp(18px, 1.9vw, 32px);
+}
+.download-copy .hero-actions { margin-top: clamp(10px, 1.5dvh, 18px); }
 .download-copy .hero-actions img { width: auto; }
 
 /* Keep the sky and download content in their final viewport throughout the flight. */
@@ -110,6 +115,7 @@
   .download-label { font-size: 16px; }
   .download-copy h2 { font-size: clamp(34px, 11dvh, 52px); margin-top: 4px; }
   .download-copy p { margin-top: 4px; font-size: 18px; }
+  .download-copy .download-tagline { margin-top: 9px; font-size: 16px; }
   .download-awards, .download-copy .hero-actions {
     --badge-height: clamp(34px, 10dvh, 44px);
     margin-top: 10px;
@@ -174,6 +180,7 @@
   .download-awards img { --cue: .38; }
   .download-awards img + img { --cue: .415; }
   .sketch-ipad { --cue: .445; }
+  .download-copy .download-tagline { --cue: .46; }
   .sketch-plane { --cue: .475; }
   .download-copy .hero-actions a { --cue: .50; }
   .download-copy .hero-actions a + a { --cue: .535; }
