@@ -49,9 +49,10 @@
 
 @media (prefers-reduced-motion: no-preference) {
   [data-gift-descent] :is(.download-copy h2, .star-rise, .star-east, .sketch-cloud, .sketch-mac) { --lag: var(--gift-lag-0); }
-  [data-gift-descent] :is(.download-copy p, .sketch-iphone, .star-west) { --lag: var(--gift-lag-1); }
+  [data-gift-descent] :is(.download-heading + p, .sketch-iphone, .star-west) { --lag: var(--gift-lag-1); }
   [data-gift-descent] :is(.download-awards img, .sketch-ipad, .star-south) { --lag: var(--gift-lag-2); }
-  [data-gift-descent] :is(.download-copy .download-tagline, .download-copy .hero-actions a, .sketch-plane) { --lag: var(--gift-lag-3); }
+  [data-gift-descent] :is(.download-copy .hero-actions a, .sketch-plane) { --lag: var(--gift-lag-3); }
+  [data-gift-descent] .download-tagline { --lag: var(--gift-lag-0); }
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p) { translate: 0 var(--lag, 0px); }
   /* Blur each line once. Stagger only opacity and vertical travel per glyph. */
   [data-gift-descent] :is(.download-label, .download-copy h2, .download-copy p,
