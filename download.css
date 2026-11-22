@@ -131,10 +131,11 @@
   rotate: -5deg;
 }
 .download-arrow {
-  left: 22.5%;
-  top: 44%;
-  width: clamp(78px, 9.5vw, 168px);
-  height: clamp(92px, 24dvh, 200px);
+  left: 25.4%;
+  top: 62%;
+  width: clamp(64px, 6.4vw, 104px);
+  height: clamp(62px, 11dvh, 100px);
+  opacity: .9;
 }
 
 .download-sketches {
@@ -252,11 +253,12 @@
     transform: translateY(-50%);
   }
   .download-arrow {
-    left: 37%;
-    top: 30%;
-    width: clamp(42px, 13vw, 75px);
-    height: min(50%, 76px);
-    transform: translateY(-45%);
+    left: 35.5%;
+    top: 40%;
+    width: clamp(38px, 11vw, 65px);
+    height: min(38%, 56px);
+    transform: translateY(-40%);
+    rotate: -27deg;
   }
   /* Anchor drawings in the free rows above and below the actual copy. */
   .download-sketches img { grid-row: 1 / 2; --y: calc(50% + (var(--header-top) + var(--header-height)) / 2); }
@@ -277,7 +279,7 @@
 }
 @media (max-height: 520px) and (orientation: landscape) {
   .download-lettering { left: 8%; top: 73%; width: clamp(85px, 16vw, 150px); }
-  .download-arrow { left: 21%; top: 45%; height: 26%; }
+  .download-arrow { left: 22.5%; top: 58%; height: 17%; }
   .sketch-mac { --x: 14%; --y: 58%; --size: min(14vw, 30dvh); }
   .sketch-iphone { --x: 82%; --y: 40%; --size: min(5.3vw, 10dvh); }
   .sketch-ipad { --x: 86%; --y: 78%; --size: min(12vw, 23dvh); }
