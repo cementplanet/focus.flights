@@ -352,9 +352,9 @@
   <script src="button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="deep-focus.css?v=focus-title-glow">
   <link rel="stylesheet" href="download.css?v=crayon-bold">
-  <link rel="stylesheet" href="gift.css?v=runway-footer">
+  <link rel="stylesheet" href="gift.css?v=runway-extension">
   <link rel="stylesheet" href="mobile.css" media="(max-width: 520px)">
-  <script src="sky.js?v=runway-footer" type="module"></script>
+  <script src="sky.js?v=runway-extension" type="module"></script>
   <script src="showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
@@ -635,6 +635,7 @@
           <source media="(max-aspect-ratio: 4/5)" srcset="gift/runway-portrait.webp?v=contact">
           <img src="gift/runway.webp?v=contact" width="1600" height="1000" alt="" decoding="async" loading="lazy">
         </picture>
+        <div class="runway-extension-poster" aria-hidden="true"></div>
         <canvas class="gift-camera" aria-hidden="true"></canvas>
       </div>
     </section>
@@ -678,15 +679,33 @@
           </a>
         </div>
       </div>
-      <footer class="site-footer" role="contentinfo" inert>
-        <small>© 2026 CementPlanet Ltd.</small>
-        <nav class="site-footer-links" aria-label="Social media">
-          <a href="https://www.xiaohongshu.com/user/profile/608c251a0000000001004a0d" lang="zh-CN" target="_blank" rel="noopener">小红书</a>
-          <a href="https://www.instagram.com/focusflight_app/" target="_blank" rel="noopener">Instagram</a>
-          <a href="https://x.com/FocusFlightApp" target="_blank" rel="noopener">X</a>
-        </nav>
-      </footer>
     </section>
+    <footer id="footer" class="site-footer" role="contentinfo" aria-labelledby="footer-title" tabindex="-1" inert>
+      <div class="site-footer-content">
+        <div class="site-footer-heading">
+          <h2 id="footer-title">CementPlanet <span>Ltd.</span></h2>
+          <nav class="site-footer-social" aria-label="Social media">
+            <a href="https://www.xiaohongshu.com/user/profile/608c251a0000000001004a0d" aria-label="小红书" lang="zh-CN" target="_blank" rel="noopener">
+              <img src="/brand/social/xiaohongshu.png" width="30" height="30" alt="">
+            </a>
+            <a href="https://www.instagram.com/focusflight_app/" aria-label="Instagram" target="_blank" rel="noopener">
+              <img src="/brand/social/instagram.png" width="24" height="24" alt="">
+            </a>
+            <a href="https://x.com/FocusFlightApp" aria-label="X" target="_blank" rel="noopener">
+              <img src="/brand/social/x.png" width="26" height="26" alt="">
+            </a>
+          </nav>
+        </div>
+        <div class="site-footer-details">
+          <small>© 2026 CementPlanet Ltd.</small>
+          <nav class="site-footer-links" aria-label="Company information">
+            <a href="/privacy/">Privacy Policy</a>
+            <a href="/terms/">Terms of Use</a>
+            <a href="mailto:contact@focus.flights">Contact Us</a>
+          </nav>
+        </div>
+      </div>
+    </footer>
   </main>
 </body>
 </html>

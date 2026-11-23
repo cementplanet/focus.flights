@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=runway-footer";
+import { setupGiftDescent } from "./gift.js?v=runway-extension";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
@@ -244,7 +244,11 @@ const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
 const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
-const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), document.getElementById("runway")];
+const runway = document.getElementById("runway");
+const footer = document.getElementById("footer");
+const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), runway, footer];
+const runwayPage = sections.indexOf(runway);
+const footerPage = sections.indexOf(footer);
 const sequence = sky.parentElement;
 prepareCopy(...deepFocus.querySelectorAll(".focus-copy h2, .focus-description p"));
 
@@ -349,13 +353,20 @@ function paintHandoff(progress, travel) {
   })) sky.style.setProperty(`--${key}`, value);
 }
 
+function paintGiftArrival(progress) {
+  giftDescent.floatLetter(unit(progress - 4), unit(progress - 5), unit(progress - runwayPage));
+}
+
 function playPage(target, focusPage = false) {
   cancelLinkFade();
   if (target === pageTarget) return false;
   // Keep this choreography through interruptions so redirecting the spring
   // samples the same image at the same position.
   if (!handoffFrame) departingFocus = handoffProgress === 2;
-  const leavingDownload = target === 4 && download.contains(document.activeElement);
+  const active = document.activeElement;
+  const leavingDownload = target === 4 && download.contains(active);
+  const leavingRunway = target === footerPage && runway.contains(active);
+  const leavingFooter = target !== footerPage && footer.contains(active);
   pageOrigin = pageTarget;
   pageTarget = target;
   beginCopyVisit(target);
@@ -375,9 +386,9 @@ function playPage(target, focusPage = false) {
       clearFocusHandoff();
       giftDescent.end(true);
       giftDescent.holdSky(false);
-      const from = progress >= 5 ? 5 : 4;
-      const phase = unit(progress-from);
-      giftDescent.floatLetter(unit(progress-4), unit(progress-5));
+      const from = Math.min(Math.floor(progress), footerPage - 1);
+      const phase = unit(progress - from);
+      paintGiftArrival(progress);
       const top = sections[from].offsetTop + giftTravel(phase)*(sections[from+1].offsetTop-sections[from].offsetTop);
       window.scrollTo({top, behavior:"instant"});
       siteHeader.removeAttribute("data-on-showcase");
@@ -425,7 +436,7 @@ function playPage(target, focusPage = false) {
     syncHeader();
     hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
-    const leavingControl = leavingDownload || (target === 6 && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
+    const leavingControl = leavingDownload || leavingRunway || leavingFooter || (target === runwayPage && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
       (target === 3 && deepFocus.contains(document.activeElement));
     deepFocus.inert = target >= 3;
     if (focusPage || leavingControl) {
@@ -692,7 +703,7 @@ function syncScroll() {
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
+  if (page >= 4) paintGiftArrival(page);
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
@@ -713,7 +724,7 @@ function restoreSection() {
   deepFocus.inert = page >= 3;
   clearFocusHandoff();
   giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
+  if (page >= 4) paintGiftArrival(page);
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);

@@ -257,50 +257,145 @@
   filter: blur(calc(14px * var(--runway-arrival, 0)));
 }
 
-.site-footer {
+.runway-extension-poster {
   position: absolute;
-  inset-inline: var(--content-left);
-  inset-block-end: max(10px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-block-start: 1px solid rgb(255 255 255 / .16);
-  color: #c4c7cd;
-  font: 400 .875rem/1.3 system-ui, sans-serif;
-  visibility: hidden;
-  opacity: var(--actions-presence, 0);
+  inset: 0;
+  overflow: hidden;
+  opacity: var(--runway-extension, 0);
+  background:
+    radial-gradient(ellipse at 50% 28%, #263e59 0%, #101a29 29%, transparent 64%),
+    linear-gradient(#070b12 10%, #101924 29%, #06090e 82%);
 }
 
-.runway[data-copy-visible] .site-footer { visibility: visible; }
-.site-footer small { font-size: inherit; }
+.runway-extension-poster::before,
+.runway-extension-poster::after {
+  content: "";
+  position: absolute;
+  inset: 28% 0 0;
+  background: linear-gradient(#9db7d8, #475f7e 40%, #24354c 80%, transparent);
+}
 
+.runway-extension-poster::before { clip-path: polygon(49.7% 0, 49.9% 0, 6.4% 100%, 6% 100%); }
+.runway-extension-poster::after { clip-path: polygon(50.1% 0, 50.3% 0, 94% 100%, 93.6% 100%); }
+
+.site-footer {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: 0 var(--content-left) max(clamp(28px, 7dvh, 92px), var(--phone-bottom, 0px), env(safe-area-inset-bottom));
+  display: grid;
+  align-items: end;
+  outline: none;
+  pointer-events: none;
+  color: #f1f4fa;
+  background: linear-gradient(180deg, transparent 16%, rgb(5 8 14 / .4) 49%, #06090e 100%);
+  opacity: var(--footer-presence, 0);
+}
+
+.site-footer-content {
+  display: grid;
+  gap: clamp(18px, 3.2dvh, 35px);
+}
+
+.site-footer-heading,
+.site-footer-details {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.site-footer h2 {
+  margin: 0 0 .04em -.07em;
+  font-size: clamp(3rem, 9.25vw, 11rem);
+  font-weight: 650;
+  letter-spacing: -.07em;
+  line-height: .9;
+}
+
+.site-footer h2 span {
+  display: inline-block;
+  margin-inline-start: .06em;
+  color: #c2ccda;
+  font-size: .31em;
+  font-weight: 500;
+  letter-spacing: -.055em;
+  vertical-align: .16em;
+}
+
+.site-footer-social,
 .site-footer-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: clamp(16px, 2vw, 28px);
 }
 
-.site-footer-links a {
+.site-footer-social {
+  flex: none;
+  gap: 8px;
+}
+
+.site-footer-social a {
   display: grid;
   place-items: center;
-  min-inline-size: 24px;
-  min-block-size: 44px;
-  color: #f3f4f6;
-  font-weight: 500;
-  text-decoration: none;
-  text-underline-offset: .22em;
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgb(227 237 255 / .24);
+  border-radius: 50%;
+  background: rgb(230 240 255 / .05);
 }
 
-.site-footer:not([inert]) .site-footer-links a { pointer-events: auto; }
+.site-footer-social a:hover { background: rgb(230 240 255 / .14); }
+
+.site-footer-social img {
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+.site-footer-social img:is([src$="/xiaohongshu.png"], [src$="/x.png"]) {
+  filter: grayscale(1) contrast(6);
+  mix-blend-mode: screen;
+}
+
+.site-footer-details {
+  align-items: center;
+  padding-block-start: clamp(6px, 1.4dvh, 16px);
+  border-block-start: 1px solid #77829266;
+  color: #c2c9d3;
+  font-size: .875rem;
+}
+
+.site-footer-details small { font-size: inherit; }
+.site-footer-links { gap: 0 clamp(12px, 2vw, 28px); }
+
+.site-footer-links a {
+  display: inline-grid;
+  align-items: center;
+  min-height: 44px;
+  color: #e7ebf1;
+  text-decoration: none;
+  text-underline-offset: .24em;
+}
+
+.site-footer:not([inert]) a { pointer-events: auto; }
 .site-footer-links a:hover { text-decoration: underline; }
-.site-footer-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.site-footer a:focus-visible { outline: 2px solid #f1f4fa; outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .site-footer-heading {
+    flex-direction: column;
+    align-items: start;
+    gap: 16px;
+  }
+  .site-footer h2 { font-size: clamp(2.25rem, 10.8vw, 5.4rem); }
+}
 
 @media (max-width: 520px) {
-  .site-footer {
-    inset-block-end: var(--phone-bottom);
+  .site-footer-details {
     flex-direction: column-reverse;
-    gap: 0;
-    padding-block-end: 4px;
+    align-items: start;
+    gap: 5px;
   }
 }

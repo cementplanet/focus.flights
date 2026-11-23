@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=card-column";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=runway-extension";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
@@ -7,7 +7,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
   const night = gift.querySelector(".gift-night");
   const runway = document.getElementById("runway");
   const runwayCopy = runway.querySelector(".runway-copy");
-  const footer = runway.querySelector(".site-footer");
+  const footer = document.getElementById("footer");
   for (const column of runwayCopy.querySelectorAll(".runway-partners > div")) {
     prepareCopy(...column.querySelectorAll("h2, p"));
   }
@@ -15,13 +15,16 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     prepareCopy(label);
   }
 
-  function revealRunwayCopy(approach, landing) {
-    runway.toggleAttribute("data-copy-visible", approach >= .47);
-    runway.style.setProperty("--copy-presence", ease(.46,.74,approach));
-    runway.style.setProperty("--actions-presence", ease(.57,.94,approach));
-    runway.style.setProperty("--camera-offset", (landing-1)*100 + "dvh");
-    runwayCopy.inert = approach < 1;
-    footer.inert = runwayCopy.inert;
+  function revealRunwayCopy(approach, landing, extension) {
+    const copyPresence = 1 - ease(0, .44, extension);
+    runway.toggleAttribute("data-copy-visible", approach >= .47 && copyPresence > 0);
+    runway.style.setProperty("--copy-presence", ease(.46, .74, approach) * copyPresence);
+    runway.style.setProperty("--actions-presence", ease(.57, .94, approach) * copyPresence);
+    runway.style.setProperty("--camera-offset", (landing - 1) * 100 + "dvh");
+    runwayCopy.inert = approach < 1 || extension > 0;
+
+    footer.style.setProperty("--footer-presence", ease(.25, .88, extension));
+    footer.inert = extension < 1;
   }
 
   const letter = document.querySelector("#letter");
@@ -94,7 +97,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
 
   // Overlapping samples of Glide start together. The sheet leads the camera
   // slightly, then the camera finishes framing it after the sleeve clears.
-  function floatLetter(phase, approach = 0) {
+  function floatLetter(phase, approach = 0, extension = 0) {
     const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
     const lift = sample(phase);
     const slip = sample(phase/.94);
@@ -104,8 +107,10 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
     const landing = sample(approach);
     gift.style.setProperty("--runway-arrival", landing);
-    revealRunwayCopy(approach, landing);
-    render(1,1,lift,slip,landing);
+    const runwayExtension = sample(extension);
+    gift.style.setProperty("--runway-extension", runwayExtension);
+    revealRunwayCopy(approach, landing, runwayExtension);
+    render(1, 1, lift, slip, landing, runwayExtension);
   }
 
   function resetLetter() {
@@ -115,7 +120,8 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     gift.removeAttribute("data-airborne");
     gift.style.removeProperty("--letter-poster");
     gift.style.removeProperty("--runway-arrival");
-    revealRunwayCopy(0, 0);
+    gift.style.removeProperty("--runway-extension");
+    revealRunwayCopy(0, 0, 0);
     render(1,1);
   }
 
