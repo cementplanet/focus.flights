@@ -7,6 +7,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
   const night = gift.querySelector(".gift-night");
   const runway = document.getElementById("runway");
   const runwayCopy = runway.querySelector(".runway-copy");
+  const footer = runway.querySelector(".site-footer");
   for (const column of runwayCopy.querySelectorAll(".runway-partners > div")) {
     prepareCopy(...column.querySelectorAll("h2, p"));
   }
@@ -20,6 +21,7 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     runway.style.setProperty("--actions-presence", ease(.57,.94,approach));
     runway.style.setProperty("--camera-offset", (landing-1)*100 + "dvh");
     runwayCopy.inert = approach < 1;
+    footer.inert = runwayCopy.inert;
   }
 
   const letter = document.querySelector("#letter");

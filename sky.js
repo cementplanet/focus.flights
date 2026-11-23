@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=affiliate";
+import { setupGiftDescent } from "./gift.js?v=runway-footer";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
