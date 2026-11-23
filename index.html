@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>FocusFlight</title>
   <script>history.scrollRestoration = "manual";</script>
-  <script src="app-store.js?v=storefront" type="module"></script>
-  <link rel="icon" href="brand/app-icon-ios27.png">
-  <link rel="stylesheet" href="typography.css?v=selection">
+  <script src="/app-store.js?v=storefront" type="module"></script>
+  <script src="/analytics.js" type="module" async></script>
+  <link rel="icon" href="/brand/app-icon-ios27.png">
+  <link rel="stylesheet" href="/typography.css?v=selection">
   <style>
     :root {
       /* Align left-side copy with the visible edge of the wordmark. */
@@ -345,23 +346,23 @@
     }
 
   </style>
-  <link rel="stylesheet" href="earth.css?v=plane-return">
-  <link rel="stylesheet" href="journey.css?v=replay-type">
-  <link rel="stylesheet" href="showcase.css?v=device-ink">
-  <link rel="stylesheet" href="button-motion.css?v=contact-hairline">
-  <script src="button-motion.js?v=aqua-nav" type="module"></script>
-  <link rel="stylesheet" href="deep-focus.css?v=focus-title-glow">
-  <link rel="stylesheet" href="download.css?v=crayon-bold">
-  <link rel="stylesheet" href="gift.css?v=inline-footer">
-  <link rel="stylesheet" href="mobile.css" media="(max-width: 520px)">
-  <script src="sky.js?v=inline-footer" type="module"></script>
-  <script src="showcase.js?v=device-ink" type="module"></script>
+  <link rel="stylesheet" href="/earth.css?v=plane-return">
+  <link rel="stylesheet" href="/journey.css?v=replay-type">
+  <link rel="stylesheet" href="/showcase.css?v=device-ink">
+  <link rel="stylesheet" href="/button-motion.css?v=contact-hairline">
+  <script src="/button-motion.js?v=aqua-nav" type="module"></script>
+  <link rel="stylesheet" href="/deep-focus.css?v=focus-title-glow">
+  <link rel="stylesheet" href="/download.css?v=crayon-bold">
+  <link rel="stylesheet" href="/gift.css?v=inline-footer">
+  <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
+  <script src="/sky.js?v=inline-footer" type="module"></script>
+  <script src="/showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
   <div class="section-fade" aria-hidden="true"></div>
   <header class="site-header">
     <a class="sky-brand" href="#flight" aria-label="FocusFlight home">
-      <img src="brand/app-icon-ios27.png" alt="" width="38" height="38">
+      <img src="/brand/app-icon-ios27.png" alt="" width="38" height="38">
       <span>FocusFlight</span>
     </a>
     <nav class="sky-nav" aria-label="Main navigation">
@@ -388,8 +389,8 @@
       <div class="aircraft" aria-hidden="true">
         <canvas class="contrails" width="640" height="128"></canvas>
         <div class="aircraft-body">
-          <img class="aircraft-day" src="aircraft/day-hd.webp" alt="" width="3072" height="1536">
-          <img class="aircraft-night" src="aircraft/night-hd.webp" alt="" width="3072" height="1536">
+          <img class="aircraft-day" src="/aircraft/day-hd.webp" alt="" width="3072" height="1536">
+          <img class="aircraft-night" src="/aircraft/night-hd.webp" alt="" width="3072" height="1536">
         </div>
         <div class="aircraft-lights">
           <span class="aircraft-light aircraft-light--navigation"></span>
@@ -402,7 +403,7 @@
 
         <div class="hero-actions">
           <a href="https://apps.apple.com/us/app/focusflight-deepfocus-timer/id6648771147" data-app-store="hero">
-            <img src="brand/download-on-the-app-store.svg" alt="Download on the App Store" width="120" height="40">
+            <img src="/brand/download-on-the-app-store.svg" alt="Download on the App Store" width="120" height="40">
           </a>
           <a class="hero-explore aqua-button" href="#showcase">
             <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
@@ -495,7 +496,7 @@
         </div>
       </div>
       <div class="showcase-stage" data-device="iphone">
-        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="device-media/films/iphone.png" preload="none" muted playsinline></video>
+        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="/device-media/films/iphone.png" preload="none" muted playsinline></video>
       </div>
       <div class="showcase-devices" role="group" aria-label="Device">
         <svg class="device-liquid" aria-hidden="true" focusable="false">
@@ -583,48 +584,48 @@
       </div>
     </section>
     <section class="download" id="download" aria-labelledby="download-title" tabindex="-1">
-      <img class="sky-meteor" src="porthole/meteor.svg" width="100" height="8" alt="" hidden>
+      <img class="sky-meteor" src="/porthole/meteor.svg" width="100" height="8" alt="" hidden>
       <div class="download-layout">
         <div class="download-sketches" aria-hidden="true">
-          <img class="sketch-mac" src="download-devices/mac-sketch.webp" alt="" width="582" height="479">
-          <img class="sketch-iphone" src="download-devices/iphone-sketch.webp" alt="" width="282" height="469">
-          <img class="sketch-ipad" src="download-devices/ipad-sketch.webp" alt="" width="604" height="393">
-          <img class="sketch-cloud" src="download-devices/wind-cloud.webp" alt="" width="300" height="149">
-          <img class="sketch-plane" src="download-devices/paper-plane.webp" alt="" width="360" height="229">
-          <img class="sketch-star star-rise" src="download-devices/star-cluster.webp" alt="" width="220" height="175">
-          <img class="sketch-star star-east" src="download-devices/star-cluster.webp" alt="" width="220" height="175">
-          <img class="sketch-star star-west" src="download-devices/wax-star.webp" alt="" width="128" height="127">
-          <img class="sketch-star star-south" src="download-devices/wax-star.webp" alt="" width="128" height="127">
-          <img class="sketch-star star-high" src="download-devices/wax-star.webp" alt="" width="128" height="127">
+          <img class="sketch-mac" src="/download-devices/mac-sketch.webp" alt="" width="582" height="479">
+          <img class="sketch-iphone" src="/download-devices/iphone-sketch.webp" alt="" width="282" height="469">
+          <img class="sketch-ipad" src="/download-devices/ipad-sketch.webp" alt="" width="604" height="393">
+          <img class="sketch-cloud" src="/download-devices/wind-cloud.webp" alt="" width="300" height="149">
+          <img class="sketch-plane" src="/download-devices/paper-plane.webp" alt="" width="360" height="229">
+          <img class="sketch-star star-rise" src="/download-devices/star-cluster.webp" alt="" width="220" height="175">
+          <img class="sketch-star star-east" src="/download-devices/star-cluster.webp" alt="" width="220" height="175">
+          <img class="sketch-star star-west" src="/download-devices/wax-star.webp" alt="" width="128" height="127">
+          <img class="sketch-star star-south" src="/download-devices/wax-star.webp" alt="" width="128" height="127">
+          <img class="sketch-star star-high" src="/download-devices/wax-star.webp" alt="" width="128" height="127">
         </div>
         <div class="download-copy">
           <span class="download-label">2.5M+ Downloads</span>
           <h2 id="download-title">FocusFlight</h2>
           <p>For iPhone, iPad, and Mac.</p>
           <div class="download-awards">
-            <img src="brand/editors-choice.png" alt="App Store Editors’ Choice" width="305" height="88">
-            <img src="brand/app-of-the-day.png" alt="App Store App of the Day" width="913" height="263">
+            <img src="/brand/editors-choice.png" alt="App Store Editors’ Choice" width="305" height="88">
+            <img src="/brand/app-of-the-day.png" alt="App Store App of the Day" width="913" height="263">
           </div>
           <div class="hero-actions">
             <a href="https://apps.apple.com/us/app/focusflight-deepfocus-timer/id6648771147?platform=iphone" data-app-store="download_iphone">
-              <img src="brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" width="120" height="40">
+              <img src="/brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" width="120" height="40">
             </a>
             <a href="https://apps.apple.com/us/app/focusflight-deepfocus-timer/id6648771147?platform=mac" data-app-store="download_mac">
-              <img src="brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" width="156" height="40">
+              <img src="/brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" width="156" height="40">
             </a>
           </div>
         </div>
         <div class="download-annotation">
-          <img class="download-lettering" src="download-devices/crayon-lettering.png?v=bold" alt="Fly into Focus Today." width="744" height="372">
-          <img class="download-arrow" src="download-devices/crayon-arrow.png?v=bold" alt="" width="504" height="504">
+          <img class="download-lettering" src="/download-devices/crayon-lettering.png?v=bold" alt="Fly into Focus Today." width="744" height="372">
+          <img class="download-arrow" src="/download-devices/crayon-arrow.png?v=bold" alt="" width="504" height="504">
         </div>
       </div>
     </section>
     <section class="gift" id="gift" aria-label="Gift" tabindex="-1">
       <div class="gift-night">
         <picture class="gift-studio" lang="zh-CN">
-          <source media="(max-aspect-ratio: 4/5)" srcset="gift/studio-portrait.webp?v=lit-cards" width="828" height="1792">
-          <img src="gift/studio.webp?v=lit-cards" alt="叠放着三张活动卡的信封" width="1920" height="1200" decoding="async" loading="lazy">
+          <source media="(max-aspect-ratio: 4/5)" srcset="/gift/studio-portrait.webp?v=lit-cards" width="828" height="1792">
+          <img src="/gift/studio.webp?v=lit-cards" alt="叠放着三张活动卡的信封" width="1920" height="1200" decoding="async" loading="lazy">
         </picture>
         <div class="gift-letter-poster" aria-hidden="true">
           <span class="gift-print welcome-print"></span>
@@ -632,8 +633,8 @@
           <span class="gift-print sharing-print"></span>
         </div>
         <picture class="runway-poster" aria-hidden="true">
-          <source media="(max-aspect-ratio: 4/5)" srcset="gift/runway-portrait.webp?v=contact">
-          <img src="gift/runway.webp?v=contact" width="1600" height="1000" alt="" decoding="async" loading="lazy">
+          <source media="(max-aspect-ratio: 4/5)" srcset="/gift/runway-portrait.webp?v=contact">
+          <img src="/gift/runway.webp?v=contact" width="1600" height="1000" alt="" decoding="async" loading="lazy">
         </picture>
         <canvas class="gift-camera" aria-hidden="true"></canvas>
       </div>
@@ -662,7 +663,7 @@
           </div>
         </div>
         <div class="runway-actions">
-          <a class="runway-action aqua-button" href="affiliate/FocusFlight_UGC_Creator_Brief_EN.pdf" download>
+          <a class="runway-action aqua-button" href="/affiliate/FocusFlight_UGC_Creator_Brief_EN.pdf" download>
             <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
               <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
               <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>

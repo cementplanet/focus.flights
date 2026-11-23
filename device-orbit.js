@@ -23,7 +23,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     item.style.setProperty("--canvas-width", `${3840 / width * 100}%`);
     item.style.setProperty("--canvas-left", `${-x / width * 100}%`);
     item.style.setProperty("--canvas-top", `${-y / height * 100}%`);
-    poster.src = `device-media/${button.dataset.media ?? button.dataset.device}.png`;
+    poster.src = `/device-media/${button.dataset.media ?? button.dataset.device}.png`;
     poster.className = "device-orbit-poster";
     poster.alt = "";
     poster.draggable = false;
@@ -31,7 +31,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     media.append(poster);
     const blurred = poster.cloneNode();
     blurred.className = "device-orbit-blur";
-    blurred.src = `device-media/${button.dataset.media ?? button.dataset.device}-blur.png`;
+    blurred.src = `/device-media/${button.dataset.media ?? button.dataset.device}-blur.png`;
     media.append(blurred);
     if (index === 0) media.append(firstVideo);
     item.append(media);

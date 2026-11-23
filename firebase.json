@@ -1,0 +1,35 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      ".firebase/**",
+      "firebase-debug*.log",
+      ".git",
+      ".git/**",
+      ".gitignore",
+      ".ignore",
+      "**/.DS_Store",
+      "**/node_modules/**",
+      "AGENTS.md",
+      "CNAME",
+      "_config.yml",
+      "preview/**"
+    ],
+    "rewrites": [
+      {
+        "regex": "^/c/[A-Za-z0-9][A-Za-z0-9_-]{0,59}/?$",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [
+          { "key": "Content-Type", "value": "application/json" }
+        ]
+      }
+    ]
+  }
+}

@@ -4,7 +4,7 @@ export async function startClouds(canvas, sky, aircraft, camera) {
   if (!gl) return;
 
   async function asset(path) {
-    const response = await fetch(path);
+    const response = await fetch(new URL(path, import.meta.url));
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
     return response;
   }

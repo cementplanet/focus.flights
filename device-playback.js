@@ -61,7 +61,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   const signal = new AbortController().signal;
   const devices = buttons.map((button, index) => {
     const video = index === 0 ? firstVideo : document.createElement("video");
-    const base = `device-media/${button.dataset.media ?? button.dataset.device}`;
+    const base = `/device-media/${button.dataset.media ?? button.dataset.device}`;
     const item = stage.querySelector(`.device-orbit-item[data-device="${button.dataset.device}"]`);
     video.dataset.device = button.dataset.device;
     video.dataset.buffering = "";
