@@ -154,8 +154,6 @@
   .gift-camera { visibility: hidden; }
 }
 
-.flight-sequence { --footer-depth: 20dvh; }
-
 .runway {
   position: relative;
   z-index: 2;
@@ -175,7 +173,7 @@
   text-align: center;
   visibility: hidden;
   opacity: var(--copy-presence, 0);
-  transform: translateY(calc(-50% + var(--camera-offset, 0dvh) + var(--footer-travel, 0) * var(--footer-depth)));
+  transform: translateY(calc(-50% + var(--camera-offset, 0dvh)));
 }
 .runway[data-copy-visible] .runway-copy { visibility: visible; }
 .runway-partners {
@@ -260,78 +258,49 @@
 }
 
 .site-footer {
-  position: relative;
-  z-index: 2;
-  height: var(--footer-depth);
-  outline: none;
-  pointer-events: none;
-  color: #f1f4fa;
-  opacity: var(--footer-presence, 0);
-}
-
-.site-footer > svg { position: absolute; }
-
-.site-footer-content {
   position: absolute;
   inset-inline: var(--content-left);
-  inset-block-end: max(10px, var(--phone-bottom, 0px), env(safe-area-inset-bottom));
-  display: grid;
-  gap: clamp(4px, 1dvh, 12px);
-}
-
-.site-footer-heading,
-.site-footer-details {
+  inset-block-end: max(10px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border-block-start: 1px solid #77829266;
+  color: #c2c9d3;
+  font-size: .875rem;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: var(--actions-presence, 0);
 }
 
-.site-footer h2 {
-  margin: 0 0 0 -.035em;
-  font-size: clamp(1.5rem, 4vw, 4rem);
-  font-weight: 610;
-  letter-spacing: -.065em;
-  line-height: .95;
-}
+.runway[data-copy-visible] .site-footer { visibility: visible; }
+.site-footer > svg { position: absolute; }
 
-.site-footer h2 span {
-  display: inline-block;
-  margin-inline-start: .06em;
-  color: #c2ccda;
-  font-size: .52em;
-  font-weight: 500;
-  letter-spacing: -.055em;
-  vertical-align: .16em;
-}
-
+.site-footer-brand,
 .site-footer-social,
 .site-footer-links {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
 }
 
-.site-footer-social {
-  flex: none;
-  gap: 8px;
+.site-footer-brand {
+  gap: 12px;
+  white-space: nowrap;
 }
+
+.site-footer small { font-size: inherit; }
 
 .site-footer-social a {
   display: grid;
   place-items: center;
-  box-sizing: border-box;
-  width: 46px;
-  height: 46px;
-  border: 1px solid rgb(227 237 255 / .24);
-  border-radius: 50%;
-  background: rgb(230 240 255 / .05);
+  width: 36px;
+  min-height: 44px;
 }
-
-.site-footer-social a:hover { background: rgb(230 240 255 / .14); }
 
 .site-footer-social img {
   display: block;
+  width: 20px;
+  height: auto;
   filter: brightness(0) invert(1);
 }
 
@@ -339,15 +308,14 @@
   filter: url(#white-social-icon);
 }
 
-.site-footer-details {
-  padding-block-start: 1px;
-  border-block-start: 1px solid #77829266;
-  color: #c2c9d3;
-  font-size: .875rem;
-}
+.site-footer-social img[src$="/xiaohongshu.png"] { width: 27px; }
+.site-footer-social a:hover img { opacity: .78; }
 
-.site-footer-details small { font-size: inherit; }
-.site-footer-links { gap: 0 clamp(12px, 2vw, 28px); }
+.site-footer-links {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 clamp(14px, 2vw, 28px);
+}
 
 .site-footer-links a {
   display: inline-grid;
@@ -360,32 +328,17 @@
 
 .site-footer:not([inert]) a { pointer-events: auto; }
 .site-footer-links a:hover { text-decoration: underline; }
-.site-footer a:focus-visible { outline: 2px solid #f1f4fa; outline-offset: 3px; }
+.site-footer a:focus-visible { outline: 2px solid #f1f4fa; outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .site-footer { flex-direction: column; gap: 0; }
+  .site-footer-links a { min-height: 32px; }
+}
 
 @media (max-width: 520px) {
-  .site-footer-content {
+  .site-footer {
     inset-block-end: calc(var(--dock-bottom) + var(--dock-height) + 6px);
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0;
     font-size: .8125rem;
   }
-  .site-footer-heading,
-  .site-footer-details { display: contents; }
-  .site-footer h2 {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-  .site-footer-details small { grid-area: 1 / 1; font-size: .75rem; }
-  .site-footer-social { grid-area: 1 / 2; gap: 4px; }
-  .site-footer-social a { width: 44px; height: 44px; }
-  .site-footer-social img { max-width: 22px; max-height: 22px; }
-  .site-footer-links {
-    grid-column: 1 / -1;
-    border-block-start: 1px solid #77829266;
-  }
-  .site-footer-links a { min-height: 28px; }
+  .site-footer-brand { gap: 8px; }
 }

@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=footer-reveal";
+import { setupGiftDescent } from "./gift.js?v=inline-footer";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
@@ -244,11 +244,7 @@ const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
 const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
-const runway = document.getElementById("runway");
-const footer = document.getElementById("footer");
-const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), runway, footer];
-const runwayPage = sections.indexOf(runway);
-const footerPage = sections.indexOf(footer);
+const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), document.getElementById("runway")];
 const sequence = sky.parentElement;
 prepareCopy(...deepFocus.querySelectorAll(".focus-copy h2, .focus-description p"));
 
@@ -353,25 +349,13 @@ function paintHandoff(progress, travel) {
   })) sky.style.setProperty(`--${key}`, value);
 }
 
-function sectionTop(page) {
-  if (page === footerPage) return runway.offsetTop + footer.offsetHeight;
-  return sections[page].offsetTop;
-}
-
-function paintGiftArrival(progress) {
-  giftDescent.floatLetter(unit(progress - 4), unit(progress - 5), unit(progress - runwayPage));
-}
-
 function playPage(target, focusPage = false) {
   cancelLinkFade();
   if (target === pageTarget) return false;
   // Keep this choreography through interruptions so redirecting the spring
   // samples the same image at the same position.
   if (!handoffFrame) departingFocus = handoffProgress === 2;
-  const active = document.activeElement;
-  const leavingDownload = target === 4 && download.contains(active);
-  const leavingRunway = target === footerPage && runway.contains(active);
-  const leavingFooter = target !== footerPage && footer.contains(active);
+  const leavingDownload = target === 4 && download.contains(document.activeElement);
   pageOrigin = pageTarget;
   pageTarget = target;
   beginCopyVisit(target);
@@ -391,11 +375,10 @@ function playPage(target, focusPage = false) {
       clearFocusHandoff();
       giftDescent.end(true);
       giftDescent.holdSky(false);
-      const from = Math.min(Math.floor(progress), footerPage - 1);
-      const phase = unit(progress - from);
-      paintGiftArrival(progress);
-      const start = sectionTop(from);
-      const top = start + giftTravel(phase) * (sectionTop(from + 1) - start);
+      const from = progress >= 5 ? 5 : 4;
+      const phase = unit(progress-from);
+      giftDescent.floatLetter(unit(progress-4), unit(progress-5));
+      const top = sections[from].offsetTop + giftTravel(phase)*(sections[from+1].offsetTop-sections[from].offsetTop);
       window.scrollTo({top, behavior:"instant"});
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
@@ -442,7 +425,7 @@ function playPage(target, focusPage = false) {
     syncHeader();
     hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
-    const leavingControl = leavingDownload || leavingRunway || leavingFooter || (target === runwayPage && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
+    const leavingControl = leavingDownload || (target === 6 && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
       (target === 3 && deepFocus.contains(document.activeElement));
     deepFocus.inert = target >= 3;
     if (focusPage || leavingControl) {
@@ -475,8 +458,7 @@ function playPage(target, focusPage = false) {
   const targetTime = giftTime(target);
   const timeOffset = giftTime(handoffProgress) - targetTime;
   const runwayHandoff = pageOrigin >= 5 && target >= 5;
-  const footerHandoff = pageOrigin >= runwayPage && target >= runwayPage;
-  const playbackRate = footerHandoff ? 4.4 : runwayHandoff ? 2.1 : (pageOrigin === 5 && target === 3 ? 1.8 : 1);
+  const playbackRate = runwayHandoff ? 2.1 : (pageOrigin === 5 && target === 3 ? 1.8 : 1);
   const giftDuration = Math.max(.18 * secondsPerPage(Math.max(target, handoffProgress)), Math.abs(timeOffset)) / playbackRate;
   const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
@@ -699,7 +681,7 @@ function syncHeader() {
 function syncScroll() {
   syncHeader();
   if (handoffFrame) return;
-  const stops = sections.map((_, page) => sectionTop(page));
+  const stops = sections.map(section => section.offsetTop);
   const page = stops.findIndex(top => Math.abs(window.scrollY - top) < 2);
   if (page < 0 || page === pageTarget) return;
   saveSection(page);
@@ -710,7 +692,7 @@ function syncScroll() {
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   giftDescent.end(page >= 4);
-  if (page >= 4) paintGiftArrival(page);
+  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
@@ -731,14 +713,14 @@ function restoreSection() {
   deepFocus.inert = page >= 3;
   clearFocusHandoff();
   giftDescent.end(page >= 4);
-  if (page >= 4) paintGiftArrival(page);
+  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
   sky.removeAttribute("data-handoff");
   hero.inert = page !== 0;
   paintHandoff(Math.min(page, 1), false);
-  window.scrollTo({ top: sectionTop(page), behavior: "instant" });
+  window.scrollTo({ top: sections[page].offsetTop, behavior: "instant" });
   syncHeader();
 }
 
@@ -761,7 +743,7 @@ window.addEventListener("resize", () => {
     giftDescent.holdSky(pageTarget === 3);
   }
   if (!handoffFrame && pageTarget > 0) {
-    window.scrollTo({ top: sectionTop(pageTarget), behavior: "instant" });
+    window.scrollTo({ top: sections[pageTarget].offsetTop, behavior: "instant" });
   }
   syncScroll();
 });
