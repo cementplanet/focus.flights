@@ -16,8 +16,9 @@ function campaignValue(name) {
 }
 
 function track() {
-  const source = campaignValue("utm_source");
-  const medium = campaignValue("utm_medium");
+  const shortLinkKol = landing.pathname.match(/^\/c\/([a-z0-9][a-z0-9_-]{0,59})\/?$/i)?.[1].toLowerCase();
+  const source = shortLinkKol ?? campaignValue("utm_source");
+  const medium = shortLinkKol ? "kol" : campaignValue("utm_medium");
   const campaign = campaignValue("utm_campaign");
   const kol = medium === "kol" && source;
   const attribution = kol ? { kol_id: kol } : {};
