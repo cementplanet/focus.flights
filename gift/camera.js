@@ -62,7 +62,7 @@ const stageFragment = runwaySource => `
   varying highp vec3 direction;
   varying highp vec2 screen;
   uniform sampler2D grain, airliner, printLayer;
-  uniform float landing, runwayExtension;
+  uniform float landing;
   ${runwaySource}
   uniform vec3 atmosphere; // lift, viewport aspect, breathing phase
   uniform vec3 eye;
@@ -94,16 +94,16 @@ const stageFragment = runwaySource => `
     float diffusion=smoothstep(.06,.94,landing);
     scene+=vec3(.082,.084,.087)*haze*mix(.48,1.,atmosphere.x);
     if (landing>0.) {
-      scene=mix(scene,runwayColor(screen,atmosphere.y,landing,atmosphere.z,runwayExtension),diffusion);
+      scene=mix(scene,runwayColor(screen,atmosphere.y,landing,atmosphere.z),diffusion);
       vec2 spread=vec2(screen.x*atmosphere.y/(.36+landing*.84),
         (screen.y-.94+landing*.68)/1.18);
-      scene+=vec3(.095,.10,.112)*exp(-dot(spread,spread))*diffusion*(1.-runwayExtension);
+      scene+=vec3(.095,.10,.112)*exp(-dot(spread,spread))*diffusion;
     }
     if (atmosphere.x>.001) {
       // Sparse motes catch the shaft at different depths. Use height units
       // so their diameter stays the same in portrait and landscape.
       vec2 cell=screen*vec2(atmosphere.y,1.)*5.;
-      cell.y-=landing*2.35+runwayExtension*2.8;
+      cell.y-=landing*2.35;
       cell+=vec2(.041,-.069)*atmosphere.z;
       vec2 id=floor(cell);
       vec3 seed=fract(vec3(id.xyx)*vec3(.1031,.1030,.0973));
@@ -111,7 +111,7 @@ const stageFragment = runwaySource => `
       vec2 center=.12+.76*fract((seed.xx+seed.yz)*seed.zy);
       vec2 d=fract(cell)-center;
       float mote=exp(-dot(d,d)*mix(830.,2300.,center.x));
-      scene+=vec3(.22,.23,.24)*mote*min(haze+.38*diffusion,1.)*center.y*center.y*(1.-.74*runwayExtension);
+      scene+=vec3(.22,.23,.24)*mote*min(haze+.38*diffusion,1.)*center.y*center.y;
     }
     if (landing>0. && landing<.93) {
       // Sample the lit paper apart from the air, keeping the runway in focus.
@@ -178,7 +178,7 @@ async function prepare(gl) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
     readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
-    fetch(new URL("./runway.glsl?v=extension",import.meta.url)).then(response=>{
+    fetch(new URL("./runway.glsl?v=ignition",import.meta.url)).then(response=>{
       if (!response.ok) throw Error("Runway lighting could not load");
       return response.text();
     }),
@@ -216,7 +216,6 @@ async function prepare(gl) {
   gl.uniform1i(gl.getUniformLocation(stage.handle,"airliner"),2);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"printLayer"),3);
   const landingUniform=gl.getUniformLocation(stage.handle,"landing");
-  const extensionUniform=gl.getUniformLocation(stage.handle,"runwayExtension");
   const atmosphere=gl.getUniformLocation(stage.handle,"atmosphere");
   const corners=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,corners);
@@ -240,7 +239,7 @@ async function prepare(gl) {
   let lastShadow=-1, lastLift=-1, lastSlip=-1, lastAir=-1;
 
   let previousLayout;
-  return function draw(t,w,h,paperPhase,lift,slip,air,landing,extension,cardLayout) {
+  return function draw(t,w,h,paperPhase,lift,slip,air,landing,cardLayout) {
     if (cardLayout !== previousLayout) {
       capturedAspect=0;
       lastShadow=-1;
@@ -319,7 +318,6 @@ async function prepare(gl) {
     camera(stage);
     gl.uniform3f(atmosphere,lift,aspect,air);
     gl.uniform1f(landingUniform,landing);
-    gl.uniform1f(extensionUniform,extension);
     gl.bindBuffer(gl.ARRAY_BUFFER,corners);
     gl.enableVertexAttribArray(stage.corner);
     gl.vertexAttribPointer(stage.corner,2,gl.FLOAT,false,0,0);
@@ -334,14 +332,14 @@ async function prepare(gl) {
 export function setupStudio(canvas, download, row) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let unavailable = false;
-  let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0, extension = 0;
+  let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
   let pixelBudget = 1600000, width = 1, height = 1;
 
   let cardLayout = [0, 0, 0];
 
   function render(now) {
-    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing,extension,cardLayout);
+    draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing,cardLayout);
     canvas.dataset.ready = "";
     dirty = false;
   }
@@ -349,10 +347,10 @@ export function setupStudio(canvas, download, row) {
     if (reducedMotion.matches) { delete canvas.dataset.ready; return; }
     if (!draw || !visible || document.hidden) return;
     if (dirty) render(now);
-    if (slip === 1 && extension < 1 && !idleFrame) {
+    if (slip === 1 && !idleFrame) {
       const last = now;
       function hover(time) {
-        if (!visible || document.hidden || reducedMotion.matches || !draw || slip !== 1 || extension === 1) {
+        if (!visible || document.hidden || reducedMotion.matches || !draw || slip !== 1) {
           idleFrame = 0;
           return;
         }
@@ -365,7 +363,7 @@ export function setupStudio(canvas, download, row) {
     }
   }
   function resize() {
-    const moving = position < 1 || (lift > 0 && slip < 1) || (landing > 0 && landing < 1) || (extension > 0 && extension < 1);
+    const moving = position < 1 || (lift > 0 && slip < 1) || (landing > 0 && landing < 1);
     const budget = moving ? pixelBudget : slip === 1 ? Math.min(1600000,pixelBudget*5) : 1600000;
     const scale = Math.min(devicePixelRatio,2,Math.sqrt(budget/(width*height)));
     const w = Math.max(1,Math.round(width*scale)), h = Math.max(1,Math.round(height*scale));
@@ -430,14 +428,13 @@ export function setupStudio(canvas, download, row) {
     visible = entry.isIntersecting;
     if (visible) { warm(); paint(); }
   }).observe(canvas);
-  return (t,phase,rise=0,separation=0,approach=0,runwayExtension=0)=>{
-    dirty ||= position !== t || paperPhase !== phase || lift !== rise || slip !== separation || landing !== approach || extension !== runwayExtension;
+  return (t,phase,rise=0,separation=0,approach=0)=>{
+    dirty ||= position !== t || paperPhase !== phase || lift !== rise || slip !== separation || landing !== approach;
     position = t;
     paperPhase = phase;
     lift = rise;
     slip = separation;
     landing = approach;
-    extension = runwayExtension;
     warm();
     resize();
   };
