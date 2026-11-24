@@ -397,7 +397,7 @@
 
 .showcase-devices button[aria-pressed="true"] { --device-selection: 1; color: #fff; }
 .showcase-devices :is(.aqua-button-surface, .device-liquid) {
-  filter: drop-shadow(0 1.25px 0 rgb(104 119 139 / .16));
+  filter: drop-shadow(0 1.25px 0 var(--aqua-shadow, rgb(104 119 139 / .16)));
 }
 .showcase-devices[data-liquid] .aqua-button-surface { display: none; }
 /* The liquid shape supplies the hover and press motion. */

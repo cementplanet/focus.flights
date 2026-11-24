@@ -108,20 +108,25 @@ a.aqua-button {
 }
 
 .aqua-face {
-  fill: var(--aqua-face, url(#device-glass-tone));
+  fill: url(#device-glass-tone);
   filter: var(--aqua-reflection, url(#device-aqua));
+  stroke-opacity: var(--aqua-edge-opacity, .3);
+}
+
+.aqua-contact-shadow {
+  fill: var(--aqua-shadow, rgb(104 119 139 / .16));
 }
 
 @media (prefers-color-scheme: dark) {
   .showcase-devices, .site-header[data-on-showcase] {
-    --aqua-face: url(#device-glass-tone-dark);
     --aqua-reflection: url(#device-aqua-dark);
+    --aqua-edge-opacity: .16;
+    --aqua-shadow: rgb(0 0 0 / .42);
   }
 
   .showcase-devices { --aqua-selection: #0c0f15; }
 
   .site-header[data-on-showcase] :is(.sky-nav, .sky-get-app) { color: inherit; }
-  .site-header[data-on-showcase] .sky-get-app { --aqua-face: url(#device-glass-tone-dark-raised); }
   .site-header[data-on-showcase] .sky-nav a:focus-visible { outline-color: #aac4ed; }
 }
 
