@@ -50,6 +50,10 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
   let phase = 0, travel = 0, start = 0, distance = 0;
   const delays = [.009, .018, .027, .036];
 
+  function place(top) {
+    night.style.setProperty("--gift-scene-offset", (top - gift.offsetTop) + "px");
+  }
+
   function scrollCamera() {
     download.style.setProperty("--sky-stretch", 1 + travel);
     // Sample the same trajectory a few frames earlier for each depth group.
@@ -58,7 +62,9 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
       const earlier = cameraTravel(Math.max(0, phase-delay));
       content.style.setProperty("--gift-lag-" + index, (distance*(travel-earlier)) + "px");
     });
-    window.scrollTo({ top: start + distance*travel, behavior: "instant" });
+    const top = start + distance * travel;
+    night.style.setProperty("--gift-scene-offset", (distance * (travel - 1)) + "px");
+    window.scrollTo({ top, behavior: "instant" });
   }
 
   function align() {
@@ -118,6 +124,7 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
     gift.style.removeProperty("--letter-poster");
     gift.style.removeProperty("--runway-arrival");
     welcome.style.removeProperty("--welcome-presence");
+    night.style.removeProperty("--gift-scene-offset");
     revealRunwayCopy(0, 0);
     render(1,1);
   }
@@ -131,7 +138,8 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
     delays.forEach((_, index)=>content.style.removeProperty("--gift-lag-" + index));
     night.style.removeProperty("opacity");
     night.style.removeProperty("--poster-offset");
+    night.style.removeProperty("--gift-scene-offset");
     if (atGift) render(1, 1);
   }
-  return { paint, end, align, holdSky, floatLetter, resetLetter };
+  return { paint, end, align, holdSky, place, floatLetter, resetLetter };
 }

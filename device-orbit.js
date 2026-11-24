@@ -108,9 +108,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
       const sharp = Math.max(0, 1 - defocus / .3);
       const leftFade = Math.max(0, Math.min(1, (x - (compact.matches ? -.05 : .05)) / .5));
       const opacity = Math.exp(-1.9 * distance) * leftFade * leftFade * (3 - 2 * leftFade);
-      item.style.left = `${x * 100}%`;
-      item.style.top = `${y * 100}%`;
-      item.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      item.style.transform = `translate(calc(${x * 100}cqw - 50%), calc(${y * 100}cqh - 50%)) scale(${scale})`;
       item.style.setProperty("--device-sharp", sharp);
       item.style.opacity = opacity;
       item.style.visibility = opacity < .008 ? "hidden" : "visible";

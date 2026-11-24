@@ -1,10 +1,116 @@
 // Noise volumes generated from Leonxlnx/halo-above-the-clouds at 1d08819 (MIT, see LICENSE-halo).
-export async function startClouds(canvas, sky, aircraft, camera) {
-  const gl = canvas.getContext("webgl2", { alpha: true, antialias: false, premultipliedAlpha: true });
-  if (!gl) return;
+export const cloudDeckBottom = -560;
 
+export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
+  const surface = canvas.parentElement;
+  const connection = navigator.connection;
+  let visible = false, frame = 0, renderer, loading, staticOnly = false, contextLost = false;
+  let lastFrame, slowFrames = 0;
+
+  function isLimited() {
+    const type = connection?.effectiveType;
+    return staticOnly || contextLost || reducedMotion.matches || connection?.saveData || type?.endsWith("2g") || type === "3g";
+  }
+
+  function canRender() {
+    const view = camera();
+    return visible && !document.hidden && !isLimited() &&
+      view.height > cloudDeckBottom && (!view.travel || surface.hasAttribute("data-clouds-ready"));
+  }
+
+  function showStill() {
+    if (surface.hasAttribute("data-clouds-ready")) {
+      surface.removeAttribute("data-clouds-ready");
+      aircraft.animate(null);
+    }
+    lastFrame = undefined;
+    slowFrames = 0;
+  }
+
+  function paint(now) {
+    frame = 0;
+    if (!canRender()) {
+      showStill();
+      return;
+    }
+    if (lastFrame !== undefined) {
+      slowFrames = now - lastFrame > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 1);
+    }
+    lastFrame = now;
+    if (slowFrames >= 5) {
+      staticOnly = true;
+      showStill();
+      return;
+    }
+    if (renderer(now)) surface.toggleAttribute("data-clouds-ready", true);
+    frame = requestAnimationFrame(paint);
+  }
+
+  async function prepare(controller) {
+    const gl = canvas.getContext("webgl2", {
+      alpha: true,
+      antialias: false,
+      premultipliedAlpha: true,
+      failIfMajorPerformanceCaveat: true,
+    });
+    const info = gl?.getExtension("WEBGL_debug_renderer_info");
+    if (!gl || (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)))) {
+      staticOnly = true;
+      return;
+    }
+    const next = await createRenderer(gl, canvas, sky, aircraft, camera, controller.signal);
+    if (!controller.signal.aborted) renderer = next;
+  }
+
+  function sync() {
+    if (!canRender()) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      if (camera().height <= cloudDeckBottom || isLimited()) showStill();
+      else { lastFrame = undefined; slowFrames = 0; }
+      return;
+    }
+    if (renderer) {
+      if (!frame) frame = requestAnimationFrame(paint);
+    } else if (!loading) {
+      const controller = loading = new AbortController();
+      void prepare(controller).catch(error => {
+        if (controller.signal.aborted) return;
+        staticOnly = true;
+        console.warn("Cloud renderer unavailable:", error);
+      }).finally(() => {
+        if (loading !== controller) return;
+        loading = undefined;
+        sync();
+      });
+    }
+  }
+
+  new IntersectionObserver(([entry]) => {
+    visible = entry.intersectionRatio > 0;
+    surface.toggleAttribute("data-clouds-visible", visible);
+    sync();
+  }, { threshold: .001 }).observe(surface);
+  reducedMotion.addEventListener("change", sync);
+  connection?.addEventListener("change", sync);
+  document.addEventListener("visibilitychange", sync);
+  canvas.addEventListener("webglcontextlost", event => {
+    event.preventDefault();
+    contextLost = true;
+    loading?.abort();
+    loading = renderer = undefined;
+    sync();
+  });
+  canvas.addEventListener("webglcontextrestored", () => {
+    contextLost = false;
+    sync();
+  });
+  return sync;
+}
+
+async function createRenderer(gl, canvas, sky, aircraft, camera, signal) {
   async function asset(path) {
-    const response = await fetch(new URL(path, import.meta.url));
+    const response = await fetch(new URL(path, import.meta.url), { signal });
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
     return response;
   }
@@ -26,6 +132,7 @@ export async function startClouds(canvas, sky, aircraft, camera) {
       asset(`data/noise/${name}.bin`).then((response) => response.arrayBuffer())),
   ]);
 
+  signal.throwIfAborted();
   const program = gl.createProgram();
   const vertex = compile(gl.VERTEX_SHADER, `#version 300 es
     void main() {
@@ -76,7 +183,6 @@ export async function startClouds(canvas, sky, aircraft, camera) {
   upload("weatherNoise", 2, 512, weather, false);
   upload("aircraftShadow", 3, 128, shadow, false, gl.RED);
 
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const epoch = performance.now();
   let frameAt = -Infinity;
   let lastPalette;
@@ -84,33 +190,20 @@ export async function startClouds(canvas, sky, aircraft, camera) {
   let elapsed = 0;
   let flightTime = 0;
   let previousAnimationAt;
-  let previousMotion;
-  let lastRenderedReduced;
-  let aircraftOffset = [0, 0];
   let pendingFrame;
   gl.enable(gl.SCISSOR_TEST);
 
-  function render(now) {
-    requestAnimationFrame(render);
+  return function render(now) {
     const delta = Math.min(now - (previousAnimationAt ?? now), 50);
     previousAnimationAt = now;
     const view = camera();
-    if (document.hidden || view.visible === false) return;
-
-    const reduce = reducedMotion.matches;
-    if (!reduce) flightTime += delta / 1000;
-    const motion = reduce ? null : flightTime;
-    const motionPreferenceChanged = lastRenderedReduced !== reduce;
-    if (motion !== previousMotion) {
-      aircraftOffset = aircraft.animate(motion);
-      previousMotion = motion;
-    }
+    flightTime += delta / 1000;
+    const aircraftOffset = aircraft.animate(flightTime);
     const moved = view.height !== lastCamera?.height;
-    if (view.height <= -560 && lastCamera?.height <= -560) return;
     // During camera travel submit on every display callback. Throttle only ambient drift.
-    if (!view.travel && !moved && !motionPreferenceChanged && now - frameAt < (reduce ? 1000 : 65)) return;
+    if (!view.travel && !moved && now - frameAt < 65) return false;
     if (pendingFrame) {
-      if (!view.travel && !moved && gl.clientWaitSync(pendingFrame, 0, 0) === gl.TIMEOUT_EXPIRED) return;
+      if (!view.travel && !moved && gl.clientWaitSync(pendingFrame, 0, 0) === gl.TIMEOUT_EXPIRED) return false;
       gl.deleteSync(pendingFrame);
       pendingFrame = null;
     }
@@ -122,14 +215,14 @@ export async function startClouds(canvas, sky, aircraft, camera) {
     const height = Math.max(1, Math.round(cssHeight * scale));
     const palette = sky();
     const resized = canvas.width !== width || canvas.height !== height;
-    if (reduce && !moved && !motionPreferenceChanged && !resized && palette === lastPalette) return;
 
-    if (!reduce) elapsed += Math.min(now - Math.max(frameAt, epoch), 125) / 1000;
+    elapsed += Math.min(now - Math.max(frameAt, epoch), 125) / 1000;
     frameAt = now;
-    lastRenderedReduced = reduce;
     if (resized) {
       canvas.width = width;
       canvas.height = height;
+    }
+    if (resized || !lastCamera) {
       gl.viewport(0, 0, width, height);
       gl.uniform2f(uniforms.resolution, width, height);
     }
@@ -144,16 +237,14 @@ export async function startClouds(canvas, sky, aircraft, camera) {
       gl.uniform3fv(uniforms.lightColor, colors[4].map((channel) => channel / 255));
     }
 
-    const cleared = view.height <= -560;
     const aboveDeck = view.height >= 1120;
-    if (resized || cleared || aboveDeck !== (lastCamera?.height >= 1120)) {
+    if (resized || !lastCamera || aboveDeck !== (lastCamera.height >= 1120)) {
       gl.scissor(0, 0, width, height);
       gl.clear(gl.COLOR_BUFFER_BIT);
       // Above the deck, the shader produces no mist or cloud above the ray horizon.
       if (aboveDeck) gl.scissor(0, 0, width, Math.ceil(height * 0.452));
     }
     lastCamera = view;
-    if (cleared) return;
     gl.uniform1f(uniforms.cameraHeight, view.height);
     const deckDepth = Math.max(0, Math.min(1, (1120 - view.height) / 180));
     gl.uniform1f(uniforms.deckDepth, deckDepth);
@@ -167,8 +258,6 @@ export async function startClouds(canvas, sky, aircraft, camera) {
       pendingFrame = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
       gl.flush();
     }
-  }
-
-  gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
-  requestAnimationFrame(render);
+    return true;
+  };
 }

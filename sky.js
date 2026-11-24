@@ -1,9 +1,9 @@
-import { setupGiftDescent } from "./gift.js?v=gift-sheet";
+import { setupGiftDescent } from "./gift.js?v=gift-sheet-release";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=cabin-light";
 import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
 import { prepareCopy, unit } from "./motion-copy.js";
-import { startClouds } from "./clouds.js?v=framed-flight";
+import { cloudDeckBottom, setupClouds } from "./clouds.js?v=cloud-still";
 import { startContrails } from "./contrails.js?v=nozzle-alignment";
 
 const night = ["091327", "182a49", "455472", "121c31", "626f8d", 1];
@@ -52,8 +52,6 @@ const ctx = canvas.getContext("2d");
 const hero = sky.querySelector(".hero-copy");
 const narrowHero = matchMedia("(max-width: 540px), (max-width: 720px) and (min-height: 480px)");
 let lastPalette;
-let heroVisible = true;
-new IntersectionObserver(([entry]) => { heroVisible = entry.isIntersecting; }).observe(sky);
 for (const copy of hero.querySelectorAll("h1, p")) prepareCopy(copy);
 hero.classList.add("motion-ready");
 
@@ -217,15 +215,11 @@ let handoffVelocity = 0;
 let pageTarget = 0;
 let pageOrigin = 0;
 const wheelQuietPeriod = 140;
-const deviceWheelQuietPeriod = 80;
 const returnWheelThreshold = 32;
 const returnTouchThreshold = 36;
-const deviceWheelThreshold = 12;
-const deviceTouchThreshold = 14;
 let lastWheelAt = -Infinity;
 let lastWheelDown;
 let capturedWheelDirection;
-let capturedDeviceWheel = false;
 let wheelDistance = 0;
 
 function ease(from, to, value) {
@@ -338,7 +332,10 @@ function paintHandoff(progress, travel) {
   const distance = 1860 * drop;
   const ground = ease(.44, .91, drop);
   const cloudBlur = 6 * ease(.25, .57, drop) * (1 - ease(.70, .95, drop));
+  const previousCloudCamera = cloudCamera;
   cloudCamera = { height: 1240 - distance, travel };
+  if (travel !== previousCloudCamera.travel ||
+      (cloudCamera.height > cloudDeckBottom) !== (previousCloudCamera.height > cloudDeckBottom)) syncClouds();
   sky.parentElement.style.setProperty("--showcase-reveal", ease(.73, .97, progress));
   aircraft.style.setProperty("--aircraft-travel", 1200 * ease(0, 1, progress));
   siteHeader.style.setProperty("--logo-ink", drop >= .76 + .02 * palette.stars ? "#202020" : "#fff");
@@ -352,10 +349,13 @@ function paintHandoff(progress, travel) {
     "stars-rise": ease(.10, .37, progress),
     "cloud-blur": `${cloudBlur}px`,
     "cloud-scale": 1 + cloudBlur / 235,
+    "cloud-passage": drop,
+    "cloud-still-opacity": 1 - ease(.56, .93, drop),
   })) sky.style.setProperty(`--${key}`, value);
 }
 
-function paintCampaign(progress, travel) {
+function paintCampaign(progress, travel, top) {
+  giftDescent.place(top);
   giftDescent.floatLetter(unit(progress - giftPage), unit(progress - lastSlidePage),
     travel ? null : campaignSlides[progress - firstSlidePage]);
 }
@@ -366,12 +366,10 @@ function playPage(target, focusPage = false) {
   // Keep this choreography through interruptions so redirecting the spring
   // samples the same image at the same position.
   if (!handoffFrame) departingFocus = handoffProgress === 2;
-  const leavingDownload = target === giftPage && download.contains(document.activeElement);
-  const leavingCampaign = campaignSlides.some(slide => slide !== sections[target] && slide.contains(document.activeElement));
+  const leavingControl = sections.some(section => section !== sections[target] && section.contains(document.activeElement));
   pageOrigin = pageTarget;
   pageTarget = target;
   beginCopyVisit(target);
-  deepFocus.inert = false;
   if (target >= 3 || handoffProgress > 2) setShadeActive(true, true);
   else if (target !== 2) setShadeActive(false);
   saveSection(target);
@@ -390,8 +388,8 @@ function playPage(target, focusPage = false) {
       const from = Math.min(Math.floor(progress), lastSlidePage);
       const phase = unit(progress - from);
       const offset = from === giftPage || from === lastSlidePage ? giftTravel(phase) : phase;
-      paintCampaign(progress, travel);
       const top = sections[from].offsetTop + offset * (sections[from + 1].offsetTop - sections[from].offsetTop);
+      paintCampaign(progress, travel, top);
       window.scrollTo({ top, behavior: "instant" });
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
@@ -436,11 +434,8 @@ function playPage(target, focusPage = false) {
     paintPage(target, false);
     if (target !== 2) deepFocus.removeAttribute("data-anchor-entry");
     syncHeader();
-    hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
-    const leavingControl = leavingDownload || leavingCampaign || (target === 2 && showcase.contains(document.activeElement)) ||
-      (target === 3 && deepFocus.contains(document.activeElement));
-    deepFocus.inert = target >= 3;
+    setInteractivePage(target);
     if (focusPage || leavingControl) {
       (target === 0 ? sequence : sections[target]).focus({ preventScroll: true });
     }
@@ -451,7 +446,6 @@ function playPage(target, focusPage = false) {
     return true;
   }
 
-  hero.inert = true;
   sky.toggleAttribute("data-handoff", cloudTransition && handoffProgress < 1);
   const start = performance.now();
   const offset = handoffProgress - target;
@@ -583,24 +577,11 @@ for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-e
 }
 
 function stepPage(down, focusPage = false) {
-  const nearingNextScreen = (pageTarget >= 2 && pageTarget <= giftPage) && Math.abs(handoffProgress - pageTarget) <= .10;
+  const nearingNextScreen = (pageTarget >= 1 && pageTarget <= giftPage) && Math.abs(handoffProgress - pageTarget) <= .10;
   const onCampaign = pageTarget >= firstSlidePage && pageTarget <= lastSlidePage;
-  if (handoffFrame && !onShowcase() && !nearingNextScreen && !onCampaign && down === (pageTarget > pageOrigin)) return true;
+  if (handoffFrame && !nearingNextScreen && !onCampaign && down === (pageTarget > pageOrigin)) return true;
   const target = Math.max(0, Math.min(sections.length - 1, pageTarget + (down ? 1 : -1)));
   return playPage(target, focusPage);
-}
-
-function onShowcase() {
-  if (pageTarget !== 1) return false;
-  // The showcase can handle input during the visible tail of the spring.
-  if (handoffFrame) return Math.abs(handoffProgress - 1) <= .1;
-  return Math.abs(window.scrollY - showcase.offsetTop) <= 2;
-}
-
-function adjacentDevice(down) {
-  const buttons = [...showcase.querySelectorAll("button[data-device]")];
-  const selected = buttons.findIndex(button => button.getAttribute("aria-pressed") === "true");
-  return buttons[selected + (down ? 1 : -1)];
 }
 
 window.addEventListener("wheel", event => {
@@ -612,11 +593,9 @@ window.addEventListener("wheel", event => {
     if (returning) event.preventDefault();
     return;
   }
-  const quietPeriod = capturedDeviceWheel ? deviceWheelQuietPeriod : wheelQuietPeriod;
-  const newGesture = now - lastWheelAt > quietPeriod;
+  const newGesture = now - lastWheelAt > wheelQuietPeriod;
   if (newGesture) {
     capturedWheelDirection = undefined;
-    capturedDeviceWheel = false;
   }
   if (newGesture || down !== lastWheelDown) wheelDistance = 0;
   lastWheelAt = now;
@@ -627,19 +606,15 @@ window.addEventListener("wheel", event => {
     return;
   }
 
-  const inShowcase = onShowcase();
-  const next = inShowcase && adjacentDevice(down);
-  if (inShowcase || returning) {
+  if (returning) {
     event.preventDefault();
     const scale = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? window.innerHeight : 1;
     wheelDistance += Math.abs(event.deltaY) * scale;
-    if (wheelDistance < (next ? deviceWheelThreshold : returnWheelThreshold)) return;
+    if (wheelDistance < returnWheelThreshold) return;
   }
 
-  if (next) next.click();
-  else if (!stepPage(down)) return;
+  if (!stepPage(down)) return;
   capturedWheelDirection = down;
-  capturedDeviceWheel = Boolean(next);
   wheelDistance = 0;
   if (!event.defaultPrevented && event.cancelable) event.preventDefault();
 }, { passive: false });
@@ -657,12 +632,6 @@ window.addEventListener("touchmove", event => {
   const { clientX, clientY } = event.touches[0];
   const dy = touchOrigin.clientY - clientY;
   const dx = Math.abs(touchOrigin.clientX - clientX);
-  const next = onShowcase() && adjacentDevice(dy > 0);
-  if (next && Math.abs(dy) > dx) {
-    if (event.cancelable) event.preventDefault();
-    if (Math.abs(dy) >= deviceTouchThreshold) { next.click(); touchHandoff = true; }
-    return;
-  }
   if (dy < 0 && pageTarget > 0) {
     if (event.cancelable) event.preventDefault();
     if (-dy < returnTouchThreshold || -dy < dx * 1.25) return;
@@ -684,14 +653,6 @@ window.addEventListener("keydown", event => {
   const down = event.key === "PageDown" || event.key === "ArrowDown" || (space && !event.shiftKey);
   const up = event.key === "PageUp" || event.key === "ArrowUp" || (space && event.shiftKey);
   if (!down && !up) return;
-  if (onShowcase()) {
-    const next = adjacentDevice(down);
-    if (next || event.repeat) {
-      if (!event.repeat) next.click();
-      event.preventDefault();
-      return;
-    }
-  }
   if (event.repeat || stepPage(down, true)) {
     event.preventDefault();
   }
@@ -706,51 +667,61 @@ function syncHeader() {
   siteHeader.toggleAttribute("data-on-showcase", !onFocus && showcase.getBoundingClientRect().top <= midpoint);
 }
 
-function syncScroll() {
-  syncHeader();
-  if (handoffFrame) return;
-  const stops = sections.map(section => section.offsetTop);
-  const page = stops.findIndex(top => Math.abs(window.scrollY - top) < 2);
-  if (page < 0 || page === pageTarget) return;
-  saveSection(page);
-  pageTarget = pageOrigin = page;
-  handoffProgress = page;
+function setInteractivePage(page) {
+  sections.forEach((section, index) => { section.inert = index !== page; });
+}
+
+function applyRestingSection(page) {
+  handoffProgress = pageOrigin = pageTarget = page;
   beginCopyVisit(page);
   revealCopy();
   setShadeActive(page >= 2);
-  deepFocus.inert = page >= 3;
   giftDescent.end(page >= giftPage);
-  if (page >= giftPage) paintCampaign(page, false);
+  if (page >= giftPage) paintCampaign(page, false, sections[page].offsetTop);
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
-  hero.inert = page !== 0;
+  setInteractivePage(page);
   paintHandoff(Math.min(page, 1), false);
 }
 
+function syncScroll() {
+  syncHeader();
+  if (handoffFrame) return;
+  const top = window.scrollY;
+  const page = sections.findIndex(section => Math.abs(top - section.offsetTop) < 2);
+  if (page < 0 || page === pageTarget) return;
+  saveSection(page);
+  applyRestingSection(page);
+}
+
 function restoreSection() {
-  const page = sections.findIndex(section => section.id === location.hash.slice(1));
-  if (page < 0) { syncScroll(); beginCopyVisit(pageTarget); revealCopy(); return; }
-  beginCopyVisit(page);
-  revealCopy();
+  const page = sections.findIndex(section => "#" + section.id === location.hash);
+  if (page < 0) {
+    syncScroll();
+    beginCopyVisit(pageTarget);
+    revealCopy();
+    setInteractivePage(pageTarget);
+    return;
+  }
   deepFocus.toggleAttribute("data-anchor-entry", page === 2);
   cancelAnimationFrame(handoffFrame);
   handoffFrame = handoffVelocity = 0;
-  handoffProgress = pageOrigin = pageTarget = page;
-  setShadeActive(page >= 2);
-  deepFocus.inert = page >= 3;
   clearFocusHandoff();
-  giftDescent.end(page >= giftPage);
-  if (page >= giftPage) paintCampaign(page, false);
-  else giftDescent.resetLetter();
-  if (page >= 3) giftDescent.holdSky(page === 3);
-  else windowFlight.end(false);
   sky.removeAttribute("data-handoff");
-  hero.inert = page !== 0;
-  paintHandoff(Math.min(page, 1), false);
+  applyRestingSection(page);
   window.scrollTo({ top: sections[page].offsetTop, behavior: "instant" });
   syncHeader();
 }
+
+const syncClouds = setupClouds(document.querySelector(".clouds"), () => palette, {
+  distance: () => aircraftDistance,
+  animate: animateAircraft,
+  position: () => [
+    (aircraftCenterX - sky.clientWidth / 2) / aircraftPixelsPerX,
+    125 - (aircraftCenterY - sky.clientHeight * .548) / aircraftPixelsPerY,
+  ],
+}, () => cloudCamera, reducedMotion);
 
 restoreSection();
 window.addEventListener("hashchange", () => { cancelLinkFade(); restoreSection(); });
@@ -771,19 +742,10 @@ window.addEventListener("resize", () => {
     giftDescent.holdSky(pageTarget === 3);
   }
   if (!handoffFrame && pageTarget > 0) {
-    window.scrollTo({ top: sections[pageTarget].offsetTop, behavior: "instant" });
+    const top = sections[pageTarget].offsetTop;
+    if (pageTarget >= giftPage) giftDescent.place(top);
+    window.scrollTo({ top, behavior: "instant" });
   }
   syncScroll();
 });
 window.addEventListener("scroll", syncScroll, { passive: true });
-
-startClouds(document.querySelector(".clouds"), () => palette, {
-  distance: () => aircraftDistance,
-  animate: animateAircraft,
-  position: () => [
-    (aircraftCenterX - sky.clientWidth / 2) / aircraftPixelsPerX,
-    125 - (aircraftCenterY - sky.clientHeight * .548) / aircraftPixelsPerY,
-  ],
-}, () => ({ ...cloudCamera, visible: heroVisible })).catch((error) => {
-  console.error("Cloud renderer could not start:", error);
-});

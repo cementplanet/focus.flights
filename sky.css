@@ -1,0 +1,71 @@
+.sky {
+  isolation: isolate;
+  --paper: #fff;
+  --ink: #202020;
+  --ground-top: color-mix(in srgb, var(--zenith, #457fb2) 11%, var(--paper));
+}
+
+@media (prefers-color-scheme: dark) {
+  .sky {
+    --paper: #101218;
+    --ink: #f2f2f2;
+    --ground-top: color-mix(in srgb, var(--zenith, #091327) 18%, var(--paper));
+  }
+
+}
+
+.sky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  --edge: var(--ground-edge, 135%);
+  background: linear-gradient(to bottom,
+    transparent calc(var(--edge) - 23%),
+    var(--ground-top) calc(var(--edge) + 12%),
+    var(--paper) calc(var(--edge) + 58%));
+}
+
+.sky .stars {
+  translate: 0 calc(var(--stars-rise, 0) * -60svh);
+  filter: blur(calc(var(--stars-rise, 0) * 3px));
+}
+
+.clouds { z-index: 1; pointer-events: none; filter: blur(var(--cloud-blur, 0px)); scale: var(--cloud-scale, 1); }
+.hero-copy, .aircraft, .sky-header { z-index: 2; }
+
+.sky .aircraft {
+  --exit: var(--plane-exit, 0);
+  opacity: calc(1 - var(--exit));
+  filter: blur(calc(var(--exit) * 10px));
+  scale: calc(1 - var(--exit) * .04);
+}
+
+.flight-sequence:focus-visible { outline: none; }
+.sky:not([data-clouds-ready]) .clouds { visibility: hidden; }
+.cloud-still {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  --cloud-day: url("/clouds/cloud-day-wide.webp");
+  --cloud-night: url("/clouds/cloud-night-wide.webp");
+  opacity: var(--cloud-still-opacity, 1);
+  transform: translateY(calc(-52% * var(--cloud-passage, 0))) scale(calc(1 + .55 * var(--cloud-passage, 0)));
+  filter: blur(var(--cloud-blur, 0px));
+}
+.sky[data-clouds-visible]:not([data-clouds-ready]) .cloud-still { display: block; }
+.cloud-still::before, .cloud-still::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--cloud-day) center / 100% 100% no-repeat;
+  opacity: calc(1 - var(--stars, 0));
+}
+.cloud-still::after { background-image: var(--cloud-night); opacity: var(--stars, 0); }
+@media (max-aspect-ratio: 4/5) {
+  .cloud-still {
+    --cloud-day: url("/clouds/cloud-day-tall.webp");
+    --cloud-night: url("/clouds/cloud-night-tall.webp");
+  }
+}

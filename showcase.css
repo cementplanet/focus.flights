@@ -229,6 +229,7 @@
 
 .device-orbit-item {
   position: absolute;
+  inset: 0 auto auto 0;
   width: min(var(--device-width), calc(var(--device-height) * var(--device-ratio)));
   aspect-ratio: var(--device-ratio);
   transform-origin: center;
