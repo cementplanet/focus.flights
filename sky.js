@@ -441,7 +441,7 @@ function playPage(target, focusPage = false) {
     }
   }
 
-  if (reducedMotion.matches) {
+  if (reducedMotion.matches || (cloudTransition && sky.hasAttribute("data-clouds-static"))) {
     settle();
     return true;
   }
