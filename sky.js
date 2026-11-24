@@ -335,7 +335,7 @@ function paintHandoff(progress, travel) {
   cloudCamera = { height: 1240 - distance, travel };
   sky.parentElement.style.setProperty("--showcase-reveal", ease(.73, .97, progress));
   aircraft.style.setProperty("--aircraft-travel", 1200 * ease(0, 1, progress));
-  siteHeader.style.setProperty("--logo-ink", drop >= .76 + .02 * palette.stars ? "#202020" : "#fff");
+  siteHeader.style.setProperty("--logo-ink", drop >= .76 + .02 * palette.stars ? "var(--showcase-ink, #202020)" : "#fff");
   siteHeader.style.setProperty("--logo-shadow", ease(.06, .18, drop) * (1 - ease(.71, .76, drop)));
   for (const [key, value] of Object.entries({
     "plane-exit": planeExit,

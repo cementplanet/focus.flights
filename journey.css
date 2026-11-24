@@ -419,6 +419,9 @@
 
 
 .flight-sequence { --flight-page: #f4f4f6; }
+@media (prefers-color-scheme: dark) {
+  .flight-sequence { --flight-page: #101218; }
+}
 .flight-feature { background: var(--flight-page); }
 .flight-sequence .sky { --paper: var(--flight-page); }
 .sky[data-handoff] { overscroll-behavior: contain; }

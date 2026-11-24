@@ -43,10 +43,11 @@ export function setupDeviceLiquid(container, initial, reducedMotion) {
   const add = (a, b, sign = 1) => a.map((v, i) => v + b[i] * sign);
   const arc = (body, end) => `A ${shapeRadius * body.p[2]} ${shapeRadius * body.p[3]} 0 1 0 ${end}`;
 
-  function paintShape(index, path, fill) {
+  function paintShape(index, path, fill, opacity = 1) {
     faces[index].setAttribute('d', path);
     inks[index].setAttribute('d', path);
     inks[index].setAttribute('fill', fill);
+    inks[index].setAttribute('fill-opacity', opacity);
   }
 
   function paint(pair, fusion) {
@@ -67,7 +68,7 @@ export function setupDeviceLiquid(container, initial, reducedMotion) {
       }
       const left = point(body, Math.PI), right = point(body, 0);
       const circle = `M ${left} ${arc(body, right)} ${arc(body, left)} Z`;
-      paintShape(i, circle, `rgb(0 0 0 / ${fills[i]})`);
+      paintShape(i, circle, 'var(--aqua-selection, #000)', fills[i]);
     });
     if (fusion > .035) {
       const a = bodies[pair[0]], b = bodies[pair[1]];

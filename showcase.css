@@ -11,6 +11,7 @@
 
 .showcase {
   --glass-tone: #d4dfe7;
+  --showcase-sheen: 255 255 255;
   --content-top: calc(var(--header-top) + var(--header-height) + 16px);
   --content-bottom: max(clamp(20px, 4svh, 56px), env(safe-area-inset-bottom));
   position: relative;
@@ -24,7 +25,7 @@
   padding: var(--content-top) var(--content-left) var(--content-bottom);
   overflow: clip;
   background: var(--flight-page);
-  color: #1d1d1f;
+  color: var(--showcase-ink, #1d1d1f);
 }
 
 .showcase::before {
@@ -35,12 +36,31 @@
   background:
     radial-gradient(ellipse 78% 90% at 88% 70%, color-mix(in srgb, var(--glass-tone) 62%, transparent), transparent 74%),
     radial-gradient(ellipse 52% 70% at 19% 45%, color-mix(in srgb, var(--glass-tone) 36%, transparent), transparent 72%),
-    linear-gradient(120deg, rgb(255 255 255 / .55), rgb(255 255 255 / .2) 55%, rgb(255 255 255 / .45));
+    linear-gradient(120deg, rgb(var(--showcase-sheen) / .55),
+      rgb(var(--showcase-sheen) / .2) 55%, rgb(var(--showcase-sheen) / .45));
 }
 
 .showcase:has([data-device="iphone-duo"][aria-pressed="true"]) { --glass-tone: #d9e2dd; }
 .showcase:has([data-device="ipad"][aria-pressed="true"]) { --glass-tone: #dfe4d8; }
 .showcase:has([data-device="macbook"][aria-pressed="true"]) { --glass-tone: #dcdce8; }
+
+@media (prefers-color-scheme: dark) {
+  :root { --showcase-ink: #f0f2f6; }
+  .showcase {
+    color-scheme: dark;
+    --glass-tone: #222e3b;
+    --showcase-sheen: 26 29 38;
+    --device-blur-strength: .26;
+    --showcase-focus: #aac4ed;
+    --playback-fill: #4f6076;
+    --playback-divider: rgb(198 211 228 / .12);
+    --selection-background: #c6d3e4;
+    --selection-text: #161a21;
+  }
+  .showcase:has([data-device="iphone-duo"][aria-pressed="true"]) { --glass-tone: #23312e; }
+  .showcase:has([data-device="ipad"][aria-pressed="true"]) { --glass-tone: #2d3028; }
+  .showcase:has([data-device="macbook"][aria-pressed="true"]) { --glass-tone: #292637; }
+}
 
 .showcase-intro {
   position: relative;
@@ -83,9 +103,9 @@
   --fill-shape: inset(0 var(--remaining) 0 0 round var(--cap-start) var(--cap-end) var(--cap-end) var(--cap-start));
   position: relative;
   overflow: hidden;
-  color: #1d1d1f;
+  color: inherit;
 }
-.flight-segment + .flight-segment { border-inline-start: 1px solid rgb(103 90 81 / .09); }
+.flight-segment + .flight-segment { border-inline-start: 1px solid var(--playback-divider, rgb(103 90 81 / .09)); }
 .flight-scrubber {
   position: absolute;
   z-index: 2;
@@ -103,7 +123,7 @@
 .flight-scrubber::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: calc(2 * var(--track-cap)); }
 .flight-scrubber::-moz-range-thumb { width: 0; height: calc(2 * var(--track-cap)); border: 0; }
 .flight-segments[data-scrubbing] .flight-scrubber { cursor: grabbing; }
-.flight-segments:has(.flight-scrubber:focus-visible) { outline: 2px solid #1d1d1f; outline-offset: 4px; }
+.flight-segments:has(.flight-scrubber:focus-visible) { outline: 2px solid currentColor; outline-offset: 4px; }
 @media (prefers-reduced-motion: no-preference) {
   .flight-segments {
     scale: 1;
@@ -117,7 +137,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: #000;
+  background: var(--playback-fill, #000);
   clip-path: var(--fill-shape);
 }
 .flight-segment-label {
@@ -158,7 +178,7 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #1d1d1f;
+  color: inherit;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -167,7 +187,7 @@
 .flight-playback-toggle[data-playing] .playback-play { display: none; }
 .flight-playback-toggle[data-playing] .playback-pause { display: block; }
 .flight-playback-toggle:disabled { cursor: default; }
-.flight-playback-toggle:focus-visible { outline: 2px solid #1d1d1f; outline-offset: 4px; }
+.flight-playback-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 
 @keyframes playback-shell-reveal {
   from { opacity: 0; filter: blur(4px); translate: 0 6px; }
@@ -261,7 +281,7 @@
   width: 174%;
   height: 42%;
   background: radial-gradient(ellipse at 50% 62%,
-    rgb(255 255 255 / .76),
+    rgb(var(--showcase-sheen) / .76),
     color-mix(in srgb, var(--glass-tone) 42%, transparent) 34%,
     color-mix(in srgb, var(--glass-tone) 16%, transparent) 52%,
     transparent 72%);
@@ -273,7 +293,8 @@
   height: 15%;
   background:
     radial-gradient(ellipse 33% 13% at 50% 49%, rgb(103 122 142 / .09), transparent 100%),
-    radial-gradient(ellipse 48% 35% at 50% 55%, rgb(255 255 255 / .92), rgb(255 255 255 / .38) 45%, transparent 100%);
+    radial-gradient(ellipse 48% 35% at 50% 55%, rgb(var(--showcase-sheen) / .92),
+      rgb(var(--showcase-sheen) / .38) 45%, transparent 100%);
 }
 
 .device-orbit-media {
@@ -310,7 +331,7 @@
 .device-orbit-poster,
 .device-orbit-item video { opacity: var(--device-sharp, 1); }
 .device-orbit-blur {
-  opacity: calc(1 - var(--device-sharp, 1));
+  opacity: calc((1 - var(--device-sharp, 1)) * var(--device-blur-strength, 1));
   /* The blurred poster still has visible alpha along the export's top and bottom. */
   mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
 }
@@ -343,7 +364,7 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #1d1d1f;
+  color: inherit;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -386,9 +407,9 @@
 .showcase-devices[data-liquid] button svg:not(.aqua-button-surface) { scale: none; transition: none; }
 
 .showcase-devices[data-liquid] button {
-  color: color-mix(in srgb, #fff var(--device-icon-fill, 0%), #1d1d1f);
+  color: color-mix(in srgb, #fff var(--device-icon-fill, 0%), var(--showcase-ink, #1d1d1f));
 }
-.showcase-devices button:focus-visible { outline: 2px solid #376598; outline-offset: 3px; }
+.showcase-devices button:focus-visible { outline: 2px solid var(--showcase-focus, #376598); outline-offset: 3px; }
 
 .device-liquid {
   display: none;
