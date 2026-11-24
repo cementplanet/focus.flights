@@ -40,7 +40,8 @@
   scale: calc(1 - var(--exit) * .04);
 }
 
-.flight-sequence:focus-visible { outline: none; }
+.flight-sequence:focus-visible, .showcase:focus { outline: none; }
+
 .sky:not([data-clouds-ready]) .clouds { visibility: hidden; }
 .cloud-still {
   display: none;
@@ -71,12 +72,5 @@
   }
 }
 
-/* Move the lightweight first shot with the page without compositing both screens. */
-.sky[data-clouds-static][data-handoff] { position: relative; opacity: 1; }
-.sky[data-clouds-static][data-handoff] + .showcase {
-  opacity: 1;
-  overflow: clip;
-  background: var(--flight-page);
-}
-.sky[data-clouds-static][data-handoff] + .showcase::before { position: absolute; }
+/* Static fallback keeps the same geometry if it activates during camera travel. */
 .sky[data-clouds-static] :is(.cloud-still, .stars, .aircraft, .motion-glyph) { filter: none; }
