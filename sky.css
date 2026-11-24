@@ -69,3 +69,13 @@
     --cloud-night: url("/clouds/cloud-night-tall.webp");
   }
 }
+
+/* Move the lightweight first shot with the page without compositing both screens. */
+.sky[data-clouds-static][data-handoff] { position: relative; opacity: 1; }
+.sky[data-clouds-static][data-handoff] + .showcase {
+  opacity: 1;
+  overflow: clip;
+  background: var(--flight-page);
+}
+.sky[data-clouds-static][data-handoff] + .showcase::before { position: absolute; }
+.sky[data-clouds-static] :is(.cloud-still, .stars, .aircraft, .motion-glyph) { filter: none; }

@@ -1,3 +1,4 @@
+import { getHardwareContext } from "../hardware-gl.js";
 import { prepareInvitation } from "./invitation.js?v=gift-sheet";
 
 const project = `
@@ -278,7 +279,7 @@ export function setupStudio(canvas, download, welcome) {
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
-  let pixelBudget = 1600000, width = 1, height = 1;
+  let width = 1, height = 1;
 
   let cardLayout = [0, 0, 0];
 
@@ -307,9 +308,7 @@ export function setupStudio(canvas, download, welcome) {
     }
   }
   function resize() {
-    const moving = position < 1 || (lift > 0 && slip < 1) || (landing > 0 && landing < 1);
-    const budget = moving ? pixelBudget : slip === 1 ? Math.min(1600000,pixelBudget*5) : 1600000;
-    const scale = Math.min(devicePixelRatio,2,Math.sqrt(budget/(width*height)));
+    const scale = Math.min(devicePixelRatio, 2, Math.sqrt(1600000 / (width * height)));
     const w = Math.max(1,Math.round(width*scale)), h = Math.max(1,Math.round(height*scale));
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
@@ -320,14 +319,9 @@ export function setupStudio(canvas, download, welcome) {
   }
   function warm() {
     if (unavailable || loading || reducedMotion.matches) return;
-    const gl = canvas.getContext("webgl",{alpha:false,antialias:true,depth:true,powerPreference:"low-power"});
+    const gl = getHardwareContext(canvas, "webgl", {alpha:false,antialias:true,depth:true,powerPreference:"low-power"});
     if (!gl) { unavailable = true; return; }
     if (gl.isContextLost()) return;
-    const info = gl.getExtension("WEBGL_debug_renderer_info");
-    if (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL))) {
-      pixelBudget = 175000;
-      resize();
-    }
     const current = generation;
     loading = prepare(gl).then(renderer=>{
       if (current !== generation || !renderer) return;

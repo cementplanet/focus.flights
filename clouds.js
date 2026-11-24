@@ -1,3 +1,5 @@
+import { getHardwareContext } from "./hardware-gl.js";
+
 // Noise volumes generated from Leonxlnx/halo-above-the-clouds at 1d08819 (MIT, see LICENSE-halo).
 export const cloudDeckBottom = -560;
 
@@ -5,7 +7,7 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
   const surface = canvas.parentElement;
   const connection = navigator.connection;
   let visible = false, frame = 0, renderer, loading, staticOnly = false, contextLost = false;
-  let lastFrame, slowFrames = 0;
+  let lastFrame, slowFrames = 0, startTimer;
 
   function isLimited() {
     const type = connection?.effectiveType;
@@ -39,7 +41,7 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
     lastFrame = now;
     if (slowFrames >= 5) {
       staticOnly = true;
-      showStill();
+      sync();
       return;
     }
     if (renderer(now)) surface.toggleAttribute("data-clouds-ready", true);
@@ -47,14 +49,10 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
   }
 
   async function prepare(controller) {
-    const gl = canvas.getContext("webgl2", {
-      alpha: true,
-      antialias: false,
-      premultipliedAlpha: true,
-      failIfMajorPerformanceCaveat: true,
+    const gl = getHardwareContext(canvas, "webgl2", {
+      alpha: true, antialias: false, premultipliedAlpha: true,
     });
-    const info = gl?.getExtension("WEBGL_debug_renderer_info");
-    if (!gl || (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)))) {
+    if (!gl) {
       staticOnly = true;
       return;
     }
@@ -63,7 +61,10 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
   }
 
   function sync() {
+    surface.toggleAttribute("data-clouds-static", Boolean(isLimited()));
     if (!canRender()) {
+      clearTimeout(startTimer);
+      startTimer = undefined;
       cancelAnimationFrame(frame);
       frame = 0;
       if (camera().height <= cloudDeckBottom || isLimited()) showStill();
@@ -72,17 +73,22 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
     }
     if (renderer) {
       if (!frame) frame = requestAnimationFrame(paint);
-    } else if (!loading) {
-      const controller = loading = new AbortController();
-      void prepare(controller).catch(error => {
-        if (controller.signal.aborted) return;
-        staticOnly = true;
-        console.warn("Cloud renderer unavailable:", error);
-      }).finally(() => {
-        if (loading !== controller) return;
-        loading = undefined;
-        sync();
-      });
+    } else if (!loading && startTimer === undefined) {
+      // Let the poster, copy and first controls paint before opening the GPU.
+      startTimer = setTimeout(() => {
+        startTimer = undefined;
+        if (!canRender()) return;
+        const controller = loading = new AbortController();
+        void prepare(controller).catch(error => {
+          if (controller.signal.aborted) return;
+          staticOnly = true;
+          console.warn("Cloud renderer unavailable:", error);
+        }).finally(() => {
+          if (loading !== controller) return;
+          loading = undefined;
+          sync();
+        });
+      }, 240);
     }
   }
 

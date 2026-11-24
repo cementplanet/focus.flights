@@ -4,7 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>FocusFlight</title>
-  <script>history.scrollRestoration = "manual";</script>
+  <script>
+    history.scrollRestoration = "manual";
+    if (!location.hash || location.hash === "#flight") {
+      const crop = matchMedia("(max-aspect-ratio: 4/5)").matches ? "tall" : "wide";
+      for (const light of ["day", "night"]) {
+        const still = document.createElement("link");
+        still.rel = "preload";
+        still.as = "image";
+        still.fetchPriority = "high";
+        still.href = `/clouds/cloud-${light}-${crop}.webp`;
+        document.head.append(still);
+      }
+    }
+  </script>
   <script src="/app-store.js?v=storefront" type="module"></script>
   <script src="/analytics.js" type="module" async></script>
   <link rel="icon" href="/brand/app-icon-ios27.png">
@@ -346,17 +359,17 @@
     }
 
   </style>
-  <link rel="stylesheet" href="/sky.css?v=cloud-still">
+  <link rel="stylesheet" href="/sky.css?v=still-clouds">
   <link rel="stylesheet" href="/journey.css?v=dark-mode">
-  <link rel="stylesheet" href="/showcase.css?v=dark-mode-release">
+  <link rel="stylesheet" href="/showcase.css?v=dark-mode-hardware">
   <link rel="stylesheet" href="/button-motion.css?v=dark-mode">
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="/deep-focus.css?v=static-porthole">
   <link rel="stylesheet" href="/download.css?v=static-porthole">
-  <link rel="stylesheet" href="/gift.css?v=footer-badges-release">
+  <link rel="stylesheet" href="/gift.css?v=footer-badges-hardware">
   <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
-  <script src="/sky.js?v=dark-mode-gift-sheet-cabin-light-release" type="module"></script>
-  <script src="/showcase.js?v=dark-mode-on-demand-release" type="module"></script>
+  <script src="/sky.js?v=dark-mode-gift-sheet-cabin-light-hardware" type="module"></script>
+  <script src="/showcase.js?v=dark-mode-on-demand-hardware" type="module"></script>
 </head>
 <body>
   <div class="section-fade" aria-hidden="true"></div>

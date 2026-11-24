@@ -1,3 +1,4 @@
+import { getHardwareContext } from "../hardware-gl.js";
 import {createCabinMesh} from "./cabin-mesh.js";
 
 const fullscreen = `#version 300 es
@@ -317,16 +318,14 @@ export function setupPortholeSky(canvas) {
   }
 
   async function prepare(version) {
-    const gl = canvas.getContext("webgl2", {
+    const gl = getHardwareContext(canvas, "webgl2", {
       alpha: true,
       depth: true,
       stencil: true,
       antialias: true,
       premultipliedAlpha: true,
-      failIfMajorPerformanceCaveat: true,
     });
-    const info = gl?.getExtension("WEBGL_debug_renderer_info");
-    if (!gl || (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)))) {
+    if (!gl) {
       staticOnly = true;
       paintStill();
       return;

@@ -58,6 +58,7 @@ async function cueVideo(video, time, signal) {
 
 export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, moveLiquid) {
   const firstVideo = stage.querySelector("video");
+  const hero = stage.closest(".showcase").previousElementSibling;
   const appleVideo = (navigator.vendor === "Apple Computer, Inc." || CSS.supports("-webkit-touch-callout", "none"))
     && firstVideo.canPlayType('video/mp4; codecs="hvc1"');
   const devices = buttons.map((button, index) => {
@@ -268,7 +269,8 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   }
 
   function canLoad() {
-    return visible && !document.hidden && (!reducedMotion.matches || manualPlayback);
+    return visible && !document.hidden &&
+      (manualPlayback || (!reducedMotion.matches && !hero.hasAttribute("data-clouds-static")));
   }
 
   function shouldPlay() {

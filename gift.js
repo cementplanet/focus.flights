@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=gift-sheet";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=gift-sheet-hardware";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
