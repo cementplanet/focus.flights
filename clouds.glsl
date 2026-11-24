@@ -25,7 +25,7 @@ float density(vec3 point, float terrainScale) {
 
   point.x += 72.0 * elapsed;
   vec2 weatherUV = vec2(point.x * 0.82, point.z * 1.24) / 31000.0 + vec2(0.29, 0.63);
-  vec3 weather = textureLod(weatherNoise, weatherUV, 0.0).rgb;
+  vec2 weather = textureLod(weatherNoise, weatherUV, 0.0).rg;
   float banks = textureLod(weatherNoise, weatherUV * 0.49 + vec2(0.31, 0.18), 0.0).r;
   float coverage = smoothstep(0.31, 0.68, weather.r * 0.56 + banks * 0.44);
   vec3 shapeUV = vec3(point.x, point.y * 1.62, point.z) / 4050.0;

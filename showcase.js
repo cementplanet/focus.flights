@@ -1,6 +1,6 @@
 import { prepareCopy } from "./motion-copy.js";
 import { setupDeviceLiquid } from "./device-liquid.js?v=dark-mode";
-import { setupDevicePlayback } from "./device-playback.js?v=on-demand-hardware";
+import { setupDevicePlayback } from "./device-playback.js?v=front-index";
 import { setupDeviceOrbit } from "./device-orbit.js?v=transform-orbit";
 
 const section = document.querySelector(".showcase");

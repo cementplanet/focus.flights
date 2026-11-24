@@ -1,4 +1,5 @@
 import { getHardwareContext } from "./hardware-gl.js";
+import { bindCloudNoise, cloudNoiseUniforms, loadCloudNoise } from "./cloud-noise.js";
 
 // Noise volumes generated from Leonxlnx/halo-above-the-clouds at 1d08819 (MIT, see LICENSE-halo).
 export const cloudDeckBottom = -560;
@@ -134,11 +135,10 @@ async function createRenderer(gl, canvas, sky, aircraft, camera, signal) {
     return shader;
   }
 
-  const [fragment, shadow, shape, detail, weather] = await Promise.all([
-    asset("clouds.glsl?v=horizon-feather").then((response) => response.text()),
+  const [fragment, shadow, volumes] = await Promise.all([
+    asset("clouds.glsl?v=compact-noise").then((response) => response.text()),
     asset("aircraft/shadow.bin?v=airliner-clay-2").then((response) => response.arrayBuffer()),
-    ...["shape64", "detail32", "weather512"].map((name) =>
-      asset(`data/noise/${name}.bin`).then((response) => response.arrayBuffer())),
+    loadCloudNoise(),
   ]);
 
   signal.throwIfAborted();
@@ -160,37 +160,20 @@ async function createRenderer(gl, canvas, sky, aircraft, camera, signal) {
   gl.useProgram(program);
 
   const uniforms = Object.fromEntries([
-    "shapeNoise", "detailNoise", "weatherNoise", "aircraftShadow", "aircraftDistance", "aircraftOffset", "resolution",
+    ...cloudNoiseUniforms, "aircraftShadow", "aircraftDistance", "aircraftOffset", "resolution",
     "elapsed", "cameraHeight", "deckDepth", "night", "shadowColor", "lightColor", "skyMid", "skyHorizon",
   ].map((name) => [name, gl.getUniformLocation(program, name)]));
 
-  function upload(name, unit, size, data, volume, format = gl.RGBA) {
-    const target = volume ? gl.TEXTURE_3D : gl.TEXTURE_2D;
-    const channels = format === gl.RED ? 1 : 4;
-    if (data.byteLength !== size ** (volume ? 3 : 2) * channels) {
-      throw new Error(`Invalid size for ${name}`);
-    }
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(target, gl.createTexture());
-    gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    const pixels = new Uint8Array(data);
-    if (volume) {
-      gl.texParameteri(target, gl.TEXTURE_WRAP_R, gl.REPEAT);
-      gl.texImage3D(target, 0, gl.RGBA8, size, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    } else {
-      const internalFormat = format === gl.RED ? gl.R8 : gl.RGBA8;
-      gl.texImage2D(target, 0, internalFormat, size, size, 0, format, gl.UNSIGNED_BYTE, pixels);
-    }
-    gl.uniform1i(uniforms[name], unit);
-  }
+  bindCloudNoise(gl, volumes);
+  cloudNoiseUniforms.forEach((name, unit) => gl.uniform1i(uniforms[name], unit));
 
-  upload("shapeNoise", 0, 64, shape, true);
-  upload("detailNoise", 1, 32, detail, true);
-  upload("weatherNoise", 2, 512, weather, false);
-  upload("aircraftShadow", 3, 128, shadow, false, gl.RED);
+  if (shadow.byteLength !== 128 ** 2) throw new Error("Invalid size for aircraft shadow");
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 128, 128, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array(shadow));
+  gl.uniform1i(uniforms.aircraftShadow, 3);
 
   const epoch = performance.now();
   let frameAt = -Infinity;

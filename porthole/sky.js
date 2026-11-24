@@ -1,4 +1,5 @@
 import { getHardwareContext } from "../hardware-gl.js";
+import { bindCloudNoise, cloudNoiseUniforms, loadCloudNoise } from "../cloud-noise.js";
 import {createCabinMesh} from "./cabin-mesh.js";
 
 const fullscreen = `#version 300 es
@@ -26,10 +27,10 @@ const skyWidth = 320, skyHeight = 480;
 // The original 2:3 camera, cropped slightly tighter for the website.
 const zoom = 1.14;
 
-async function read(path, binary = false) {
-  const response = await fetch(new URL(path + (binary ? "" : "?v=cabin-light"), import.meta.url));
+async function read(path) {
+  const response = await fetch(new URL(path + "?v=cabin-light", import.meta.url));
   if (!response.ok) throw new Error(path + " returned " + response.status);
-  return binary ? response.arrayBuffer() : response.text();
+  return response.text();
 }
 
 function program(gl, vertex, fragment, names) {
@@ -51,18 +52,17 @@ function program(gl, vertex, fragment, names) {
 async function createScene(gl) {
   const aircraft = new Image();
   aircraft.src = new URL("airliner.webp", import.meta.url);
-  const noise = [["shapeNoise","shape64",64], ["detailNoise","detail32",32], ["weatherNoise","weather512",512]];
   const [skySource, cabinVertex, cabinFragment, glassFragment, volumes] = await Promise.all([
     read("sky.glsl"), read("cabin.vert"), read("cabin.frag"), read("glass.frag"),
-    Promise.all(noise.map(([, file]) => read("../data/noise/"+file+".bin", true))), aircraft.decode(),
+    loadCloudNoise(), aircraft.decode(),
   ]);
   if (gl.isContextLost()) return;
-  const sky = program(gl, fullscreen, skySource, ["resolution","elapsed","view","camera","aircraft",...noise.map(([name])=>name)]);
+  const sky = program(gl, fullscreen, skySource, ["resolution","elapsed","view","camera","aircraft",...cloudNoiseUniforms]);
   const glass = program(gl, paneVertex, glassFragment, ["resolution","projection","tilt","zoom","skyMap"]);
   const cabin = program(gl, cabinVertex, cabinFragment, ["resolution","projection","tilt","shade","zoom","skyMap"]);
   // Shade the moving view directly into the display-sized canvas.
   const paneSky = program(gl,paneVertex,skySource,
-    ["resolution","elapsed","view","camera","aircraft","projection","zoom","tilt",...noise.map(([name])=>name)]);
+    ["resolution","elapsed","view","camera","aircraft","projection","zoom","tilt",...cloudNoiseUniforms]);
   const stencil = program(gl,paneVertex,`#version 300 es
     precision highp float;
     out vec4 pixel;
@@ -96,15 +96,7 @@ async function createScene(gl) {
     gl.texParameteri(target, gl.TEXTURE_WRAP_T, wrap);
     return tex;
   }
-  gl.useProgram(sky.handle);
-  noise.forEach(([name,,size], unit) => {
-    const volume = unit < 2, target = volume ? gl.TEXTURE_3D : gl.TEXTURE_2D;
-    texture(unit, target, gl.REPEAT);
-    const pixels = new Uint8Array(volumes[unit]);
-    if (volume) gl.texImage3D(target,0,gl.RGBA8,size,size,size,0,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
-    else gl.texImage2D(target,0,gl.RGBA8,size,size,0,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
-    gl.uniform1i(sky[name],unit);
-  });
+  bindCloudNoise(gl, volumes);
 
   const skyUnit = 3, lightUnit = 6;
   const skyTexture = texture(skyUnit,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
@@ -161,7 +153,7 @@ async function createScene(gl) {
   for (const pass of [sky,paneSky]) {
     gl.useProgram(pass.handle);
     gl.uniform1i(pass.aircraft,4);
-    noise.forEach(([name],i)=>gl.uniform1i(pass[name],i));
+    cloudNoiseUniforms.forEach((name,i)=>gl.uniform1i(pass[name],i));
   }
   gl.useProgram(paneSky.handle);
   gl.uniform1f(paneSky.zoom,zoom);
