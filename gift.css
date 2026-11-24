@@ -328,7 +328,19 @@
 }
 
 .site-footer-icon {
-  width: var(--icon-size, 18px);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  border: 1px solid #dbe4f447;
+  border-radius: 7px;
+  background: #0e141dbd;
+}
+
+.site-footer-icon::before {
+  content: "";
+  width: var(--icon-size, 15px);
   aspect-ratio: 1;
   background: currentColor;
   mask: var(--icon-url) center / contain no-repeat;
@@ -337,16 +349,21 @@
 /* Simple Icons wordmark and symbols, sized for the visible marks. */
 .icon-xiaohongshu {
   --icon-url: url("brand/social/xiaohongshu.svg");
-  --icon-size: 28px;
+  --icon-size: 23px;
 }
 .icon-instagram { --icon-url: url("brand/social/instagram.svg"); }
 .icon-x {
   --icon-url: url("brand/social/x.svg");
-  --icon-size: 19px;
+  --icon-size: 16px;
 }
 .site-footer-social a:hover { color: white; }
+.site-footer-social a:hover .site-footer-icon {
+  border-color: #dbe4f488;
+  background: #293240d9;
+}
 @media (forced-colors: active) {
-  .site-footer-icon { forced-color-adjust: none; background: LinkText; }
+  .site-footer-icon { border-color: LinkText; }
+  .site-footer-icon::before { forced-color-adjust: none; background: LinkText; }
 }
 
 .site-footer-links {
