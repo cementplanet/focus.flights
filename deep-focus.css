@@ -206,6 +206,9 @@
 @media (orientation: landscape) and (max-height: 500px) {
   .deep-focus { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 }
+@media (orientation: landscape) and (max-height: 430px) {
+  .focus-description { font-size: min(var(--intro-font-size), 20px); }
+}
 @keyframes porthole-arrival {
   from { --window-entry: 0; }
   to { --window-entry: 1; }

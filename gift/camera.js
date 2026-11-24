@@ -160,7 +160,7 @@ function cameraPose(t) {
 
 async function prepare(gl, letterIsRising, isCurrent) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
-    readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
+    readImage("invitation.webp?v=english-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
     fetch(new URL("./runway.glsl?v=ignition",import.meta.url)).then(response=>{
       if (!response.ok) throw Error("Runway lighting could not load");

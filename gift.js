@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=letter-handoff";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=english-cards";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
@@ -29,7 +29,7 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
   const welcomePrint = new Image();
   function prepareWelcomePrint() {
     if (welcomePrint.hasAttribute("src")) return;
-    welcomePrint.src = new URL("./gift/welcome-print.webp", import.meta.url);
+    welcomePrint.src = new URL("./gift/welcome-print.webp?v=english-cards", import.meta.url);
     void welcomePrint.decode().then(() => {
       sequence.setAttribute("data-welcome-print-ready", "");
     }).catch(() => { /* Keep the existing atlas if the print is unavailable. */ });

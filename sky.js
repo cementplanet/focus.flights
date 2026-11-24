@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=letter-handoff";
+import { setupGiftDescent } from "./gift.js?v=english-cards";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=compact-noise";
 import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
