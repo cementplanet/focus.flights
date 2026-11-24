@@ -158,7 +158,7 @@ function cameraPose(t) {
   return {x,y,z,aimY};
 }
 
-async function prepare(gl) {
+async function prepare(gl, letterIsRising, isCurrent) {
   const [invitation,floor,plane,runwaySource]=await Promise.all([
     readImage("invitation.webp?v=lit-cards"),readImage("graphite.webp"),
     readImage("../aircraft/deep-focus-front.webp"),
@@ -167,7 +167,9 @@ async function prepare(gl) {
       return response.text();
     }),
   ]);
-  if (gl.isContextLost()) return;
+  // A late studio load can wait until the static card has finished entering.
+  while (isCurrent() && letterIsRising()) await new Promise(resolve => requestAnimationFrame(resolve));
+  if (!isCurrent() || gl.isContextLost()) return;
   function texture(image,repeat=false) {
     const handle=gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D,handle);
@@ -276,6 +278,7 @@ async function prepare(gl) {
 
 export function setupStudio(canvas, download, welcome) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const gift = canvas.closest(".gift");
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
   let visible = false, generation = 0, dirty = true, idleFrame = 0;
@@ -285,7 +288,7 @@ export function setupStudio(canvas, download, welcome) {
 
   function render(now) {
     draw(position,canvas.width,canvas.height,paperPhase,lift,slip,lift ? now/1000 : 0,landing,cardLayout);
-    canvas.dataset.ready = "";
+    if (!canvas.hasAttribute("data-ready")) canvas.setAttribute("data-ready", "");
     dirty = false;
   }
   function paint(now = performance.now()) {
@@ -323,7 +326,7 @@ export function setupStudio(canvas, download, welcome) {
     if (!gl) { unavailable = true; return; }
     if (gl.isContextLost()) return;
     const current = generation;
-    loading = prepare(gl).then(renderer=>{
+    loading = prepare(gl, () => gift.hasAttribute("data-letter-rising"), () => current === generation).then(renderer=>{
       if (current !== generation || !renderer) return;
       draw = renderer;
       if (reducedMotion.matches) return;
@@ -374,6 +377,6 @@ export function setupStudio(canvas, download, welcome) {
     slip = separation;
     landing = approach;
     warm();
-    resize();
+    paint();
   };
 }

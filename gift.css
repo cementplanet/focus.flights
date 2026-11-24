@@ -103,7 +103,9 @@
   outline: none;
   color: #f5f5f3;
 }
-.gift[data-airborne]:has(.gift-camera[data-ready]) + .gift-letter {
+.gift[data-airborne] .gift-camera { transition: opacity 240ms var(--button-press); }
+.gift[data-letter-rising]:not([data-letter-flight]) .gift-camera { opacity: 0; }
+.gift[data-letter-flight]:has(.gift-camera[data-ready]) + .gift-letter {
   opacity: var(--welcome-presence, 0);
 }
 .gift-copy h2 {
@@ -149,7 +151,20 @@
   background-repeat: no-repeat;
   background-position: var(--print-x) .347222%;
 }
-.welcome-print { --print-x: .290698%; }
+.welcome-print { --print-x: .290698%; position: relative; }
+.welcome-print::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms var(--button-press);
+}
+[data-welcome-print-ready] .welcome-print::after {
+  background: url("gift/welcome-print.webp") center / cover no-repeat;
+  opacity: 1;
+}
 .black-week-print { --print-x: 50%; }
 .sharing-print { --print-x: 99.709302%; }
 .gift-letter button {
@@ -184,6 +199,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .gift-camera { visibility: hidden; }
+  .welcome-print::after { transition: none; }
 }
 
 .runway {

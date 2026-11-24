@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=gift-sheet-hardware";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=letter-handoff";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
@@ -24,7 +24,22 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
   }
 
   const [welcome] = slides;
-  const render = setupStudio(gift.querySelector(".gift-camera"), download, welcome);
+  const camera = gift.querySelector(".gift-camera");
+  const render = setupStudio(camera, download, welcome);
+  const welcomePrint = new Image();
+  function prepareWelcomePrint() {
+    if (welcomePrint.hasAttribute("src")) return;
+    welcomePrint.src = new URL("./gift/welcome-print.webp", import.meta.url);
+    void welcomePrint.decode().then(() => {
+      sequence.setAttribute("data-welcome-print-ready", "");
+    }).catch(() => { /* Keep the existing atlas if the print is unavailable. */ });
+  }
+  const printObserver = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) return;
+    printObserver.disconnect();
+    prepareWelcomePrint();
+  }, { rootMargin: "100% 0px" });
+  printObserver.observe(gift);
   const reader = document.getElementById("gift-reader");
   const enlarged = reader.querySelector(".gift-print");
   for (const slide of slides) {
@@ -97,7 +112,10 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
     content.style.setProperty("--gift-exit", Math.min(1, travel / .57));
   }
 
+  let interactiveSlide;
   function setActiveSlide(activeSlide) {
+    if (activeSlide === interactiveSlide) return;
+    interactiveSlide = activeSlide;
     for (const slide of slides) slide.inert = slide !== activeSlide;
     if (!activeSlide && reader.open) reader.close();
   }
@@ -106,11 +124,21 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
   function floatLetter(phase, approach, activeSlide) {
     const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
     const lift = sample(phase);
-    const slip = sample(phase/.94);
+    const rising = phase > 0 && phase < 1;
+    if (rising && !gift.hasAttribute("data-letter-rising")) {
+      gift.toggleAttribute("data-letter-flight", camera.hasAttribute("data-ready"));
+    } else if (phase === 0) {
+      gift.removeAttribute("data-letter-flight");
+    }
+    gift.toggleAttribute("data-letter-rising", rising);
+    const flying = gift.hasAttribute("data-letter-flight");
+    const slip = phase > 0 && !flying ? 1 : sample(phase/.94);
+    if (phase > 0 && !gift.hasAttribute("data-airborne")) prepareWelcomePrint();
     setActiveSlide(activeSlide);
     gift.toggleAttribute("data-airborne", phase > 0);
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
-    welcome.style.setProperty("--welcome-presence", ease(.84,1,phase));
+    // Cover the moving sheet before it leaves the WebGL draw pass at .94.
+    welcome.style.setProperty("--welcome-presence", ease(.86,.935,phase));
     const landing = sample(approach);
     gift.style.setProperty("--runway-arrival", landing);
     revealRunwayCopy(approach, landing);
@@ -121,6 +149,8 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
     if (!gift.hasAttribute("data-airborne")) return;
     setActiveSlide(null);
     gift.removeAttribute("data-airborne");
+    gift.removeAttribute("data-letter-rising");
+    gift.removeAttribute("data-letter-flight");
     gift.style.removeProperty("--letter-poster");
     gift.style.removeProperty("--runway-arrival");
     welcome.style.removeProperty("--welcome-presence");
