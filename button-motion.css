@@ -118,7 +118,7 @@ a.aqua-button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .showcase-devices, .site-header[data-on-showcase] {
+  .showcase-devices, .site-header[data-on-showcase] .sky-nav-surface {
     --aqua-reflection: url(#device-aqua-dark);
     --aqua-edge-opacity: .16;
     --aqua-shadow: rgb(0 0 0 / .42);
@@ -126,7 +126,7 @@ a.aqua-button {
 
   .showcase-devices { --aqua-selection: #0c0f15; }
 
-  .site-header[data-on-showcase] :is(.sky-nav, .sky-get-app) { color: inherit; }
+  .site-header[data-on-showcase] .sky-nav { color: inherit; }
   .site-header[data-on-showcase] .sky-nav a:focus-visible { outline-color: #aac4ed; }
 }
 
