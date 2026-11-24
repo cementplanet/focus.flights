@@ -72,7 +72,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     video.playsInline = true;
     video.preload = "auto";
     video.setAttribute("aria-hidden", "true");
-    item.querySelector(".device-orbit-media").append(video);
+    item.querySelector(".device-orbit-sharp").append(video);
     const chapterStarts = button.dataset.chapters.split(",").map(Number);
     const chapters = [0, ...chapterStarts];
     const cues = [...button.dataset.boardingCues.split(",").map(Number), ...chapterStarts];
@@ -256,8 +256,15 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     active.video.pause();
     active.item.removeAttribute("data-front");
     replay?.video.pause();
-    for (const device of outgoing) unload(device);
-    outgoing.clear();
+    // Keep the last decoded frame until the orbit has defocused the device.
+    for (const device of outgoing) {
+      device.video.pause();
+      if (!visible || document.hidden) {
+        outgoing.delete(device);
+        unload(device);
+      }
+    }
+    retireHiddenVideos();
   }
 
   function retireHiddenVideos() {
@@ -359,7 +366,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
       const previous = current.video;
       // Additive blending preserves the opaque device body through the dissolve.
       const group = document.createElement("div");
-      Object.assign(group.style, { position: "absolute", inset: "0", isolation: "isolate", opacity: "var(--device-sharp, 1)" });
+      Object.assign(group.style, { position: "absolute", inset: "0", isolation: "isolate" });
       previous.before(group);
       group.append(previous, next.video);
       previous.removeAttribute("id");
@@ -403,8 +410,8 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
       // A fully buffered clip can finish its orbit fade without making a request.
       const fullyBuffered = active.blobURL || (buffered.length === 1 &&
         buffered.start(0) === 0 && buffered.end(0) >= duration - .05);
-      if (!paused && !reducedMotion.matches && fullyBuffered) outgoing.add(active);
-      else unload(active);
+      outgoing.add(active);
+      if (paused || reducedMotion.matches || !fullyBuffered) active.video.pause();
     } else if (active.loading) {
       unload(active);
     }

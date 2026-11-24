@@ -14,10 +14,12 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   const items = buttons.map((button, index) => {
     const item = document.createElement("div");
     const media = document.createElement("div");
+    const sharp = document.createElement("div");
     const poster = document.createElement("img");
     const [x, y, width, height] = bounds[index];
     item.className = "device-orbit-item";
     media.className = "device-orbit-media";
+    sharp.className = "device-orbit-sharp";
     media.style.animationDelay = `${index * -1.7}s`;
     item.dataset.device = button.dataset.device;
     item.style.setProperty("--device-ratio", width / height);
@@ -30,12 +32,13 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     poster.alt = "";
     poster.draggable = false;
     item.setAttribute("aria-hidden", "true");
-    media.append(poster);
+    sharp.append(poster);
     const blurred = poster.cloneNode();
     blurred.className = "device-orbit-blur";
     posters.push({ poster, blurred, base });
     media.append(blurred);
-    if (index === 0) media.append(firstVideo);
+    if (index === 0) sharp.append(firstVideo);
+    media.append(sharp);
     item.append(media);
     item.addEventListener("click", () => button.click());
     orbit.append(item);

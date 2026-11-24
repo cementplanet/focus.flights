@@ -329,15 +329,29 @@
   pointer-events: none;
 }
 
+.device-orbit-sharp {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  opacity: var(--device-sharp, 1);
+}
+/* Blend inside a single sharp layer so the device stays opaque during handoff. */
 .device-orbit-poster,
-.device-orbit-item video { opacity: var(--device-sharp, 1); }
+.device-orbit-sharp > video { mix-blend-mode: plus-lighter; }
+.device-orbit-poster,
+.device-orbit-item video { opacity: 1; }
 .device-orbit-blur {
   opacity: calc((1 - var(--device-sharp, 1)) * var(--device-blur-strength, 1));
   /* The blurred poster still has visible alpha along the export's top and bottom. */
   mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
 }
-.device-orbit-item:has(video:not([data-buffering])) .device-orbit-poster { visibility: hidden; }
+.device-orbit-sharp:has(video:not([data-buffering])) .device-orbit-poster { opacity: 0; }
 .showcase-stage video[data-buffering] { opacity: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .device-orbit-poster,
+  .device-orbit-sharp > video { transition: opacity 650ms var(--orbit-ease); }
+}
 
 .showcase-devices {
   position: absolute;
