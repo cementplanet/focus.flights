@@ -1,6 +1,6 @@
 import { setupGiftDescent } from "./gift.js?v=inline-footer";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
-import { setupPortholeSky } from "./porthole/sky.js?v=static-porthole";
+import { setupPortholeSky } from "./porthole/sky.js?v=cabin-light";
 import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
 import { prepareCopy, unit } from "./motion-copy.js";
 import { startClouds } from "./clouds.js?v=framed-flight";

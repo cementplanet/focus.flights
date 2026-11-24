@@ -26,7 +26,7 @@ const skyWidth = 320, skyHeight = 480;
 const zoom = 1.14;
 
 async function read(path, binary = false) {
-  const response = await fetch(new URL(path + (binary ? "" : "?v=ascent"), import.meta.url));
+  const response = await fetch(new URL(path + (binary ? "" : "?v=cabin-light"), import.meta.url));
   if (!response.ok) throw new Error(path + " returned " + response.status);
   return binary ? response.arrayBuffer() : response.text();
 }
@@ -59,8 +59,7 @@ async function createScene(gl) {
   const sky = program(gl, fullscreen, skySource, ["resolution","elapsed","view","camera","aircraft",...noise.map(([name])=>name)]);
   const glass = program(gl, paneVertex, glassFragment, ["resolution","projection","tilt","zoom","skyMap"]);
   const cabin = program(gl, cabinVertex, cabinFragment, ["resolution","projection","tilt","shade","zoom","skyMap"]);
-  // Shade the moving view directly into the display-sized canvas. The
-  // pane texture is reserved for lighting the cabin and the resting glass.
+  // Shade the moving view directly into the display-sized canvas.
   const paneSky = program(gl,paneVertex,skySource,
     ["resolution","elapsed","view","camera","aircraft","projection","zoom","tilt",...noise.map(([name])=>name)]);
   const stencil = program(gl,paneVertex,`#version 300 es
@@ -106,11 +105,22 @@ async function createScene(gl) {
     gl.uniform1i(sky[name],unit);
   });
 
-  const skyTexture = texture(3,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,skyWidth,skyHeight,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  const skyUnit = 3, lightUnit = 6;
+  const skyTexture = texture(skyUnit,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
+  const lightTexture = texture(lightUnit,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
+  function sizeSkyTextures(width,height) {
+    for (const [unit, tex] of [[skyUnit,skyTexture],[lightUnit,lightTexture]]) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D,tex);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,width,height,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    }
+  }
+  sizeSkyTextures(skyWidth,skyHeight);
   const target = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER,target);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,skyTexture,0);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,lightTexture,0);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1]);
   if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error("Incomplete sky render target");
   texture(4,gl.TEXTURE_2D,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,aircraft);
@@ -144,7 +154,7 @@ async function createScene(gl) {
   gl.bindVertexArray(null);
   for (const pass of [glass,cabin]) {
     gl.useProgram(pass.handle);
-    gl.uniform1i(pass.skyMap,3);
+    gl.uniform1i(pass.skyMap,pass === glass ? skyUnit : lightUnit);
     gl.uniform1f(pass.zoom,zoom);
   }
   for (const pass of [sky,paneSky]) {
@@ -176,9 +186,7 @@ async function createScene(gl) {
       const w = Math.max(1,Math.ceil(width * zoom * .435));
       const h = Math.max(1,Math.ceil(width * zoom * 1.5 * .44));
       if (w !== lightWidth || h !== lightHeight) {
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D,skyTexture);
-        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+        sizeSkyTextures(w,h);
         lightWidth=w; lightHeight=h; lastSkyTime=undefined;
       }
     }

@@ -11,7 +11,8 @@ uniform vec4 view; // optical centre and field of view, in viewport units
 uniform vec3 camera; // pitch, metres climbed, metres forward
 uniform sampler2D aircraft;
 uniform float elapsed;
-out vec4 pixel;
+layout(location = 0) out vec4 pixel;
+layout(location = 1) out vec4 cabinLight;
 const float cloudBase = 160., cloudCeiling = 1120.;
 const float earthRadius = 6371000.;
 const float sceneHour = 19.55;
@@ -153,6 +154,10 @@ void main() {
     vec2 slope = ray.xy / ray.z;
     vec2 uv = vec2(.5 + 1.5 * slope.x, .548 - slope.y / .86);
     vec3 color = atmosphere(position, uv, ray, 1240. + camera.y);
+    // One display-level dither keeps the long blue gradient smooth at 8 bits.
+    float grain = fract(52.9829189 * fract(dot(floor(position),vec2(.06711056,.00583715)))) - .5;
+    // Cabin surfaces receive ambient sky light without the passing aircraft or its trail.
+    cabinLight = vec4(color + grain / 255., 1.);
 
     // Intersect this ray with the passing aircraft's plane, 6 km beyond the glass.
     vec2 distant = slope * (1. - camera.z / 6000.) + vec2(0., camera.y / 6000.);
@@ -166,7 +171,5 @@ void main() {
         vec4 plane = texture(aircraft, sprite);
         color = mix(color, plane.rgb, plane.a);
     }
-    // One display-level dither keeps the long blue gradient smooth at 8 bits.
-    float grain = fract(52.9829189 * fract(dot(floor(position),vec2(.06711056,.00583715)))) - .5;
     pixel = vec4(color + grain / 255., 1.);
 }
