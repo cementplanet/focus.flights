@@ -10,6 +10,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   orbit.className = "device-orbit";
   wave.append(orbit);
   stage.append(wave);
+  const posters = [];
   const items = buttons.map((button, index) => {
     const item = document.createElement("div");
     const media = document.createElement("div");
@@ -23,7 +24,8 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     item.style.setProperty("--canvas-width", `${3840 / width * 100}%`);
     item.style.setProperty("--canvas-left", `${-x / width * 100}%`);
     item.style.setProperty("--canvas-top", `${-y / height * 100}%`);
-    poster.src = `/device-media/${button.dataset.media ?? button.dataset.device}.png`;
+    const base = `/device-media/${button.dataset.media ?? button.dataset.device}`;
+    poster.decoding = "async";
     poster.className = "device-orbit-poster";
     poster.alt = "";
     poster.draggable = false;
@@ -31,7 +33,7 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
     media.append(poster);
     const blurred = poster.cloneNode();
     blurred.className = "device-orbit-blur";
-    blurred.src = `/device-media/${button.dataset.media ?? button.dataset.device}-blur.png`;
+    posters.push({ poster, blurred, base });
     media.append(blurred);
     if (index === 0) media.append(firstVideo);
     item.append(media);
@@ -50,6 +52,26 @@ export function setupDeviceOrbit(stage, buttons, reducedMotion) {
   const compact = matchMedia("(max-width: 700px)");
 
   const section = stage.closest(".showcase");
+  const hero = section.previousElementSibling;
+  function loadPosters() {
+    entryObserver.disconnect();
+    handoffObserver.disconnect();
+    for (const { poster, blurred, base } of posters) {
+      poster.srcset = `${base}.webp 1920w, ${base}-4k.webp 3840w`;
+      poster.src = `${base}.webp`;
+      blurred.src = `${base}-blur.webp`;
+    }
+  }
+  const entryObserver = new IntersectionObserver(([entry]) => {
+    if (entry.intersectionRatio >= .01) loadPosters();
+  }, { threshold: .01 });
+  const handoffObserver = new MutationObserver(() => {
+    if (hero.hasAttribute("data-handoff")) loadPosters();
+  });
+  entryObserver.observe(section);
+  handoffObserver.observe(hero, { attributes: true, attributeFilter: ["data-handoff"] });
+  if (hero.hasAttribute("data-handoff")) loadPosters();
+
   const intro = section.querySelector(".showcase-intro");
   const picker = section.querySelector(".showcase-devices");
   let frontX = .72;

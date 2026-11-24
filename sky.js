@@ -1,7 +1,7 @@
 import { setupGiftDescent } from "./gift.js?v=inline-footer";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
-import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
-import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
+import { setupPortholeSky } from "./porthole/sky.js?v=static-porthole";
+import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
 import { prepareCopy, unit } from "./motion-copy.js";
 import { startClouds } from "./clouds.js?v=framed-flight";
 import { startContrails } from "./contrails.js?v=nozzle-alignment";

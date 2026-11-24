@@ -13,13 +13,15 @@ function flightTime(chapters, duration, progress) {
     boundaries[index] + (boundaries[index + 1] - boundaries[index]) * (position - index));
 }
 
-function correspondingTime(previous, current, destination) {
-  const from = [0, ...previous.cues, current.duration];
+function correspondingTime(previous, destination) {
+  if (!previous) return 0;
+  const { device, duration, currentTime } = previous;
+  const from = [0, ...device.cues, duration];
   const to = [0, ...destination.cues, destination.video.duration];
-  const time = Math.min(current.duration, current.currentTime);
+  const time = Math.min(duration, currentTime);
   const end = Math.max(0, destination.video.duration - 1 / 30);
-  if (!Number.isFinite(current.duration)) return 0;
-  if (from.length !== to.length) return Math.min(end, time * end / current.duration);
+  if (device === destination) return Math.min(end, time);
+  if (from.length !== to.length) return Math.min(end, time * end / duration);
   const next = from.findIndex((point, index) => index > 0 && time < point);
   if (next < 0) return end;
   const progress = (time - from[next - 1]) / (from[next] - from[next - 1]);
@@ -58,7 +60,6 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   const firstVideo = stage.querySelector("video");
   const appleVideo = (navigator.vendor === "Apple Computer, Inc." || CSS.supports("-webkit-touch-callout", "none"))
     && firstVideo.canPlayType('video/mp4; codecs="hvc1"');
-  const signal = new AbortController().signal;
   const devices = buttons.map((button, index) => {
     const video = index === 0 ? firstVideo : document.createElement("video");
     const base = `/device-media/${button.dataset.media ?? button.dataset.device}`;
@@ -69,7 +70,6 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     video.defaultMuted = true;
     video.playsInline = true;
     video.preload = "auto";
-    video.poster = `${base}.png`;
     video.setAttribute("aria-hidden", "true");
     item.querySelector(".device-orbit-media").append(video);
     const chapterStarts = button.dataset.chapters.split(",").map(Number);
@@ -78,14 +78,12 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     return { button, video, item, base, cues, chapters, ready: false };
   });
   let active = devices[0];
-  let cueSource = active;
+  let parkedCue;
   const outgoing = new Set();
   const local = ["127.0.0.1", "localhost"].includes(location.hostname);
   const easing = getComputedStyle(stage).getPropertyValue("--orbit-ease").trim();
   let ranges;
-  let started = false;
   let visible = false;
-  let switching = false;
   let cycling = false;
   let revision = 0;
   let transition;
@@ -110,14 +108,15 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
 
   function updateProgress() {
     retireHiddenVideos();
-    const source = switching ? cueSource : active;
-    let progress = flightProgress(source.chapters, source.video.duration, source.video.currentTime);
+    const source = active.ready ? active : parkedCue?.device ?? active;
+    const timeline = active.ready ? active.video : parkedCue;
+    let progress = flightProgress(source.chapters, timeline?.duration, timeline?.currentTime ?? 0);
     if (replay?.device === source && replay.animations) {
       const blend = replay.animations[1].effect.getComputedTiming().progress ?? 0;
       const position = segments.length + (progress.reduce((sum, value) => sum + value, 0) - segments.length) * blend;
       progress = progress.map((_, index) => Math.max(0, Math.min(1, position - index)));
     }
-    if (shouldPlay() && active.ready && !switching && !replay && active.video.duration - active.video.currentTime < 2.5) {
+    if (shouldPlay() && active.ready && !replay && active.video.duration - active.video.currentTime < 2.5) {
       void prepareReplay(active);
     }
     segments.forEach((segment, index) => {
@@ -126,11 +125,11 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
       const percent = String(Math.round(progress[index] * 100));
       if (segment.getAttribute("aria-valuenow") !== percent) segment.setAttribute("aria-valuenow", percent);
     });
-    scrubber.disabled = !active.ready || switching || cycling;
+    scrubber.disabled = !active.ready || cycling;
     if (!scrubbing) scrubber.value = progress.reduce((sum, value) => sum + value, 0) * 100 / segments.length;
     const currentSegment = Math.min(segments.length - 1, Math.floor(Number(scrubber.value) * segments.length / 100));
     scrubber.setAttribute("aria-valuetext", `${segments[currentSegment].getAttribute("aria-label")}, ${Math.round(Number(scrubber.value))}%`);
-    toggle.disabled = !active.ready || switching;
+    toggle.disabled = Boolean(active.loading);
     const playing = !active.video.paused && !active.video.ended;
     toggle.toggleAttribute("data-playing", playing);
     toggle.setAttribute("aria-label", playing ? "Pause preview" : "Play preview");
@@ -190,55 +189,90 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     scrubber.addEventListener(event, event => event.stopPropagation(), { passive: true });
   }
 
+  function unload(device) {
+    device.loadController?.abort();
+    device.loadController = undefined;
+    device.loading = undefined;
+    device.ready = false;
+    device.video.setAttribute("data-buffering", "");
+    device.item.removeAttribute("data-front");
+    device.video.pause();
+    device.video.removeAttribute("src");
+    device.video.load();
+    if (device.blobURL) URL.revokeObjectURL(device.blobURL);
+    device.blobURL = undefined;
+  }
+
   function load(device) {
-    return device.loading ??= (async () => {
-      const src = `${device.base}.${appleVideo ? "mov" : "webm"}`;
+    const controller = device.loadController = new AbortController();
+    const { signal } = controller;
+    const cue = parkedCue;
+    const src = `${device.base}.${appleVideo ? "mov" : "webm"}`;
+    device.loading = (async () => {
       if (local) {
-        ranges ??= fetch(src, { method: "HEAD" })
-          .then(response => response.headers.get("accept-ranges") === "bytes")
-          .catch(() => false);
-        if (!await ranges) {
+        if (ranges === undefined) {
+          ranges = await fetch(src, { method: "HEAD", signal })
+            .then(response => response.headers.get("accept-ranges") === "bytes")
+            .catch(error => {
+              if (signal.aborted) throw error;
+              return false;
+            });
+        }
+        if (!ranges) {
           const response = await fetch(src, { signal });
           if (!response.ok) throw new Error(`Missing ${src}`);
-          device.blobURL = URL.createObjectURL(await response.blob());
+          const blob = await response.blob();
+          signal.throwIfAborted();
+          device.blobURL = URL.createObjectURL(blob);
         }
       }
+      signal.throwIfAborted();
       // Safari may stop at metadata unless frame loading is explicitly requested.
       device.video.src = device.blobURL ?? src;
       device.video.load();
       await waitForVideo(device.video, "loadedmetadata", () => Number.isFinite(device.video.duration), signal);
-      await cueVideo(device.video, 0, signal);
+      await cueVideo(device.video, correspondingTime(cue, device), signal);
+      signal.throwIfAborted();
       device.ready = true;
       delete device.video.dataset.buffering;
       return true;
     })().catch(error => {
-      device.video.pause();
-      device.video.removeAttribute("src");
-      device.video.load();
-      if (device.blobURL) URL.revokeObjectURL(device.blobURL);
-      device.blobURL = undefined;
-      device.loading = undefined;
-      console.warn(`Device preview unavailable: ${device.button.dataset.device}`, error);
+      if (!signal.aborted) {
+        unload(device);
+        console.warn(`Device preview unavailable: ${device.button.dataset.device}`, error);
+      }
       return false;
+    }).finally(() => {
+      if (device.loadController === controller) {
+        device.loading = undefined;
+        device.loadController = undefined;
+      }
     });
+    return device.loading;
   }
 
   function pauseAll() {
-    devices.forEach(({ video, item }) => { video.pause(); item.removeAttribute("data-front"); });
+    active.video.pause();
+    active.item.removeAttribute("data-front");
     replay?.video.pause();
+    for (const device of outgoing) unload(device);
+    outgoing.clear();
   }
 
   function retireHiddenVideos() {
     for (const device of outgoing) {
       if (Number(getComputedStyle(device.item).getPropertyValue("--device-sharp")) > .01) continue;
-      device.video.pause();
-      device.item.removeAttribute("data-front");
       outgoing.delete(device);
+      unload(device);
     }
   }
 
+  function canLoad() {
+    return visible && !document.hidden && (!reducedMotion.matches || manualPlayback);
+  }
+
   function shouldPlay() {
-    return visible && !document.hidden && (!reducedMotion.matches || manualPlayback) && !userPaused && !scrubbing;
+    return canLoad() && !userPaused && !scrubbing;
   }
 
   function syncPlayback(inView = visible) {
@@ -246,26 +280,19 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     const playing = shouldPlay();
     stage.toggleAttribute("data-playing", playing);
     replay?.animations?.forEach(animation => playing ? animation.play() : animation.pause());
-    if (visible && !started) {
-      started = true;
-      void (async () => {
-        await load(active);
-        syncPlayback();
-        // Prepare paused streams serially; no background playback or periodic seeking.
-        for (const device of devices) if (device !== active) await load(device);
-      })();
+    if (!canLoad()) {
+      if (active.loading) unload(active);
+    } else if (!active.ready && !active.loading) {
+      const selected = active;
+      void load(selected).then(loaded => {
+        if (selected !== active) return;
+        if (loaded) syncPlayback();
+        else updateProgress();
+      });
     }
+    if (!playing) pauseAll();
     updateProgress();
-    if (!playing) { pauseAll(); return; }
-    for (const device of outgoing) {
-      device.item.setAttribute("data-front", "");
-      if (!device.video.ended) device.video.play().catch(() => {});
-    }
-    if (switching) return;
-    if (!active.ready) {
-      if (!active.loading) void load(active).then(loaded => { if (loaded) syncPlayback(); });
-      return;
-    }
+    if (!playing || !active.ready) return;
     active.item.setAttribute("data-front", "");
     if (active.video.ended) { void restart(); return; }
     const version = revision;
@@ -305,8 +332,12 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     return next.ready;
   }
 
-  function clearPreparedReplay() {
-    if (!replay || replay.animations) return;
+  function clearReplay() {
+    if (!replay) return;
+    if (replay.animations) {
+      replay.animations.forEach(animation => animation.finish());
+      return;
+    }
     replay.controller.abort();
     releaseVideo(replay.video);
     replay = undefined;
@@ -354,43 +385,36 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     }
   }
 
-  async function select(device) {
-    if (device === active && (switching || device.ready)) return;
+  function select(device) {
+    if (device === active) {
+      if (!device.ready && !device.loading) syncPlayback();
+      return;
+    }
     endScrub();
     revision++;
     transition?.abort();
     transition = new AbortController();
-    const selectionSignal = transition.signal;
-    clearPreparedReplay();
-    if (!switching && active.ready) cueSource = active;
-    if (active !== device && active.ready) outgoing.add(active);
+    clearReplay();
+    if (active.ready) {
+      const { duration, currentTime, buffered, paused } = active.video;
+      parkedCue = { device: active, duration, currentTime };
+      // A fully buffered clip can finish its orbit fade without making a request.
+      const fullyBuffered = active.blobURL || (buffered.length === 1 &&
+        buffered.start(0) === 0 && buffered.end(0) >= duration - .05);
+      if (!paused && !reducedMotion.matches && fullyBuffered) outgoing.add(active);
+      else unload(active);
+    } else if (active.loading) {
+      unload(active);
+    }
     outgoing.delete(device);
+    active.video.removeAttribute("id");
     active = device;
-    switching = true;
-    stage.querySelector("#device-preview")?.removeAttribute("id");
     device.video.id = "device-preview";
     stage.dataset.device = device.button.dataset.device;
     // The device can move into place while its video loads or seeks.
     void moveOrbit(device.button);
-    void moveLiquid(device.button, selectionSignal);
-    updateProgress();
-    try {
-      if (!await load(device) || selectionSignal.aborted) return;
-      // A returning, still-playing device keeps its current frames without a seek.
-      if (device.video.paused && cueSource.ready && device !== cueSource) {
-        await cueVideo(device.video, correspondingTime(cueSource, cueSource.video, device), selectionSignal);
-      }
-    } catch (error) {
-      if (!selectionSignal.aborted) {
-        console.warn("Device preview could not synchronize", error);
-      }
-    } finally {
-      if (!selectionSignal.aborted) {
-        switching = false;
-        if (device.ready) syncPlayback();
-        else updateProgress();
-      }
-    }
+    void moveLiquid(device.button, transition.signal);
+    syncPlayback();
   }
 
   function observeVideo(device, video) {
@@ -400,14 +424,11 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     video.addEventListener("ended", () => {
       if (device.video !== video) return;
       updateProgress();
-      if (device === active && shouldPlay() && !switching) void restart();
+      if (device === active && shouldPlay()) void restart();
     });
   }
 
   devices.forEach(device => {
-    device.button.addEventListener("pointerenter", () => { if (device !== active) void load(device); });
-    device.button.addEventListener("focus", () => { if (device !== active) void load(device); });
-    device.button.addEventListener("pointerdown", () => { if (device !== active) void load(device); });
     device.button.addEventListener("click", () => { void select(device); });
     observeVideo(device, device.video);
   });
@@ -415,7 +436,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   reducedMotion.addEventListener("change", () => {
     if (reducedMotion.matches) {
       manualPlayback = false;
-      replay?.animations?.forEach(animation => animation.finish());
+      clearReplay();
     }
     syncPlayback();
   });

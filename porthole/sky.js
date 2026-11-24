@@ -255,111 +255,171 @@ export function setupPortholeSky(canvas) {
   const host = canvas.parentElement;
   const sequence = host.closest(".deep-focus").parentElement;
   const inTransit = () => sequence.hasAttribute("data-focus-handoff") || sequence.hasAttribute("data-window-flight");
-  let nearby = false, camera = null, mount = host, maxCanvasSize = 8192;
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  let softwareCanvas, render, loading, generation = 0, visible = false, frame = 0, lastTime = null, elapsed = 0;
+  const stillInTransit = () => inTransit() && sequence.hasAttribute("data-static-porthole");
+  let nearby = false, visible = false, camera = null, mount = host;
+  let staticOnly = Boolean(navigator.connection?.saveData), contextLost = false;
+  let render, loading, generation = 0, maxCanvasSize = 8192;
+  let frame = 0, lastTime = null, elapsed = 0, previousFrame, slowFrames = 0;
+  let stillApproach;
+
+  function paintStill() {
+    sequence.toggleAttribute("data-static-porthole", true);
+    host.toggleAttribute("data-scene-ready", true);
+    const approach = Math.min(1, (camera?.advance ?? 0) / 3.49);
+    if (approach === stillApproach) return;
+    stillApproach = approach;
+    sequence.style.setProperty("--still-approach", approach);
+  }
+
+  function sampleFrame(now) {
+    if (previousFrame !== undefined) {
+      slowFrames = now - previousFrame > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 1);
+    }
+    previousFrame = now;
+    if (slowFrames < 5) return true;
+    // Keep the rest of the visit on the still after repeated missed frames.
+    staticOnly = true;
+    paintStill();
+    return false;
+  }
 
   function draw(now) {
-    frame = 0;
-    if (camera || lastTime === null || now-lastTime >= 1000/30-1 || motion.matches) {
-      if (lastTime !== null && !motion.matches && !inTransit() && !camera) elapsed += Math.min(.125,(now-lastTime)/1000);
+    if (camera || lastTime === null || now - lastTime >= 1000 / 30 - 1) {
+      if (lastTime !== null && !inTransit() && !camera) elapsed += Math.min(.125, (now - lastTime) / 1000);
       lastTime = now;
-      const scale = Math.min(devicePixelRatio, maxCanvasSize/Math.max(1,canvas.clientWidth,canvas.clientHeight));
-      const w = Math.max(1,Math.round(canvas.clientWidth*scale)), h = Math.max(1,Math.round(canvas.clientHeight*scale));
-      if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; }
-      render(w,h,elapsed, Number(host.style.getPropertyValue("--shade-drop")),camera);
-      canvas.dataset.ready = "";
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const scale = Math.min(devicePixelRatio, maxCanvasSize / Math.max(1, width, height));
+      const w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      render(w, h, elapsed, Number(host.style.getPropertyValue("--shade-drop")), camera);
+      if (!canvas.hasAttribute("data-ready")) {
+        canvas.setAttribute("data-ready", "");
+        host.setAttribute("data-scene-ready", "");
+      }
+      sequence.removeAttribute("data-static-porthole");
     }
-    if (!camera && visible && !inTransit() && !motion.matches && !softwareCanvas) frame = requestAnimationFrame(draw);
+    if (!camera && visible && !inTransit()) frame = requestAnimationFrame(animate);
+  }
+
+  function animate(now) {
+    frame = 0;
+    if (sampleFrame(now)) draw(now);
   }
 
   async function prepare(version) {
-    const gl = canvas.getContext("webgl2",{alpha:true,depth:true,stencil:true,antialias:true,premultipliedAlpha:true});
-    let scene;
-    if (gl && !gl.isContextLost()) {
-      try {
-        maxCanvasSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));
-        scene = await createScene(gl);
-      }
-      catch (error) { console.warn("Porthole WebGL:",error); }
+    const gl = canvas.getContext("webgl2", {
+      alpha: true,
+      depth: true,
+      stencil: true,
+      antialias: true,
+      premultipliedAlpha: true,
+      failIfMajorPerformanceCaveat: true,
+    });
+    const info = gl?.getExtension("WEBGL_debug_renderer_info");
+    if (!gl || (info && /swiftshader|llvmpipe|software/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)))) {
+      staticOnly = true;
+      paintStill();
+      return;
     }
-    if (!scene && version === generation) {
-      const {softwareCabin} = await import("./cabin-software.js?v=ascent");
-      const surface = document.createElement("canvas");
-      surface.setAttribute("aria-hidden","true");
-      scene = await softwareCabin(surface,zoom);
-      if (version !== generation) return;
-      surface.className = canvas.className;
-      canvas.after(surface);
-      softwareCanvas = surface;
-    }
+    if (gl.isContextLost()) return;
+    maxCanvasSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));
+    const scene = await createScene(gl);
     if (version !== generation || !scene) return;
     render = scene;
     sync();
   }
+
   function sync() {
     cancelAnimationFrame(frame);
+    frame = 0;
     lastTime = null;
-    if ((!camera && !visible && !nearby) || document.hidden) return;
-    if (!camera && (!visible || inTransit()) && canvas.hasAttribute("data-ready")) return;
-    if (render) draw(performance.now());
-    else loading ??= prepare(generation).catch(error=>console.warn("Porthole:",error));
+    if (document.hidden || (!camera && !visible && !nearby)) {
+      previousFrame = undefined;
+      slowFrames = 0;
+      return;
+    }
+    // Finish the same shot with the still if WebGL becomes ready partway through.
+    if (staticOnly || motion.matches || contextLost || (render && stillInTransit())) {
+      paintStill();
+      return;
+    }
+    if (!render) {
+      if (visible || camera) paintStill();
+      const version = generation;
+      loading ??= prepare(version).catch(error => {
+        if (version !== generation) return;
+        staticOnly = true;
+        paintStill();
+        console.warn("Porthole WebGL:", error);
+      });
+      return;
+    }
+    if (!camera && (!visible || inTransit()) && canvas.hasAttribute("data-ready") &&
+      !sequence.hasAttribute("data-static-porthole")) {
+      previousFrame = undefined;
+      slowFrames = 0;
+      return;
+    }
+    draw(performance.now());
   }
-  new IntersectionObserver(([entry])=>{
+
+  new IntersectionObserver(([entry]) => {
     visible = entry.intersectionRatio >= .001;
     sync();
-  }, {threshold: .001}).observe(canvas.closest(".focus-window-stage") || host);
-  // Prepare one still frame on the preceding screen. Resume cloud rendering after landing.
-  new IntersectionObserver(([entry])=>{
+  }, { threshold: .001 }).observe(host.closest(".focus-window-stage"));
+  // Prepare the still and the first WebGL frame on the preceding screen.
+  new IntersectionObserver(([entry]) => {
     nearby = entry.isIntersecting;
-    if (nearby && !canvas.hasAttribute("data-ready")) sync();
-  }, {rootMargin:"90% 0px"}).observe(canvas);
-  new MutationObserver(sync).observe(sequence,{attributes:true,attributeFilter:["data-focus-handoff","data-window-flight"]});
+    sync();
+  }, { rootMargin: "90% 0px" }).observe(host);
+  new MutationObserver(sync).observe(sequence, { attributes: true, attributeFilter: ["data-focus-handoff", "data-window-flight"] });
   new ResizeObserver(sync).observe(canvas);
-  // The transition freezes the sky texture. Keep painting shade geometry as it moves.
   new MutationObserver(() => {
-    if (!render || document.hidden || (!visible && !nearby)) return;
-    if (motion.matches || softwareCanvas || inTransit()) {
+    if (!render || sequence.hasAttribute("data-static-porthole") || document.hidden || (!visible && !nearby)) return;
+    if (inTransit()) {
       cancelAnimationFrame(frame);
       lastTime = null;
       draw(performance.now());
     }
-  }).observe(host,{attributes:true,attributeFilter:["style"]});
-  motion.addEventListener("change",sync);
-  document.addEventListener("visibilitychange",sync);
-  canvas.addEventListener("webglcontextlost",event=>{
+  }).observe(host, { attributes: true, attributeFilter: ["style"] });
+  motion.addEventListener("change", sync);
+  document.addEventListener("visibilitychange", sync);
+  canvas.addEventListener("webglcontextlost", event => {
     event.preventDefault();
+    contextLost = true;
     generation++;
-    cancelAnimationFrame(frame);
-    render = null;
-    softwareCanvas?.remove();
-    softwareCanvas = null;
-    loading = null;
+    render = loading = null;
     delete canvas.dataset.ready;
-    if (visible || camera) sync();
+    sync();
   });
-  canvas.addEventListener("webglcontextrestored",()=>{
-    generation++;
-    softwareCanvas?.remove();
-    softwareCanvas = null;
-    render = null;
+  canvas.addEventListener("webglcontextrestored", () => {
+    contextLost = false;
     loading = null;
     sync();
   });
+
   return function setCamera(next, destination) {
     if (!next && !camera && mount === host) return;
+    if (Boolean(next) !== Boolean(camera)) {
+      previousFrame = undefined;
+      slowFrames = 0;
+    }
     camera = next;
     if (mount !== destination) {
       mount = destination;
-      for (const surface of [canvas,softwareCanvas]) {
-        if (!surface) continue;
-        surface.classList.toggle("flight-camera", Boolean(camera));
-        mount.append(surface);
-      }
+      canvas.classList.toggle("flight-camera", Boolean(camera));
+      mount.append(canvas);
       cancelAnimationFrame(frame);
+      frame = 0;
       lastTime = null;
     }
-    if (camera && render) draw(performance.now());
-    else sync();
+    if (camera && render && !staticOnly && !motion.matches && !stillInTransit() && !document.hidden) {
+      const now = performance.now();
+      if (sampleFrame(now)) draw(now);
+    } else {
+      sync();
+    }
   };
 }

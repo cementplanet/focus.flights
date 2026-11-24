@@ -3,7 +3,17 @@
   height: 100dvh;
   overflow: clip;
   outline: none;
-  background: linear-gradient(#1c3459, #506f97);
+  --download-sky: linear-gradient(#1c3459, #506f97);
+  background: var(--download-sky);
+}
+.porthole-sky-still { display: none; }
+[data-static-porthole] .porthole-sky-still {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: var(--download-sky);
+  opacity: clamp(0, (var(--still-approach, 0) - .18) / .82, 1);
+  pointer-events: none;
 }
 .porthole-frame.flight-camera {
   position: absolute;

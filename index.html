@@ -351,12 +351,12 @@
   <link rel="stylesheet" href="/showcase.css?v=device-ink">
   <link rel="stylesheet" href="/button-motion.css?v=contact-hairline">
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
-  <link rel="stylesheet" href="/deep-focus.css?v=focus-title-glow">
-  <link rel="stylesheet" href="/download.css?v=crayon-bold">
+  <link rel="stylesheet" href="/deep-focus.css?v=static-porthole">
+  <link rel="stylesheet" href="/download.css?v=static-porthole">
   <link rel="stylesheet" href="/gift.css?v=inline-footer">
   <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
-  <script src="/sky.js?v=inline-footer" type="module"></script>
-  <script src="/showcase.js?v=device-ink" type="module"></script>
+  <script src="/sky.js?v=inline-footer-static-porthole" type="module"></script>
+  <script src="/showcase.js?v=on-demand-media" type="module"></script>
 </head>
 <body>
   <div class="section-fade" aria-hidden="true"></div>
@@ -496,7 +496,7 @@
         </div>
       </div>
       <div class="showcase-stage" data-device="iphone">
-        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" poster="/device-media/films/iphone.png" preload="none" muted playsinline></video>
+        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" preload="none" muted playsinline></video>
       </div>
       <div class="showcase-devices" role="group" aria-label="Device">
         <svg class="device-liquid" aria-hidden="true" focusable="false">
@@ -572,6 +572,7 @@
     <section class="deep-focus" id="deep-focus" aria-labelledby="deep-focus-title" tabindex="-1">
       <div class="focus-window-stage">
         <div class="porthole">
+          <div class="porthole-still" aria-hidden="true"></div>
           <canvas class="porthole-frame" aria-hidden="true"></canvas>
           <button type="button" class="shade-control" role="slider" aria-label="Window shade opening" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="Fully open"></button>
         </div>
@@ -584,6 +585,7 @@
       </div>
     </section>
     <section class="download" id="download" aria-labelledby="download-title" tabindex="-1">
+      <div class="porthole-sky-still" aria-hidden="true"></div>
       <img class="sky-meteor" src="/porthole/meteor.svg" width="100" height="8" alt="" hidden>
       <div class="download-layout">
         <div class="download-sketches" aria-hidden="true">

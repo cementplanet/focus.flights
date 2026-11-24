@@ -1,6 +1,5 @@
 export function setupWindowShade(porthole) {
   const handle = porthole.querySelector(".shade-control");
-  const canvas = porthole.querySelector(".porthole-frame");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const clamp = value => Math.max(0, Math.min(1, value));
   let position = 1, target = 1, velocity = 0, frame = 0;
@@ -52,11 +51,11 @@ export function setupWindowShade(porthole) {
 
   paint(1);
   const ready = new MutationObserver(() => {
-    if (!canvas.hasAttribute("data-ready")) return;
+    if (!porthole.hasAttribute("data-scene-ready")) return;
     ready.disconnect();
     if (active && !drag) glide(0, 1);
   });
-  ready.observe(canvas, {attributes:true, attributeFilter:["data-ready"]});
+  ready.observe(porthole, {attributes:true, attributeFilter:["data-scene-ready"]});
   reduced.addEventListener("change", () => { if (reduced.matches && frame) glide(target, 1); });
 
   handle.addEventListener("pointerdown", event => {
@@ -100,6 +99,6 @@ export function setupWindowShade(porthole) {
     if (active === next && !(openForFlight && (target > 0 || drag))) return;
     active = next;
     if (drag) handle.releasePointerCapture(drag.id);
-    if (!active || reduced.matches || canvas.hasAttribute("data-ready")) glide(active ? 0 : 1, active ? 1 : 1.45);
+    if (!active || reduced.matches || porthole.hasAttribute("data-scene-ready")) glide(active ? 0 : 1, active ? 1 : 1.45);
   };
 }
