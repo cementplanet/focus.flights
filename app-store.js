@@ -1,3 +1,5 @@
+import { campaignToken, providerToken } from "./campaign.js";
+
 // Storefront codes from the country and region picker on apps.apple.com.
 const storefronts = new Set(`
   ae af ag ai al am ao ar at au az ba bb be bf bg bh bj bm bn bo br bs bt bw by bz
@@ -31,5 +33,8 @@ const storefront = preferredStorefront(languages, Intl.DateTimeFormat().resolved
 for (const link of document.querySelectorAll("a[data-app-store]")) {
   const url = new URL(link.href);
   url.pathname = url.pathname.replace(/^\/us\//, `/${storefront}/`);
+  url.searchParams.set("pt", providerToken);
+  url.searchParams.set("ct", campaignToken);
+  url.searchParams.set("mt", "8");
   link.href = url.href;
 }
