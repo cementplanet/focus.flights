@@ -1,0 +1,12 @@
+@media screen and (max-width: 940px) {
+  :root body { padding-inline: 20px; }
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    background: #101218;
+  }
+
+  :root body { color: #e8ebf0; }
+}

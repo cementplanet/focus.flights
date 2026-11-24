@@ -1,5 +1,5 @@
 import { prepareCopy } from "./motion-copy.js";
-import { setupDeviceLiquid } from "./device-liquid.js?v=device-ink";
+import { setupDeviceLiquid } from "./device-liquid.js?v=dark-mode";
 import { setupDevicePlayback } from "./device-playback.js?v=on-demand-media";
 import { setupDeviceOrbit } from "./device-orbit.js?v=transform-orbit";
 

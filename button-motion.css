@@ -107,6 +107,24 @@ a.aqua-button {
   rx: var(--aqua-radius);
 }
 
+.aqua-face {
+  fill: var(--aqua-face, url(#device-glass-tone));
+  filter: var(--aqua-reflection, url(#device-aqua));
+}
+
+@media (prefers-color-scheme: dark) {
+  .showcase-devices, .site-header[data-on-showcase] {
+    --aqua-face: url(#device-glass-tone-dark);
+    --aqua-reflection: url(#device-aqua-dark);
+  }
+
+  .showcase-devices { --aqua-selection: #0c0f15; }
+
+  .site-header[data-on-showcase] :is(.sky-nav, .sky-get-app) { color: inherit; }
+  .site-header[data-on-showcase] .sky-get-app { --aqua-face: url(#device-glass-tone-dark-raised); }
+  .site-header[data-on-showcase] .sky-nav a:focus-visible { outline-color: #aac4ed; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @media (hover: hover) and (pointer: fine) {
     .aqua-button:hover { scale: 1.035; }
@@ -128,6 +146,15 @@ a.aqua-button {
     var(--contact-highlight), var(--contact-tone) 3px,
     var(--contact-tone) calc(100% - 2.5px), var(--contact-lowlight)
   ) padding-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .showcase .contact-material {
+    --contact-edge: #41454d;
+    --contact-highlight: #2a2e36;
+    --contact-tone: #1c1f26;
+    --contact-lowlight: #16191f;
+  }
 }
 
 .contact-surface {
