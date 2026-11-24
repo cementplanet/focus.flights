@@ -32,7 +32,7 @@ const languages = navigator.languages?.length ? navigator.languages : [navigator
 const storefront = preferredStorefront(languages, Intl.DateTimeFormat().resolvedOptions().timeZone);
 for (const link of document.querySelectorAll("a[data-app-store]")) {
   const url = new URL(link.href);
-  url.pathname = url.pathname.replace(/^\/us\//, `/${storefront}/`);
+  url.pathname = url.pathname.replace(/^\/(?:[a-z]{2}\/)?app\//, `/${storefront}/app/`);
   url.searchParams.set("pt", providerToken);
   url.searchParams.set("ct", campaignToken);
   url.searchParams.set("mt", "8");
