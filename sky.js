@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=inline-footer";
+import { setupGiftDescent } from "./gift.js?v=campaign-slides";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
@@ -243,8 +243,14 @@ const setCamera = setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
 const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
-const giftDescent = setupGiftDescent(download, gift, windowFlight, ease, giftTravel);
-const sections = [sky, showcase, deepFocus, download, gift, document.getElementById("letter"), document.getElementById("runway")];
+const campaignSlides = [...document.querySelectorAll(".gift-letter")];
+const runway = document.getElementById("runway");
+const sections = [sky, showcase, deepFocus, download, gift, ...campaignSlides, runway];
+const giftPage = sections.indexOf(gift);
+const firstSlidePage = giftPage + 1;
+const runwayPage = sections.indexOf(runway);
+const lastSlidePage = runwayPage - 1;
+const giftDescent = setupGiftDescent(download, gift, campaignSlides, runway, windowFlight, ease, giftTravel);
 const sequence = sky.parentElement;
 prepareCopy(...deepFocus.querySelectorAll(".focus-copy h2, .focus-description p"));
 
@@ -349,13 +355,19 @@ function paintHandoff(progress, travel) {
   })) sky.style.setProperty(`--${key}`, value);
 }
 
+function paintCampaign(progress, travel) {
+  giftDescent.floatLetter(unit(progress - giftPage), unit(progress - lastSlidePage),
+    travel ? null : campaignSlides[progress - firstSlidePage]);
+}
+
 function playPage(target, focusPage = false) {
   cancelLinkFade();
   if (target === pageTarget) return false;
   // Keep this choreography through interruptions so redirecting the spring
   // samples the same image at the same position.
   if (!handoffFrame) departingFocus = handoffProgress === 2;
-  const leavingDownload = target === 4 && download.contains(document.activeElement);
+  const leavingDownload = target === giftPage && download.contains(document.activeElement);
+  const leavingCampaign = campaignSlides.some(slide => slide !== sections[target] && slide.contains(document.activeElement));
   pageOrigin = pageTarget;
   pageTarget = target;
   beginCopyVisit(target);
@@ -371,28 +383,29 @@ function playPage(target, focusPage = false) {
       sky.toggleAttribute("data-handoff", travel && progress < 1);
       paintHandoff(unit(progress), travel && progress < 1);
     }
-    if (progress >= 4) {
+    if (progress >= giftPage) {
       clearFocusHandoff();
       giftDescent.end(true);
       giftDescent.holdSky(false);
-      const from = progress >= 5 ? 5 : 4;
-      const phase = unit(progress-from);
-      giftDescent.floatLetter(unit(progress-4), unit(progress-5));
-      const top = sections[from].offsetTop + giftTravel(phase)*(sections[from+1].offsetTop-sections[from].offsetTop);
-      window.scrollTo({top, behavior:"instant"});
+      const from = Math.min(Math.floor(progress), lastSlidePage);
+      const phase = unit(progress - from);
+      const offset = from === giftPage || from === lastSlidePage ? giftTravel(phase) : phase;
+      paintCampaign(progress, travel);
+      const top = sections[from].offsetTop + offset * (sections[from + 1].offsetTop - sections[from].offsetTop);
+      window.scrollTo({ top, behavior: "instant" });
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
       return;
     }
     giftDescent.resetLetter();
-    if (travel && (progress > 3 || (progress === 3 && (target === 4 || sequence.hasAttribute("data-gift-descent"))))) {
+    if (travel && (progress > 3 || (progress === 3 && (target === giftPage || sequence.hasAttribute("data-gift-descent"))))) {
       clearFocusHandoff();
       giftDescent.paint(unit(progress - 3));
       siteHeader.removeAttribute("data-on-showcase");
       siteHeader.setAttribute("data-on-focus", "");
       return;
     }
-    giftDescent.end(!travel && target === 4);
+    giftDescent.end();
     if (travel && progress > 2) {
       clearFocusHandoff();
       windowFlight.paint(unit(progress - 2), target === 3);
@@ -425,7 +438,7 @@ function playPage(target, focusPage = false) {
     syncHeader();
     hero.inert = target !== 0;
     sky.removeAttribute("data-handoff");
-    const leavingControl = leavingDownload || (target === 6 && pageOrigin === 5) || (target === 2 && showcase.contains(document.activeElement)) ||
+    const leavingControl = leavingDownload || leavingCampaign || (target === 2 && showcase.contains(document.activeElement)) ||
       (target === 3 && deepFocus.contains(document.activeElement));
     deepFocus.inert = target >= 3;
     if (focusPage || leavingControl) {
@@ -444,23 +457,38 @@ function playPage(target, focusPage = false) {
   const offset = handoffProgress - target;
   // Reversing a running spring carries its current position and velocity.
   const farthest = Math.max(pageOrigin, target);
-  const giftTrack = (target >= 3 && handoffProgress >= 3) || (target === 4 && handoffProgress > 2.9);
+  const insideCampaign = target >= firstSlidePage && target <= lastSlidePage &&
+    handoffProgress >= firstSlidePage && handoffProgress <= lastSlidePage;
+  const giftTrack = !insideCampaign && ((target >= 3 && handoffProgress >= 3) || (target === giftPage && handoffProgress > 2.9));
   // Page progress is the reversible shot clock; the camera and the paper
   // sample independent tracks so the flap doesn't inherit the camera's peak speed.
   const giftStart = Math.min(3, handoffProgress);
-  // The open envelope is zero on the shared clock. Each side retains
-  // its authored duration, including when one gesture crosses both shots.
   const descentSeconds = 2.55;
-  const openingLetter = target === 5 && handoffProgress < 5;
+  const openingLetter = target === firstSlidePage && handoffProgress < firstSlidePage;
   const unfoldSeconds = openingLetter ? 2.75 : 3.25;
-  const secondsPerPage = phase => phase > 4 ? unfoldSeconds : descentSeconds;
-  const giftTime = phase => (phase - 4) * secondsPerPage(phase);
+  const slideSeconds = .76;
+  const landingSeconds = 1.55;
+  const lastSlideTime = unfoldSeconds + (lastSlidePage - firstSlidePage) * slideSeconds;
+  const secondsPerPage = page => page < giftPage ? descentSeconds : page < firstSlidePage ? unfoldSeconds :
+    page < lastSlidePage ? slideSeconds : landingSeconds;
+  // A clock with different durations for the studio, slides, and landing keeps
+  // the camera on the same shot when a gesture redirects it partway through.
+  function giftTime(page) {
+    if (page <= giftPage) return (page - giftPage) * descentSeconds;
+    if (page <= firstSlidePage) return (page - giftPage) * unfoldSeconds;
+    if (page <= lastSlidePage) return unfoldSeconds + (page - firstSlidePage) * slideSeconds;
+    return lastSlideTime + (page - lastSlidePage) * landingSeconds;
+  }
+  function giftProgress(time) {
+    if (time <= 0) return giftPage + time / descentSeconds;
+    if (time <= unfoldSeconds) return giftPage + time / unfoldSeconds;
+    if (time <= lastSlideTime) return firstSlidePage + (time - unfoldSeconds) / slideSeconds;
+    return lastSlidePage + (time - lastSlideTime) / landingSeconds;
+  }
   const targetTime = giftTime(target);
   const timeOffset = giftTime(handoffProgress) - targetTime;
-  const runwayHandoff = pageOrigin >= 5 && target >= 5;
-  const playbackRate = runwayHandoff ? 2.1 : (pageOrigin === 5 && target === 3 ? 1.8 : 1);
-  const giftDuration = Math.max(.18 * secondsPerPage(Math.max(target, handoffProgress)), Math.abs(timeOffset)) / playbackRate;
-  const rate = farthest === 4 ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
+  const giftDuration = Math.max(.18 * secondsPerPage(Math.max(target, handoffProgress)), Math.abs(timeOffset));
+  const rate = farthest === giftPage ? .63 : farthest === 3 ? .51 : farthest === 2 ? .8 : 1;
   const slowRate = springSlow * rate;
   const fastRate = springFast * rate;
   const slowOffset = (handoffVelocity - fastRate*offset)/(slowRate-fastRate);
@@ -474,8 +502,9 @@ function playPage(target, focusPage = false) {
       const inertia = incoming ? incoming-velocity : 0;
       const tail = 1-t;
       const time = targetTime + timeOffset*tail + inertia*giftDuration*t*tail**6;
-      const scale = time > 0 ? unfoldSeconds : descentSeconds;
-      return [4 + time/scale - target, (velocity + inertia*tail**5*(1-7*t))/scale];
+      const page = giftProgress(time);
+      const scale = secondsPerPage(page);
+      return [page - target, (velocity + inertia*tail**5*(1-7*t))/scale];
     }
     const slow = slowOffset*Math.exp(slowRate*seconds);
     const fast = fastOffset*Math.exp(fastRate*seconds);
@@ -554,10 +583,9 @@ for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-e
 }
 
 function stepPage(down, focusPage = false) {
-  const nearingNextScreen = (pageTarget === 2 || pageTarget === 3) && Math.abs(handoffProgress - pageTarget) <= .10;
-  if (handoffFrame && !onShowcase() && !nearingNextScreen && down === (pageTarget > pageOrigin)) return true;
-  if (pageTarget === 5 && !down) return playPage(3, focusPage);
-  if (handoffFrame && pageOrigin === 5 && pageTarget === 3 && down) return playPage(5, focusPage);
+  const nearingNextScreen = (pageTarget >= 2 && pageTarget <= giftPage) && Math.abs(handoffProgress - pageTarget) <= .10;
+  const onCampaign = pageTarget >= firstSlidePage && pageTarget <= lastSlidePage;
+  if (handoffFrame && !onShowcase() && !nearingNextScreen && !onCampaign && down === (pageTarget > pageOrigin)) return true;
   const target = Math.max(0, Math.min(sections.length - 1, pageTarget + (down ? 1 : -1)));
   return playPage(target, focusPage);
 }
@@ -691,8 +719,8 @@ function syncScroll() {
   revealCopy();
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
-  giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
+  giftDescent.end(page >= giftPage);
+  if (page >= giftPage) paintCampaign(page, false);
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);
@@ -712,8 +740,8 @@ function restoreSection() {
   setShadeActive(page >= 2);
   deepFocus.inert = page >= 3;
   clearFocusHandoff();
-  giftDescent.end(page >= 4);
-  if (page >= 4) giftDescent.floatLetter(unit(page-4), unit(page-5));
+  giftDescent.end(page >= giftPage);
+  if (page >= giftPage) paintCampaign(page, false);
   else giftDescent.resetLetter();
   if (page >= 3) giftDescent.holdSky(page === 3);
   else windowFlight.end(false);

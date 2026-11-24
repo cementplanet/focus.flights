@@ -6,7 +6,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
     attribute vec2 uv;
     attribute float panel;
     uniform float shot, shadowPass;
-    uniform vec3 cardLayout; // width and centre-to-centre steps in viewport units
+    uniform vec3 cardLayout; // welcome print width and centre in viewport units
     uniform vec3 flight; // lift, separation, breathing phase
     varying highp vec2 texCoord;
     varying highp vec3 world;
@@ -23,7 +23,6 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       vec3 n=vec3(0.,0.,1.);
       bool card=panel==2. || panel>=6.;
       float stack=panel==6. ? -1. : (panel==7. ? 1. : 0.);
-      float slot=panel==2. ? -1. : (panel==7. ? 1. : 0.);
       float fall=smoothstep(.26,.455,shot);
       float seated=smoothstep(.355,.48,shot);
       float open=smoothstep(.475,.81,shot);
@@ -60,7 +59,7 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
       p.z+=.91*(1.-fall)+1.24*sin(bank)+.865*sin(tilt)+.009;
       float rise=flight.x, release=flight.y, air=flight.z;
       if (rise>0. || release>0.) {
-        if (card) {
+        if (panel==2.) {
           // Slide along the sleeve from the first frame. The lower edge
           // takes the weight later, as it passes the pocket lip.
           float seatedHeight=p.z;
@@ -72,21 +71,17 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
           float depth=dot(centre-eye,forward);
           vec2 viewSize=2.*depth/lens;
           float width=cardLayout.x*viewSize.x;
-          float spread=smoothstep(.12,.95,release);
-          vec2 offset=slot*spread*cardLayout.yz*viewSize;
-          vec3 facing=centre+right*(offset.x+point.x*width/1.08)
+          vec2 offset=cardLayout.yz*viewSize;
+          vec3 facing=eye+forward*depth+right*(offset.x+point.x*width/1.08)
                             +up*(offset.y+point.y*width/1.08+.012*(1.-release)*sin(air*.85));
           p=mix(p,facing,release);
           vec2 pocket=turn(.047+.095*release)*(p.xy-vec2(-.24,-2.75)*release);
           float clearLip=smoothstep(.64,.91,pocket.y);
           p.z=mix(seatedHeight,p.z,clearLip);
-          // Preserve a little depth between the leaves until their edges part.
-          float order=panel==2. ? 2. : (panel==6. ? 1. : 0.);
-          p-=forward*(order*.16*sin(3.14159*release)*clearLip);
+          p-=forward*(.32*sin(3.14159*release)*clearLip);
           n=normalize(mix(n,-forward,release));
         } else {
-          // The sleeve stays at floor height while its weight carries it
-          // down the frame. The flap, pocket and wax seal move together.
+          // The sleeve and the remaining prints retreat together.
           p.xy=turn(-.095*release)*p.xy;
           n.xy=turn(-.095*release)*n.xy;
           p.xy+=vec2(-.24,-2.75)*release;

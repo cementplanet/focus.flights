@@ -1,11 +1,10 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=card-column";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=campaign-slides";
 import { prepareCopy } from "./motion-copy.js";
 
-export function setupGiftDescent(download, gift, windowFlight, ease, cameraTravel) {
+export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
   const sequence = gift.parentElement;
   const content = download.querySelector(".download-layout");
   const night = gift.querySelector(".gift-night");
-  const runway = document.getElementById("runway");
   const runwayCopy = runway.querySelector(".runway-copy");
   const footer = runway.querySelector(".site-footer");
   for (const column of runwayCopy.querySelectorAll(".runway-partners > div")) {
@@ -24,18 +23,18 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     footer.inert = runwayCopy.inert;
   }
 
-  const letter = document.querySelector("#letter");
-  const row = letter.querySelector(".gift-card-row");
-  const render = setupStudio(gift.querySelector(".gift-camera"), download, row);
-  const reader = letter.querySelector(".gift-reader");
+  const [welcome] = slides;
+  const render = setupStudio(gift.querySelector(".gift-camera"), download, welcome);
+  const reader = document.getElementById("gift-reader");
   const enlarged = reader.querySelector(".gift-print");
-  row.addEventListener("click", event => {
-    const card = event.target.closest("button[data-print]");
-    if (!card) return;
-    enlarged.className = "gift-print " + card.dataset.print;
-    enlarged.setAttribute("aria-label", card.getAttribute("aria-description"));
-    reader.showModal();
-  });
+  for (const slide of slides) {
+    const card = slide.querySelector("button");
+    card.addEventListener("click", () => {
+      enlarged.className = card.className;
+      enlarged.setAttribute("aria-label", slide.querySelector(".gift-copy").innerText.replace(/\s+/g, " ").trim());
+      reader.showModal();
+    });
+  }
   reader.addEventListener("click", event => {
     if (event.target === reader || event.target.closest("button")) reader.close();
   });
@@ -92,16 +91,20 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
     content.style.setProperty("--gift-exit", Math.min(1, travel / .57));
   }
 
-  // Overlapping samples of Glide start together. The sheet leads the camera
-  // slightly, then the camera finishes framing it after the sleeve clears.
-  function floatLetter(phase, approach = 0) {
+  function setActiveSlide(activeSlide) {
+    for (const slide of slides) slide.inert = slide !== activeSlide;
+    if (!activeSlide && reader.open) reader.close();
+  }
+
+  // The first sheet leads the camera slightly as it clears the sleeve.
+  function floatLetter(phase, approach, activeSlide) {
     const sample = value => value <= 0 ? 0 : value >= 1 ? 1 : cameraTravel(value);
     const lift = sample(phase);
     const slip = sample(phase/.94);
-    row.inert = phase < 1 || approach > 0;
-    if (row.inert && reader.open) reader.close();
+    setActiveSlide(activeSlide);
     gift.toggleAttribute("data-airborne", phase > 0);
     gift.style.setProperty("--letter-poster", ease(.18,.84,phase));
+    welcome.style.setProperty("--welcome-presence", ease(.84,1,phase));
     const landing = sample(approach);
     gift.style.setProperty("--runway-arrival", landing);
     revealRunwayCopy(approach, landing);
@@ -110,11 +113,11 @@ export function setupGiftDescent(download, gift, windowFlight, ease, cameraTrave
 
   function resetLetter() {
     if (!gift.hasAttribute("data-airborne")) return;
-    row.inert = true;
-    if (reader.open) reader.close();
+    setActiveSlide(null);
     gift.removeAttribute("data-airborne");
     gift.style.removeProperty("--letter-poster");
     gift.style.removeProperty("--runway-arrival");
+    welcome.style.removeProperty("--welcome-presence");
     revealRunwayCopy(0, 0);
     render(1,1);
   }

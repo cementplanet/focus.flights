@@ -353,9 +353,9 @@
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="/deep-focus.css?v=focus-title-glow">
   <link rel="stylesheet" href="/download.css?v=crayon-bold">
-  <link rel="stylesheet" href="/gift.css?v=inline-footer">
+  <link rel="stylesheet" href="/gift.css?v=campaign-slides">
   <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
-  <script src="/sky.js?v=inline-footer" type="module"></script>
+  <script src="/sky.js?v=campaign-slides" type="module"></script>
   <script src="/showcase.js?v=device-ink" type="module"></script>
 </head>
 <body>
@@ -627,11 +627,7 @@
           <source media="(max-aspect-ratio: 4/5)" srcset="/gift/studio-portrait.webp?v=lit-cards" width="828" height="1792">
           <img src="/gift/studio.webp?v=lit-cards" alt="叠放着三张活动卡的信封" width="1920" height="1200" decoding="async" loading="lazy">
         </picture>
-        <div class="gift-letter-poster" aria-hidden="true">
-          <span class="gift-print welcome-print"></span>
-          <span class="gift-print black-week-print"></span>
-          <span class="gift-print sharing-print"></span>
-        </div>
+        <div class="gift-letter-poster" aria-hidden="true"></div>
         <picture class="runway-poster" aria-hidden="true">
           <source media="(max-aspect-ratio: 4/5)" srcset="/gift/runway-portrait.webp?v=contact">
           <img src="/gift/runway.webp?v=contact" width="1600" height="1000" alt="" decoding="async" loading="lazy">
@@ -639,17 +635,34 @@
         <canvas class="gift-camera" aria-hidden="true"></canvas>
       </div>
     </section>
-    <section class="gift-letter" id="letter" lang="zh-CN" aria-label="活动卡" tabindex="-1">
-      <div class="gift-card-row" inert>
-        <button type="button" data-print="welcome-print" aria-haspopup="dialog" aria-label="放大新用户礼遇" aria-description="新用户首次下载注册即享 20% off。不同地区详见具体优惠规则。"></button>
-        <button type="button" data-print="black-week-print" aria-haspopup="dialog" aria-label="放大黑五飞行周" aria-description="Black Week Flight 黑五飞行周。11/27 00:00 至 12/3 23:59，年付 5 折，永久 7 折。"></button>
-        <button type="button" data-print="sharing-print" aria-haspopup="dialog" aria-label="放大分享专注时刻" aria-description="分享你的 FocusFlight 专注体验。在任意公开平台分享专注时刻，带上 #FocusFlight 和 #FocusFlightChallenge，就有机会赢取最多 365 天会员。"></button>
+    <section class="gift-letter" id="letter" lang="zh-CN" aria-labelledby="welcome-title" tabindex="-1" inert>
+      <button class="gift-print welcome-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="放大新用户礼遇"></button>
+      <div class="gift-copy">
+        <h2 id="welcome-title">新用户礼遇</h2>
+        <p>首次下载并注册，即享 8 折优惠。</p>
+        <p class="gift-details">具体优惠以所在地区的活动规则为准。</p>
       </div>
-      <dialog class="gift-reader" aria-label="活动卡详情">
-        <div class="gift-print" role="img"></div>
-        <button type="button" aria-label="关闭">×</button>
-      </dialog>
     </section>
+    <section class="gift-letter" id="black-week" lang="zh-CN" aria-labelledby="black-week-title" tabindex="-1" inert>
+      <button class="gift-print black-week-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="放大黑五飞行周"></button>
+      <div class="gift-copy">
+        <h2 id="black-week-title">黑五飞行周</h2>
+        <p>活动期间，年付会员 5 折，永久会员 7 折。</p>
+        <p class="gift-details">11 月 27 日 00:00 至 12 月 3 日 23:59</p>
+      </div>
+    </section>
+    <section class="gift-letter" id="sharing" lang="zh-CN" aria-labelledby="sharing-title" tabindex="-1" inert>
+      <button class="gift-print sharing-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="放大分享专注时刻"></button>
+      <div class="gift-copy">
+        <h2 id="sharing-title">分享你的专注时刻</h2>
+        <p>在任意公开平台分享你的 FocusFlight 专注体验，带上这两个话题，就有机会赢取最多 365 天会员。</p>
+        <p class="gift-details"><span>#FocusFlight</span> <span>#FocusFlightChallenge</span></p>
+      </div>
+    </section>
+    <dialog class="gift-reader" id="gift-reader" lang="zh-CN" aria-label="活动卡详情">
+      <div class="gift-print" role="img"></div>
+      <button type="button" aria-label="关闭">×</button>
+    </dialog>
     <section id="runway" class="runway" lang="en" data-copy-motion="soft-type" tabindex="-1" aria-label="Affiliate and partnerships">
       <div class="runway-copy" inert>
         <div class="runway-partners">
