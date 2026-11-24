@@ -15,9 +15,8 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
   }
 
   function canRender() {
-    const view = camera();
-    return visible && !document.hidden && !isLimited() &&
-      view.height > cloudDeckBottom && (!view.travel || surface.hasAttribute("data-clouds-ready"));
+    // Leaving the deck hides its last frame. The return can render a new one in motion.
+    return visible && !document.hidden && !isLimited() && camera().height > cloudDeckBottom;
   }
 
   function showStill() {
@@ -35,10 +34,14 @@ export function setupClouds(canvas, sky, aircraft, camera, reducedMotion) {
       showStill();
       return;
     }
-    if (lastFrame !== undefined) {
+    const travelling = camera().travel;
+    if (!travelling && lastFrame !== undefined) {
       slowFrames = now - lastFrame > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 1);
+    } else {
+      slowFrames = 0;
     }
-    lastFrame = now;
+    // Judge sustained performance at cruise, where the camera no longer adds transient load.
+    lastFrame = travelling ? undefined : now;
     if (slowFrames >= 5) {
       staticOnly = true;
       sync();
@@ -132,7 +135,7 @@ async function createRenderer(gl, canvas, sky, aircraft, camera, signal) {
   }
 
   const [fragment, shadow, shape, detail, weather] = await Promise.all([
-    asset("clouds.glsl?v=cloud-perf").then((response) => response.text()),
+    asset("clouds.glsl?v=horizon-feather").then((response) => response.text()),
     asset("aircraft/shadow.bin?v=airliner-clay-2").then((response) => response.arrayBuffer()),
     ...["shape64", "detail32", "weather512"].map((name) =>
       asset(`data/noise/${name}.bin`).then((response) => response.arrayBuffer())),

@@ -13,6 +13,7 @@ out vec4 cloud;
 const float cloudBase = 160.0;
 const float cloudCeiling = 1120.0;
 const float earthRadius = 6371000.0;
+const float rayHorizon = 0.452;
 
 float terrainAt(float distanceToEye) {
   return 1.0 - smoothstep(7000.0, 26000.0, distanceToEye);
@@ -64,7 +65,7 @@ vec2 cloudSpan(vec3 ray) {
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution;
   float aspect = resolution.x / resolution.y;
-  vec3 ray = normalize(vec3((uv.x - 0.5) * min(aspect, 2.15), (uv.y - 0.452) * 0.86, 1.0));
+  vec3 ray = normalize(vec3((uv.x - 0.5) * min(aspect, 2.15), (uv.y - rayHorizon) * 0.86, 1.0));
   cloud = vec4(0.0);
   vec3 origin = vec3(260.0, cameraHeight, -830.0);
   vec2 span = cloudSpan(ray);
@@ -154,4 +155,7 @@ void main() {
   scattering = mix(scattering, vec3(neutral * opacity), nearDeck * 0.15);
   cloud = vec4(scattering, opacity) * horizonFade * undercast;
   cloud = vec4(veilLight * veil, veil) + cloud * (1.0 - veil);
+  // Feather grazing rays near the horizon while keeping the nearby cloud detail.
+  float aboveDeck = smoothstep(1040.0, cloudCeiling, cameraHeight);
+  cloud *= 1.0 - aboveDeck * smoothstep(rayHorizon - 0.042, rayHorizon, uv.y);
 }

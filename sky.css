@@ -50,6 +50,7 @@
   pointer-events: none;
   --cloud-day: url("/clouds/cloud-day-wide.webp");
   --cloud-night: url("/clouds/cloud-night-wide.webp");
+  mask-image: linear-gradient(to bottom, transparent 54.8%, #000 59%);
   opacity: var(--cloud-still-opacity, 1);
   transform: translateY(calc(-52% * var(--cloud-passage, 0))) scale(calc(1 + .55 * var(--cloud-passage, 0)));
   filter: blur(var(--cloud-blur, 0px));

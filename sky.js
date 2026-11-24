@@ -3,7 +3,7 @@ import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=cabin-light-hardware";
 import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
 import { prepareCopy, unit } from "./motion-copy.js";
-import { cloudDeckBottom, setupClouds } from "./clouds.js?v=still-clouds";
+import { cloudDeckBottom, setupClouds } from "./clouds.js?v=cloud-return";
 import { startContrails } from "./contrails.js?v=nozzle-alignment";
 
 const night = ["091327", "182a49", "455472", "121c31", "626f8d", 1];
