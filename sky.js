@@ -229,6 +229,7 @@ function ease(from, to, value) {
 
 const siteHeader = document.querySelector(".site-header");
 const showcase = document.getElementById("showcase");
+const deviceButtons = [...showcase.querySelectorAll("button[data-device]")];
 const deepFocus = document.getElementById("deep-focus");
 
 const setShadeActive = setupWindowShade(deepFocus.querySelector(".porthole"));
@@ -240,6 +241,7 @@ const gift = document.getElementById("gift");
 const campaignSlides = [...document.querySelectorAll(".gift-letter")];
 const runway = document.getElementById("runway");
 const sections = [sky, showcase, deepFocus, download, gift, ...campaignSlides, runway];
+const showcasePage = sections.indexOf(showcase);
 const giftPage = sections.indexOf(gift);
 const firstSlidePage = giftPage + 1;
 const runwayPage = sections.indexOf(runway);
@@ -577,11 +579,23 @@ for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-e
   });
 }
 
-function stepPage(down, focusPage = false) {
-  const nearingNextScreen = (pageTarget >= 1 && pageTarget <= giftPage) && Math.abs(handoffProgress - pageTarget) <= .10;
+function stepNavigation(down, focusPage = false) {
+  const direction = down ? 1 : -1;
+  const nearTarget = Math.abs(handoffProgress - pageTarget) <= .10;
+  if (pageTarget === showcasePage && nearTarget) {
+    const selected = deviceButtons.findIndex(button => button.getAttribute("aria-pressed") === "true");
+    const nextDevice = deviceButtons[selected + direction];
+    if (selected >= 0 && nextDevice) {
+      cancelLinkFade();
+      nextDevice.click();
+      return true;
+    }
+  }
+
+  const nearingNextScreen = pageTarget >= 1 && pageTarget <= giftPage && nearTarget;
   const onCampaign = pageTarget >= firstSlidePage && pageTarget <= lastSlidePage;
   if (handoffFrame && !nearingNextScreen && !onCampaign && down === (pageTarget > pageOrigin)) return true;
-  const target = Math.max(0, Math.min(sections.length - 1, pageTarget + (down ? 1 : -1)));
+  const target = Math.max(0, Math.min(sections.length - 1, pageTarget + direction));
   return playPage(target, focusPage);
 }
 
@@ -603,7 +617,7 @@ window.addEventListener("wheel", event => {
   const scale = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? window.innerHeight : 1;
   wheelDistance += Math.abs(event.deltaY) * scale;
   if (wheelDistance < wheelThreshold) return;
-  stepPage(down);
+  stepNavigation(down);
   capturedWheelDirection = down;
   wheelDistance = 0;
 }, { passive: false });
@@ -624,7 +638,7 @@ window.addEventListener("touchmove", event => {
   const dy = touchOrigin.clientY - clientY;
   const dx = Math.abs(touchOrigin.clientX - clientX);
   if (Math.abs(dy) < touchThreshold || Math.abs(dy) < dx * 1.25) return;
-  stepPage(dy > 0);
+  stepNavigation(dy > 0);
   touchHandoff = true;
 }, { passive: false });
 for (const type of ["touchend", "touchcancel"]) {
@@ -639,7 +653,7 @@ window.addEventListener("keydown", event => {
   const down = event.key === "PageDown" || event.key === "ArrowDown" || (space && !event.shiftKey);
   const up = event.key === "PageUp" || event.key === "ArrowUp" || (space && event.shiftKey);
   if (!down && !up) return;
-  if (event.repeat || stepPage(down, true)) {
+  if (event.repeat || stepNavigation(down, true)) {
     event.preventDefault();
   }
 });
