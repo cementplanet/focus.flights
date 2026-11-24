@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=campaign-slides";
+import { setupGiftDescent } from "./gift.js?v=gift-sheet";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=ascent";
 import { setupWindowShade } from "./porthole/shade.js?v=window-flight";
@@ -463,11 +463,11 @@ function playPage(target, focusPage = false) {
   // Page progress is the reversible shot clock; the camera and the paper
   // sample independent tracks so the flap doesn't inherit the camera's peak speed.
   const giftStart = Math.min(3, handoffProgress);
-  const descentSeconds = 2.55;
-  const openingLetter = target === firstSlidePage && handoffProgress < firstSlidePage;
-  const unfoldSeconds = openingLetter ? 2.75 : 3.25;
+  const returning = target < handoffProgress;
+  const descentSeconds = returning ? 1.25 : 2.55;
+  const unfoldSeconds = returning ? 1.10 : 2.75;
   const slideSeconds = .76;
-  const landingSeconds = 1.55;
+  const landingSeconds = returning ? .95 : 1.55;
   const lastSlideTime = unfoldSeconds + (lastSlidePage - firstSlidePage) * slideSeconds;
   const secondsPerPage = page => page < giftPage ? descentSeconds : page < firstSlidePage ? unfoldSeconds :
     page < lastSlidePage ? slideSeconds : landingSeconds;

@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=campaign-slides";
+import { prepareInvitation } from "./invitation.js?v=gift-sheet";
 
 const project = `
   uniform vec3 eye, right, up, forward;

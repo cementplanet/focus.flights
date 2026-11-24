@@ -303,7 +303,6 @@
 }
 
 .runway[data-copy-visible] .site-footer { visibility: visible; }
-.site-footer > svg { position: absolute; }
 
 .site-footer-brand,
 .site-footer-social,
@@ -322,23 +321,33 @@
 .site-footer-social a {
   display: grid;
   place-items: center;
-  width: 36px;
+  width: 44px;
   min-height: 44px;
+  border-radius: 8px;
+  color: #e1e6ed;
 }
 
-.site-footer-social img {
-  display: block;
-  width: 20px;
-  height: auto;
-  filter: brightness(0) invert(1);
+.site-footer-icon {
+  width: var(--icon-size, 18px);
+  aspect-ratio: 1;
+  background: currentColor;
+  mask: var(--icon-url) center / contain no-repeat;
 }
 
-.site-footer-social img:is([src$="/xiaohongshu.png"], [src$="/x.png"]) {
-  filter: url(#white-social-icon);
+/* Simple Icons wordmark and symbols, sized for the visible marks. */
+.icon-xiaohongshu {
+  --icon-url: url("brand/social/xiaohongshu.svg");
+  --icon-size: 28px;
 }
-
-.site-footer-social img[src$="/xiaohongshu.png"] { width: 27px; }
-.site-footer-social a:hover img { opacity: .78; }
+.icon-instagram { --icon-url: url("brand/social/instagram.svg"); }
+.icon-x {
+  --icon-url: url("brand/social/x.svg");
+  --icon-size: 19px;
+}
+.site-footer-social a:hover { color: white; }
+@media (forced-colors: active) {
+  .site-footer-icon { forced-color-adjust: none; background: LinkText; }
+}
 
 .site-footer-links {
   flex-wrap: wrap;
@@ -369,5 +378,9 @@
     inset-block-end: calc(var(--dock-bottom) + var(--dock-height) + 6px);
     font-size: .8125rem;
   }
-  .site-footer-brand { gap: 8px; }
+  .site-footer-brand { flex-wrap: wrap; justify-content: center; max-width: 100%; gap: 0 8px; }
+}
+
+@media (max-width: 360px) {
+  .site-footer-brand { gap: 0 4px; font-size: .75rem; }
 }
