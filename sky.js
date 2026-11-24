@@ -572,7 +572,7 @@ function fadeToSection(target) {
   };
 }
 
-for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-explore')) {
+for (const link of document.querySelectorAll('.site-header a[href^="#"], .hero-explore, .site-footer-wordmark')) {
   link.addEventListener("click", event => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = sections.findIndex(section => "#" + section.id === link.hash);

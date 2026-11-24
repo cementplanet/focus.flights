@@ -286,45 +286,83 @@
 .runway-poster { position: absolute; inset: 0; opacity: var(--runway-arrival, 0); }
 .runway-poster img { width: 100%; height: 100%; object-fit: cover; }
 
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 .site-footer {
+  --footer-bottom: max(10px, env(safe-area-inset-bottom));
   position: absolute;
+  isolation: isolate;
   inset-inline: var(--content-left);
-  inset-block-end: max(10px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-block-start: 1px solid #77829266;
-  color: #c2c9d3;
-  font-size: .875rem;
+  inset-block-end: var(--footer-bottom);
+  color: #f4f1eb;
   pointer-events: none;
   visibility: hidden;
   opacity: var(--actions-presence, 0);
 }
 
+.site-footer::before {
+  --footer-shade: linear-gradient(transparent, #0b0b0d26 25%, #0b0b0dc4 72%, #0b0b0d);
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -36px calc(-1 * var(--content-left)) calc(-1 * var(--footer-bottom));
+  background: var(--footer-shade);
+}
+
 .runway[data-copy-visible] .site-footer { visibility: visible; }
 
-.site-footer-brand,
+.site-footer-main,
+.site-footer-meta,
 .site-footer-social,
 .site-footer-links {
   display: flex;
   align-items: center;
 }
 
-.site-footer-brand {
-  gap: 12px;
+.site-footer-main,
+.site-footer-meta {
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+
+.site-footer-main { padding-block-end: 12px; }
+
+.site-footer-wordmark {
+  box-sizing: border-box;
+  display: grid;
+  align-items: center;
+  min-block-size: 44px;
+  padding-block: .04em .1em;
+  color: inherit;
+  font: 400 clamp(3rem, 6.25vw, 6.5rem)/.87 "Instrument Serif", Georgia, serif;
+  letter-spacing: -.035em;
+  text-decoration: none;
   white-space: nowrap;
 }
 
-.site-footer small { font-size: inherit; }
+.site-footer-meta {
+  border-block-start: 1px solid #f4f1eb55;
+  color: #cfcbc5;
+  font-size: .75rem;
+}
+
+.site-footer-meta small { font-size: inherit; }
+
+.site-footer-social { margin-inline-end: -5px; }
 
 .site-footer-social a {
   display: grid;
   place-items: center;
   width: 44px;
   min-height: 44px;
-  border-radius: 8px;
-  color: #e1e6ed;
+  border-radius: 7px;
+  color: inherit;
 }
 
 .site-footer-icon {
@@ -333,9 +371,9 @@
   place-items: center;
   width: 34px;
   height: 26px;
-  border: 1px solid #dbe4f447;
-  border-radius: 7px;
-  background: #0e141dbd;
+  border: 1px solid #f4f1eb52;
+  border-radius: 6px;
+  background: #17171bbd;
 }
 
 .site-footer-icon::before {
@@ -358,8 +396,8 @@
 }
 .site-footer-social a:hover { color: white; }
 .site-footer-social a:hover .site-footer-icon {
-  border-color: #dbe4f488;
-  background: #293240d9;
+  border-color: #f4f1ebb3;
+  background: #353436d9;
 }
 @media (forced-colors: active) {
   .site-footer-icon { border-color: LinkText; }
@@ -368,36 +406,57 @@
 
 .site-footer-links {
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0 clamp(14px, 2vw, 28px);
+  column-gap: clamp(16px, 3vw, 44px);
 }
 
 .site-footer-links a {
   display: inline-grid;
   align-items: center;
   min-height: 44px;
-  color: #e7ebf1;
+  color: #f4f1eb;
+  font-size: .75rem;
+  font-weight: 500;
+  letter-spacing: .095em;
   text-decoration: none;
   text-underline-offset: .24em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .site-footer:not([inert]) a { pointer-events: auto; }
+.site-footer-wordmark:hover { color: white; }
 .site-footer-links a:hover { text-decoration: underline; }
 .site-footer a:focus-visible { outline: 2px solid #f1f4fa; outline-offset: 2px; }
 
-@media (max-width: 720px) {
-  .site-footer { flex-direction: column; gap: 0; }
-  .site-footer-links a { min-height: 32px; }
-}
-
-@media (max-width: 520px) {
-  .site-footer {
-    inset-block-end: calc(var(--dock-bottom) + var(--dock-height) + 6px);
-    font-size: .8125rem;
+@media (max-width: 660px) {
+  .site-footer-main { gap: 10px; padding-block-end: 6px; }
+  .site-footer-wordmark { font-size: clamp(2.3rem, 10.6vw, 3.5rem); }
+  .site-footer-meta { flex-direction: column; align-items: start; gap: 0; }
+  .site-footer-meta small { order: 1; padding-block: 0 4px; }
+  .site-footer-links {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-between;
+    width: 100%;
+    column-gap: 6px;
   }
-  .site-footer-brand { flex-wrap: wrap; justify-content: center; max-width: 100%; gap: 0 8px; }
+  .site-footer-links a { font-size: .6875rem; letter-spacing: .07em; }
 }
 
 @media (max-width: 360px) {
-  .site-footer-brand { gap: 0 4px; font-size: .75rem; }
+  .site-footer-links a { font-size: .625rem; }
+}
+
+@media (max-width: 520px) {
+  .site-footer { --footer-bottom: calc(var(--dock-bottom) + var(--dock-height) + 8px); }
+  .site-footer::before {
+    background: radial-gradient(ellipse 50% 40px at 24% 58px, #0b0b0d80, transparent), var(--footer-shade);
+  }
+}
+
+@media (max-width: 520px) and (max-height: 520px) and (orientation: portrait) {
+  .runway-copy { top: 36%; gap: 12px; }
+  .runway-partners { row-gap: 10px; }
+  .runway-partners h2 { margin-block-end: 3px; font-size: 19px; }
+  .runway-partners p { font-size: 13px; line-height: 1.35; }
 }
