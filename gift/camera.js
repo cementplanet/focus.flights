@@ -1,5 +1,5 @@
 import { getHardwareContext } from "../hardware-gl.js";
-import { prepareInvitation } from "./invitation.js?v=gift-sheet";
+import { prepareInvitation } from "./invitation.js?v=hidden-black-week";
 
 const project = `
   uniform vec3 eye, right, up, forward;

@@ -85,6 +85,7 @@
     radial-gradient(ellipse at 38% 24%, #303237, transparent 54%),
     radial-gradient(ellipse at 55% 62%, #22272d, transparent 68%), #080c13;
 }
+.gift-letter[hidden] { display: none; }
 .gift-letter {
   --gift-top: var(--phone-top, calc(var(--header-top) + var(--header-height) + 12px));
   --gift-bottom: var(--phone-bottom, max(20px, env(safe-area-inset-bottom)));

@@ -196,7 +196,8 @@ export function prepareInvitation(gl, program, project, shadows, studioAir, atla
   }
   // Welcome on top, brushed silver and airmail stock just behind its edges.
   strips(cardRows,7,.013,[1372,4,672,896],insert,12);
-  strips(cardRows,6,.021,[688,4,672,896],insert,12);
+  // Black Week is temporarily hidden. Restore this sheet with its campaign slide.
+  // strips(cardRows,6,.021,[688,4,672,896],insert,12);
   strips(cardRows,2,.029,[4,4,672,896],insert,12);
   for(const side of [-1,1]) {
     polygon([[side*1.24,-.865],[side*1.24,.65],[side*1.14,.63],[0,-.29]],1,.039);

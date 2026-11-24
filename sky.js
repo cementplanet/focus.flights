@@ -1,4 +1,4 @@
-import { setupGiftDescent } from "./gift.js?v=english-cards";
+import { setupGiftDescent } from "./gift.js?v=hidden-black-week";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=compact-noise";
 import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
@@ -238,7 +238,7 @@ const setCamera = setupPortholeSky(deepFocus.querySelector(".porthole-frame"));
 const download = document.getElementById("download");
 const windowFlight = setupWindowFlight(deepFocus, download, ease, setCamera);
 const gift = document.getElementById("gift");
-const campaignSlides = [...document.querySelectorAll(".gift-letter")];
+const campaignSlides = [...document.querySelectorAll(".gift-letter:not([hidden])")];
 const runway = document.getElementById("runway");
 const sections = [sky, showcase, deepFocus, download, gift, ...campaignSlides, runway];
 const showcasePage = sections.indexOf(showcase);

@@ -1,4 +1,4 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=english-cards";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=hidden-black-week";
 import { prepareCopy } from "./motion-copy.js";
 
 export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
