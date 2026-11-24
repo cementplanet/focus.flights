@@ -75,10 +75,9 @@
   }
 }
 
-/* One camera stays in view while the two gift anchors pass underneath it. */
+/* The studio stays fixed while the campaign slides move through it. */
 .gift[data-airborne] { overflow: visible; z-index: 1; }
 .gift[data-airborne] .gift-night { position: fixed; }
-.gift-letter { position: relative; height: 100dvh; outline: none; pointer-events: none; }
 .gift-letter-poster {
   position: absolute;
   inset: 0;
@@ -87,30 +86,65 @@
     radial-gradient(ellipse at 38% 24%, #303237, transparent 54%),
     radial-gradient(ellipse at 55% 62%, #22272d, transparent 68%), #080c13;
 }
-/* The camera uses the button bounds as the final positions of the prints. */
-.gift-letter-poster, .gift-card-row {
-  --print-width: min(29.6vw, 49.5dvh);
-  display: flex;
+.gift-letter {
+  --gift-top: var(--phone-top, calc(var(--header-top) + var(--header-height) + 12px));
+  --gift-bottom: var(--phone-bottom, max(20px, env(safe-area-inset-bottom)));
+  --gift-space: calc(100dvh - var(--gift-top) - var(--gift-bottom));
+  --print-width: min(35vw, 50dvh, 420px, calc(var(--gift-space) * .75));
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: var(--gift-top) var(--content-left) var(--gift-bottom);
+  display: grid;
+  grid-template-columns: var(--print-width) minmax(0, 26rem);
   align-items: center;
-  justify-content: center;
-  gap: calc(var(--print-width) * .07);
+  justify-content: safe center;
+  gap: clamp(24px, 6.5vw, 112px);
+  outline: none;
+  color: #f5f5f3;
 }
+.gift[data-airborne]:has(.gift-camera[data-ready]) + .gift-letter {
+  opacity: var(--welcome-presence, 0);
+}
+.gift-copy h2 {
+  margin: 0 0 .46em;
+  font-size: clamp(29px, 3.55vw, 54px);
+  line-height: 1.15;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.gift-copy p {
+  margin: 0;
+  color: #e1e3e6;
+  font-size: clamp(16px, 1.55vw, 21px);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.gift-copy .gift-details {
+  margin-top: .85em;
+  color: #aeb7c4;
+  font-size: clamp(14px, 1.25vw, 17px);
+  font-variant-numeric: tabular-nums;
+}
+.gift-details span { display: inline-block; }
+.gift-details span + span { margin-inline-start: .45em; }
 @media (max-width: 620px) and (orientation: portrait) {
-  .gift-letter-poster, .gift-card-row {
-    --card-gap: clamp(8px, 1.6dvh, 16px);
-    --card-margin: max(var(--phone-top, calc(var(--header-top) + var(--header-height) + 12px)), var(--phone-bottom, 20px));
-    /* Three 3:4 cards together occupy four card widths of vertical space. */
-    --print-width: min(76vw, calc((100dvh - 2 * var(--card-margin) - 2 * var(--card-gap)) / 4));
-    flex-direction: column;
-    gap: var(--card-gap);
+  .gift-letter {
+    --print-width: min(59vw, 260px, calc((var(--gift-space) - 144px) * .75));
+    grid-template-columns: minmax(0, 24rem);
+    grid-template-rows: auto auto;
+    align-content: center;
+    justify-items: center;
+    gap: clamp(14px, 2.6dvh, 24px);
+    text-align: center;
   }
+  .gift-copy h2 { font-size: clamp(25px, 6.2vw, 32px); }
 }
-.gift-print, .gift-card-row button {
+.gift-print {
   width: var(--print-width);
   aspect-ratio: 3 / 4;
   border-radius: 2.4% / 1.8%;
-}
-.gift-print {
   background-image: url("gift/invitation.webp?v=lit-cards");
   background-size: 304.7619% 228.5714%;
   background-repeat: no-repeat;
@@ -119,15 +153,14 @@
 .welcome-print { --print-x: .290698%; }
 .black-week-print { --print-x: 50%; }
 .sharing-print { --print-x: 99.709302%; }
-.gift-card-row { position: absolute; inset: 0; z-index: 2; }
-.gift-card-row button {
+.gift-letter button {
+  display: block;
   border: 0;
   padding: 0;
-  background: transparent;
-  pointer-events: auto;
+  background-color: transparent;
   cursor: zoom-in;
 }
-.gift-card-row button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.gift-letter button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 .gift-reader {
   padding: 0;
   border: 0;
@@ -252,10 +285,6 @@
 }
 .runway-poster { position: absolute; inset: 0; opacity: var(--runway-arrival, 0); }
 .runway-poster img { width: 100%; height: 100%; object-fit: cover; }
-.gift-letter-poster .gift-print {
-  translate: 0 calc(-106dvh * var(--runway-arrival, 0));
-  filter: blur(calc(14px * var(--runway-arrival, 0)));
-}
 
 .site-footer {
   position: absolute;
@@ -274,7 +303,6 @@
 }
 
 .runway[data-copy-visible] .site-footer { visibility: visible; }
-.site-footer > svg { position: absolute; }
 
 .site-footer-brand,
 .site-footer-social,
@@ -293,23 +321,50 @@
 .site-footer-social a {
   display: grid;
   place-items: center;
-  width: 36px;
+  width: 44px;
   min-height: 44px;
+  border-radius: 8px;
+  color: #e1e6ed;
 }
 
-.site-footer-social img {
-  display: block;
-  width: 20px;
-  height: auto;
-  filter: brightness(0) invert(1);
+.site-footer-icon {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  border: 1px solid #dbe4f447;
+  border-radius: 7px;
+  background: #0e141dbd;
 }
 
-.site-footer-social img:is([src$="/xiaohongshu.png"], [src$="/x.png"]) {
-  filter: url(#white-social-icon);
+.site-footer-icon::before {
+  content: "";
+  width: var(--icon-size, 15px);
+  aspect-ratio: 1;
+  background: currentColor;
+  mask: var(--icon-url) center / contain no-repeat;
 }
 
-.site-footer-social img[src$="/xiaohongshu.png"] { width: 27px; }
-.site-footer-social a:hover img { opacity: .78; }
+/* Simple Icons wordmark and symbols, sized for the visible marks. */
+.icon-xiaohongshu {
+  --icon-url: url("brand/social/xiaohongshu.svg");
+  --icon-size: 23px;
+}
+.icon-instagram { --icon-url: url("brand/social/instagram.svg"); }
+.icon-x {
+  --icon-url: url("brand/social/x.svg");
+  --icon-size: 16px;
+}
+.site-footer-social a:hover { color: white; }
+.site-footer-social a:hover .site-footer-icon {
+  border-color: #dbe4f488;
+  background: #293240d9;
+}
+@media (forced-colors: active) {
+  .site-footer-icon { border-color: LinkText; }
+  .site-footer-icon::before { forced-color-adjust: none; background: LinkText; }
+}
 
 .site-footer-links {
   flex-wrap: wrap;
@@ -340,5 +395,9 @@
     inset-block-end: calc(var(--dock-bottom) + var(--dock-height) + 6px);
     font-size: .8125rem;
   }
-  .site-footer-brand { gap: 8px; }
+  .site-footer-brand { flex-wrap: wrap; justify-content: center; max-width: 100%; gap: 0 8px; }
+}
+
+@media (max-width: 360px) {
+  .site-footer-brand { gap: 0 4px; font-size: .75rem; }
 }

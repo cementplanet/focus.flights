@@ -1,4 +1,4 @@
-import { prepareInvitation } from "./invitation.js?v=card-column";
+import { prepareInvitation } from "./invitation.js?v=gift-sheet";
 
 const project = `
   uniform vec3 eye, right, up, forward;
@@ -61,7 +61,7 @@ const stageFragment = runwaySource => `
   precision highp float;
   varying highp vec3 direction;
   varying highp vec2 screen;
-  uniform sampler2D grain, airliner, printLayer;
+  uniform sampler2D grain, airliner;
   uniform float landing;
   ${runwaySource}
   uniform vec3 atmosphere; // lift, viewport aspect, breathing phase
@@ -112,23 +112,6 @@ const stageFragment = runwaySource => `
       vec2 d=fract(cell)-center;
       float mote=exp(-dot(d,d)*mix(830.,2300.,center.x));
       scene+=vec3(.22,.23,.24)*mote*min(haze+.38*diffusion,1.)*center.y*center.y;
-    }
-    if (landing>0. && landing<.93) {
-      // Sample the lit paper apart from the air, keeping the runway in focus.
-      vec2 uv=.5+.5*screen;
-      uv.y-=landing*1.06;
-      float softness=smoothstep(.025,.74,landing);
-      vec2 radius=.0055*softness*vec2(1./atmosphere.y,1.);
-      float lod=5.8*softness;
-      vec4 sheets=.25*(texture2D(printLayer,uv+radius,lod)+texture2D(printLayer,uv-radius,lod)
-        +texture2D(printLayer,uv+radius*vec2(1.,-1.),lod)+texture2D(printLayer,uv-radius*vec2(1.,-1.),lod));
-      // Mip filtering must approach transparent air outside the image.
-      float cardHeight=min(.296*atmosphere.y,.495)*4./3.;
-      float coverage=1.-smoothstep(.5*cardHeight+.02,.5*cardHeight+.08,abs(uv.y-.5));
-      sheets*=coverage*(1.-smoothstep(.18,.92,landing));
-      float headerShade=smoothstep(.61,.94,screen.y)*smoothstep(.04,.20,landing);
-      sheets.rgb*=1.-.40*headerShade;
-      scene=scene*(1.-sheets.a)+sheets.rgb;
     }
     gl_FragColor=vec4(scene,1.);
   }
@@ -199,22 +182,11 @@ async function prepare(gl) {
   }
   const atlas=texture(invitation), ground=texture(floor,true);
   const planeTexture=texture(plane);
-  const printTexture=gl.createTexture(), printBuffer=gl.createFramebuffer();
-  gl.bindTexture(gl.TEXTURE_2D,printTexture);
-  // Complete texture even before the first landing on browsers that validate all samplers.
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
-  for (const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T]) gl.texParameteri(gl.TEXTURE_2D,axis,gl.CLAMP_TO_EDGE);
-  gl.bindFramebuffer(gl.FRAMEBUFFER,printBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,printTexture,0);
-  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
-  let printWidth=0, printHeight=0, capturedAspect=0;
   const letter=prepareInvitation(gl,program,project,shadows,studioAir,atlas);
   const stage=program(gl,stageVertex,stageFragment(runwaySource),["corner"]);
   gl.useProgram(stage.handle);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"shadowMap"),1);
   gl.uniform1i(gl.getUniformLocation(stage.handle,"airliner"),2);
-  gl.uniform1i(gl.getUniformLocation(stage.handle,"printLayer"),3);
   const landingUniform=gl.getUniformLocation(stage.handle,"landing");
   const atmosphere=gl.getUniformLocation(stage.handle,"atmosphere");
   const corners=gl.createBuffer();
@@ -241,7 +213,6 @@ async function prepare(gl) {
   let previousLayout;
   return function draw(t,w,h,paperPhase,lift,slip,air,landing,cardLayout) {
     if (cardLayout !== previousLayout) {
-      capturedAspect=0;
       lastShadow=-1;
       previousLayout=cardLayout;
     }
@@ -265,7 +236,7 @@ async function prepare(gl) {
       gl.uniform3f(pass.up,fz*ry,-fz*rx,fy*rx-fx*ry);
       gl.uniform2f(pass.lens,lensX,lensX*aspect);
     }
-    if(landing<1 && (lastShadow!==paperPhase || lastLift!==lift || lastSlip!==slip || (!landing && lastAir!==air))) {
+    if(lastShadow!==paperPhase || lastLift!==lift || lastSlip!==slip || (slip<1 && lastAir!==air)) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D,atlas);
       gl.activeTexture(gl.TEXTURE0);
@@ -273,7 +244,7 @@ async function prepare(gl) {
       gl.viewport(0,0,size,size);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
-      letter(paperPhase,camera,true,lift,slip,air,cardLayout);
+      if (slip<1) letter(paperPhase,camera,true,lift,slip,air,cardLayout);
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -282,33 +253,6 @@ async function prepare(gl) {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
     gl.activeTexture(gl.TEXTURE0);
-    if (landing>0 && landing<.93 && aspect!==capturedAspect) {
-      // Cache the actual three printed surfaces, including their lighting and
-      // silhouette. Power-of-two mip levels give a continuous optical blur.
-      const pot=n=>Math.min(2048,2**Math.ceil(Math.log2(n)));
-      const pw=pot(w), ph=pot(h);
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D,printTexture);
-      if (pw!==printWidth || ph!==printHeight) {
-        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,pw,ph,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-        printWidth=pw; printHeight=ph;
-      }
-      gl.bindTexture(gl.TEXTURE_2D,null);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER,printBuffer);
-      gl.viewport(0,0,pw,ph);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.disable(gl.DEPTH_TEST);
-      letter(paperPhase,camera,false,lift,slip,air,cardLayout);
-      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D,printTexture);
-      gl.generateMipmap(gl.TEXTURE_2D);
-      capturedAspect=aspect;
-    }
-    if (!landing) capturedAspect=0;
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D,printTexture);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D,planeTexture);
     gl.activeTexture(gl.TEXTURE0);
@@ -325,11 +269,11 @@ async function prepare(gl) {
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.disableVertexAttribArray(stage.corner);
     gl.enable(gl.DEPTH_TEST);
-    if (!landing) letter(paperPhase,camera,false,lift,slip,air,cardLayout);
+    if (slip<1) letter(paperPhase,camera,false,lift,slip,air,cardLayout);
   };
 }
 
-export function setupStudio(canvas, download, row) {
+export function setupStudio(canvas, download, welcome) {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let unavailable = false;
   let draw, loading, position = 1, paperPhase = 1, lift = 0, slip = 0, landing = 0;
@@ -394,20 +338,20 @@ export function setupStudio(canvas, download, row) {
       paint();
     }).catch(error=>console.warn("Gift studio:",error));
   }
+  const card = welcome.querySelector("button");
   const layoutObserver = new ResizeObserver(()=>{
-    const bounds = row.getBoundingClientRect();
-    const first = row.firstElementChild.getBoundingClientRect();
-    const last = row.lastElementChild.getBoundingClientRect();
+    const bounds = welcome.getBoundingClientRect();
+    const print = card.getBoundingClientRect();
     width = canvas.clientWidth;
     height = canvas.clientHeight;
-    cardLayout = [first.width / bounds.width,
-      (last.left - first.left) / (2 * bounds.width),
-      (first.top - last.top) / (2 * bounds.height)];
+    cardLayout = [print.width / bounds.width,
+      (print.left - bounds.left + (print.width - bounds.width) / 2) / bounds.width,
+      (bounds.top - print.top + (bounds.height - print.height) / 2) / bounds.height];
     dirty = true;
     resize();
   });
   layoutObserver.observe(canvas);
-  layoutObserver.observe(row.firstElementChild);
+  layoutObserver.observe(card);
   new IntersectionObserver(([entry])=>{
     if (entry.isIntersecting) warm();
   },{rootMargin:"100% 0px"}).observe(download);
