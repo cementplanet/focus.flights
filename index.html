@@ -361,8 +361,8 @@
   </style>
   <link rel="stylesheet" href="/sky.css?v=still-clouds">
   <link rel="stylesheet" href="/journey.css?v=dark-mode">
-  <link rel="stylesheet" href="/showcase.css?v=dark-mode-hardware">
-  <link rel="stylesheet" href="/button-motion.css?v=dark-mode">
+  <link rel="stylesheet" href="/showcase.css?v=aqua-tone-release">
+  <link rel="stylesheet" href="/button-motion.css?v=aqua-tone">
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="/deep-focus.css?v=static-porthole">
   <link rel="stylesheet" href="/download.css?v=static-porthole">
@@ -380,16 +380,16 @@
     </a>
     <nav class="sky-nav" aria-label="Main navigation">
       <svg class="sky-nav-surface aqua-button-surface" aria-hidden="true" focusable="false">
-        <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
-        <rect class="aqua-face" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65"/>
+        <rect class="aqua-contact-shadow" transform="translate(0 1.25)"/>
+        <rect class="aqua-face" stroke="#a9b3c3" stroke-width=".65"/>
       </svg>
       <a class="section-link" href="#showcase">Flight</a>
       <a class="section-link gift-link" href="#gift">Gift</a>
       <a class="section-link" href="#runway">Affiliate</a>
       <a class="sky-get-app aqua-button" href="#download">
         <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
-          <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
-          <rect class="aqua-face" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65"/>
+          <rect class="aqua-contact-shadow" transform="translate(0 1.25)"/>
+          <rect class="aqua-face" stroke="#a9b3c3" stroke-width=".65"/>
         </svg>
         Get the App
       </a>
@@ -522,18 +522,6 @@
               <stop offset=".84" stop-color="#e3e7ee"/>
               <stop offset="1" stop-color="#fbfcff"/>
             </radialGradient>
-            <radialGradient id="device-glass-tone-dark" href="#device-glass-tone">
-              <stop stop-color="#363d49"/>
-              <stop offset=".52" stop-color="#282e38"/>
-              <stop offset=".84" stop-color="#1b2029"/>
-              <stop offset="1" stop-color="#2d3440"/>
-            </radialGradient>
-            <radialGradient id="device-glass-tone-dark-raised" href="#device-glass-tone">
-              <stop stop-color="#454e5e"/>
-              <stop offset=".52" stop-color="#323a48"/>
-              <stop offset=".84" stop-color="#232932"/>
-              <stop offset="1" stop-color="#374050"/>
-            </radialGradient>
             <filter id="device-aqua" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
               <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="rounding"/>
               <feSpecularLighting in="rounding" surfaceScale="2" specularConstant=".65" specularExponent="24" lighting-color="#fff" result="light">
@@ -542,17 +530,24 @@
               <feComposite in="light" in2="SourceAlpha" operator="in" result="highlight"/>
               <feBlend in="SourceGraphic" in2="highlight" mode="screen"/>
             </filter>
+            <!-- WebKit needs the Aqua lighting and dark tone mapping inside one filter. -->
             <filter id="device-aqua-dark" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
               <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="rounding"/>
-              <feSpecularLighting in="rounding" surfaceScale="2" specularConstant=".32" specularExponent="24" lighting-color="#8f9db2" result="light">
+              <feSpecularLighting in="rounding" surfaceScale="2" specularConstant=".65" specularExponent="24" lighting-color="#fff" result="light">
                 <feDistantLight azimuth="225" elevation="55"/>
               </feSpecularLighting>
               <feComposite in="light" in2="SourceAlpha" operator="in" result="highlight"/>
               <feBlend in="SourceGraphic" in2="highlight" mode="screen"/>
+              <feComponentTransfer>
+                <feFuncR type="linear" slope="1.62" intercept="-1.32"/>
+                <feFuncG type="linear" slope="1.62" intercept="-1.305"/>
+                <feFuncB type="linear" slope="1.62" intercept="-1.283"/>
+              </feComponentTransfer>
+              <feColorMatrix type="saturate" values=".6"/>
             </filter>
             <symbol id="device-aqua-disc" viewBox="0 0 44 44">
               <circle class="aqua-face" cx="22" cy="22" r="21.75"/>
-              <circle cx="22" cy="22" r="21.75" fill="var(--aqua-selection, #000)" fill-opacity="var(--device-selection, 0)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".5"/>
+              <circle cx="22" cy="22" r="21.75" fill="var(--aqua-selection, #000)" fill-opacity="var(--device-selection, 0)" stroke="#a9b3c3" stroke-opacity="var(--aqua-edge-opacity, .3)" stroke-width=".5"/>
             </symbol>
             <linearGradient id="device-bridge-tint" gradientUnits="userSpaceOnUse">
               <stop stop-color="var(--aqua-selection, #000)"/>
@@ -562,7 +557,7 @@
           <g class="aqua-face">
             <path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/><path class="liquid-face"/>
           </g>
-          <g stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".5">
+          <g stroke="#a9b3c3" stroke-opacity="var(--aqua-edge-opacity, .3)" stroke-width=".5">
             <path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/><path class="liquid-ink"/>
           </g>
         </svg>
