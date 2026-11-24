@@ -175,6 +175,7 @@
   cursor: zoom-in;
 }
 .gift-letter button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+html:has(.gift-reader[open]) { overflow: hidden; }
 .gift-reader {
   padding: 0;
   border: 0;

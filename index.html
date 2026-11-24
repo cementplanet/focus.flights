@@ -7,6 +7,14 @@
   <script>
     history.scrollRestoration = "manual";
     if (!location.hash || location.hash === "#flight") {
+      const root = document.documentElement;
+      root.dataset.flightPending = "scene";
+      // A stalled connection must not keep the navigation hidden indefinitely.
+      setTimeout(() => root.removeAttribute("data-flight-pending"), 12000);
+      // Module download or initialization errors still leave the HTML usable.
+      document.addEventListener("DOMContentLoaded", () => {
+        if (root.dataset.flightPending === "scene") root.removeAttribute("data-flight-pending");
+      });
       const crop = matchMedia("(max-aspect-ratio: 4/5)").matches ? "tall" : "wide";
       for (const light of ["day", "night"]) {
         const still = document.createElement("link");
@@ -30,6 +38,8 @@
       --header-top: max(clamp(32px, 6vh, 76px), calc(env(safe-area-inset-top) + 16px));
       --header-height: 44px;
     }
+
+    html[data-flight-pending] body { visibility: hidden; }
 
     html, body {
       margin: 0;
@@ -366,9 +376,9 @@
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="/deep-focus.css?v=static-porthole">
   <link rel="stylesheet" href="/download.css?v=static-porthole">
-  <link rel="stylesheet" href="/gift.css?v=letter-handoff">
+  <link rel="stylesheet" href="/gift.css?v=reader-scroll">
   <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
-  <script src="/sky.js?v=letter-handoff" type="module"></script>
+  <script src="/sky.js?v=first-frame" type="module"></script>
   <script src="/showcase.js?v=front-index" type="module"></script>
 </head>
 <body>

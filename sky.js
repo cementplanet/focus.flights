@@ -215,8 +215,8 @@ let handoffVelocity = 0;
 let pageTarget = 0;
 let pageOrigin = 0;
 const wheelQuietPeriod = 140;
-const returnWheelThreshold = 32;
-const returnTouchThreshold = 36;
+const wheelThreshold = 32;
+const touchThreshold = 36;
 let lastWheelAt = -Infinity;
 let lastWheelDown;
 let capturedWheelDirection;
@@ -259,7 +259,8 @@ new IntersectionObserver(([entry]) => {
 }).observe(focusTitle);
 
 const copyGroups = sections.map(section => section.querySelector('[data-copy-motion="soft-type"]'));
-let copyVisit = -1;
+// The first view opens with the complete title. Later visits replay its entrance.
+let copyVisit = !location.hash || location.hash === "#flight" ? 0 : -1;
 
 function beginCopyVisit(page) {
   if (copyVisit === page) return;
@@ -588,11 +589,8 @@ window.addEventListener("wheel", event => {
   if (event.ctrlKey || event.defaultPrevented || !event.deltaY) return;
   const now = event.timeStamp;
   const down = event.deltaY > 0;
-  const returning = !down && pageTarget > 0;
-  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
-    if (returning) event.preventDefault();
-    return;
-  }
+  event.preventDefault();
+  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
   const newGesture = now - lastWheelAt > wheelQuietPeriod;
   if (newGesture) {
     capturedWheelDirection = undefined;
@@ -601,22 +599,13 @@ window.addEventListener("wheel", event => {
   lastWheelAt = now;
   lastWheelDown = down;
   // Only a deliberate reversal or a new gesture can consume another step.
-  if (capturedWheelDirection === down) {
-    event.preventDefault();
-    return;
-  }
-
-  if (returning) {
-    event.preventDefault();
-    const scale = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? window.innerHeight : 1;
-    wheelDistance += Math.abs(event.deltaY) * scale;
-    if (wheelDistance < returnWheelThreshold) return;
-  }
-
-  if (!stepPage(down)) return;
+  if (capturedWheelDirection === down) return;
+  const scale = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? window.innerHeight : 1;
+  wheelDistance += Math.abs(event.deltaY) * scale;
+  if (wheelDistance < wheelThreshold) return;
+  stepPage(down);
   capturedWheelDirection = down;
   wheelDistance = 0;
-  if (!event.defaultPrevented && event.cancelable) event.preventDefault();
 }, { passive: false });
 
 let touchOrigin;
@@ -627,19 +616,16 @@ window.addEventListener("touchstart", event => {
     ? event.touches[0] : undefined;
 }, { passive: true });
 window.addEventListener("touchmove", event => {
-  if (!touchOrigin || event.touches.length !== 1) return;
-  if (touchHandoff) { if (event.cancelable) event.preventDefault(); return; }
+  if (!touchOrigin || event.touches.length !== 1 || window.visualViewport?.scale > 1) return;
+  // Even a mostly horizontal swipe can natively scroll the page between two stops.
+  if (event.cancelable) event.preventDefault();
+  if (touchHandoff) return;
   const { clientX, clientY } = event.touches[0];
   const dy = touchOrigin.clientY - clientY;
   const dx = Math.abs(touchOrigin.clientX - clientX);
-  if (dy < 0 && pageTarget > 0) {
-    if (event.cancelable) event.preventDefault();
-    if (-dy < returnTouchThreshold || -dy < dx * 1.25) return;
-  }
-  if (Math.abs(dy) < 5 || Math.abs(dy) <= dx) return;
-  const down = dy > 0;
-  touchHandoff ||= stepPage(down);
-  if (touchHandoff && event.cancelable) event.preventDefault();
+  if (Math.abs(dy) < touchThreshold || Math.abs(dy) < dx * 1.25) return;
+  stepPage(dy > 0);
+  touchHandoff = true;
 }, { passive: false });
 for (const type of ["touchend", "touchcancel"]) {
   window.addEventListener(type, () => { touchOrigin = undefined; }, { passive: true });
@@ -724,8 +710,29 @@ const syncClouds = setupClouds(document.querySelector(".clouds"), () => palette,
 }, () => cloudCamera, reducedMotion);
 
 restoreSection();
+
+async function revealFirstFlight() {
+  const root = document.documentElement;
+  if (!root.hasAttribute("data-flight-pending")) return;
+  root.dataset.flightPending = "images";
+  const images = [...document.querySelectorAll(".sky-brand img, .sky .hero-actions img")];
+  const crop = matchMedia("(max-aspect-ratio: 4/5)").matches ? "tall" : "wide";
+  for (const light of ["day", "night"]) {
+    if (light === "day" ? palette.stars === 1 : palette.stars === 0) continue;
+    images.push(aircraft.querySelector(".aircraft-" + light));
+    const poster = new Image();
+    poster.src = new URL(`./clouds/cloud-${light}-${crop}.webp`, import.meta.url);
+    images.push(poster);
+  }
+  await Promise.allSettled(images.map(image => image.decode()));
+  if (pageTarget === 0) sky.setAttribute("data-clouds-visible", "");
+  root.removeAttribute("data-flight-pending");
+}
+void revealFirstFlight();
 window.addEventListener("hashchange", () => { cancelLinkFade(); restoreSection(); });
-window.addEventListener("pageshow", restoreSection);
+window.addEventListener("pageshow", event => {
+  if (event.persisted) restoreSection();
+});
 window.addEventListener("resize", () => {
   if (sequence.hasAttribute("data-focus-handoff")) {
     alignFocusScene();
