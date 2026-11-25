@@ -149,7 +149,7 @@
   width: var(--print-width);
   aspect-ratio: 3 / 4;
   border-radius: 2.4% / 1.8%;
-  background-image: url("gift/invitation.webp?v=english-cards");
+  background-image: var(--gift-atlas, url("gift/invitation.webp?v=english-cards"));
   background-size: 304.7619% 228.5714%;
   background-repeat: no-repeat;
   background-position: var(--print-x) .347222%;

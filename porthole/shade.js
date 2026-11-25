@@ -1,5 +1,6 @@
 export function setupWindowShade(porthole) {
   const handle = porthole.querySelector(".shade-control");
+  const { openLabel, closedLabel, percentLabel } = handle.dataset;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const clamp = value => Math.max(0, Math.min(1, value));
   let position = 1, target = 1, velocity = 0, frame = 0;
@@ -11,7 +12,7 @@ export function setupWindowShade(porthole) {
     const open = Math.round(100 * (1 - position));
     if (Number(handle.getAttribute("aria-valuenow")) !== open) {
       handle.setAttribute("aria-valuenow", open);
-      handle.setAttribute("aria-valuetext", open === 0 ? "Closed" : open === 100 ? "Fully open" : open + "% open");
+      handle.setAttribute("aria-valuetext", open === 0 ? closedLabel : open === 100 ? openLabel : percentLabel.replace("{percent}", open));
     }
   }
 

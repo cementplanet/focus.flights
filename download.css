@@ -86,7 +86,7 @@
 .download-awards,
 .download-copy .hero-actions {
   --pair-gap: clamp(12px, 1.4vw, 24px);
-  --badge-height: min(clamp(46px, 4.3vw, 72px), (100cqw - var(--pair-gap)) / 6.94);
+  --badge-height: min(clamp(46px, 4.3vw, 72px), (100cqw - var(--pair-gap)) / var(--pair-aspect, 6.94));
   display: flex;
   justify-content: center;
   align-items: center;
@@ -101,6 +101,7 @@
 }
 .download-copy .hero-actions { margin-top: clamp(18px, 2.8dvh, 34px); }
 .download-copy .hero-actions img { width: auto; }
+:lang(ko) .download-copy .hero-actions { --pair-aspect: 7.27; }
 .download-copy .download-count {
   margin-top: clamp(8px, 1.5dvh, 16px);
   color: #c9daec;

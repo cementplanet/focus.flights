@@ -1,8 +1,8 @@
-import { setupGiftDescent } from "./gift.js?v=hidden-black-week";
+import { setupGiftDescent } from "./gift.js?v=locales";
 import { setupWindowFlight } from "./window-flight.js?v=sky-meteor";
 import { setupPortholeSky } from "./porthole/sky.js?v=compact-noise";
-import { setupWindowShade } from "./porthole/shade.js?v=static-porthole";
-import { prepareCopy, unit } from "./motion-copy.js";
+import { setupWindowShade } from "./porthole/shade.js?v=locales";
+import { prepareCopy, unit } from "./motion-copy.js?v=locales";
 import { cloudDeckBottom, setupClouds } from "./clouds.js?v=compact-noise";
 import { startContrails } from "./contrails.js?v=nozzle-alignment";
 

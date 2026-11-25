@@ -12,3 +12,11 @@ html {
   --selection-background: #fff;
   --selection-text: #000;
 }
+
+html:not(:lang(en)) .hero-actions img {
+  object-fit: contain;
+}
+
+html:is(:lang(zh), :lang(ja)) .showcase-copy strong {
+  white-space: normal;
+}

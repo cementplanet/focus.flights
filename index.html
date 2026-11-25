@@ -4,6 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>FocusFlight</title>
+  <link rel="alternate" hreflang="en" href="https://focus.flights/en/">
+  <link rel="alternate" hreflang="zh-CN" href="https://focus.flights/zh-CN/">
+  <link rel="alternate" hreflang="zh-TW" href="https://focus.flights/zh-TW/">
+  <link rel="alternate" hreflang="zh-HK" href="https://focus.flights/zh-HK/">
+  <link rel="alternate" hreflang="ja" href="https://focus.flights/ja/">
+  <link rel="alternate" hreflang="ko" href="https://focus.flights/ko/">
+  <link rel="alternate" hreflang="x-default" href="https://focus.flights/">
+  <link rel="canonical" href="https://focus.flights/">
+  <script src="/locales/preference.js"></script>
   <script>
     history.scrollRestoration = "manual";
     if (!location.hash || location.hash === "#flight") {
@@ -29,7 +38,7 @@
   <script src="/app-store.js?v=apple-campaign-url" type="module"></script>
   <script src="/analytics.js?v=campaign-links" type="module" async></script>
   <link rel="icon" href="/brand/app-icon-ios27.png">
-  <link rel="stylesheet" href="/typography.css?v=selection">
+  <link rel="stylesheet" href="/typography.css?v=locales">
   <style>
     :root {
       /* Align left-side copy with the visible edge of the wordmark. */
@@ -375,33 +384,33 @@
   <link rel="stylesheet" href="/button-motion.css?v=white-header-aqua">
   <script src="/button-motion.js?v=aqua-nav" type="module"></script>
   <link rel="stylesheet" href="/deep-focus.css?v=short-landscape">
-  <link rel="stylesheet" href="/download.css?v=download-count">
-  <link rel="stylesheet" href="/gift.css?v=hidden-black-week">
+  <link rel="stylesheet" href="/download.css?v=locales">
+  <link rel="stylesheet" href="/gift.css?v=locales">
   <link rel="stylesheet" href="/mobile.css" media="(max-width: 520px)">
-  <script src="/sky.js?v=hidden-black-week" type="module"></script>
-  <script src="/showcase.js?v=frame-handoff" type="module"></script>
+  <script src="/sky.js?v=locales" type="module"></script>
+  <script src="/showcase.js?v=locales" type="module"></script>
 </head>
 <body>
   <div class="section-fade" aria-hidden="true"></div>
   <header class="site-header">
-    <a class="sky-brand" href="#flight" aria-label="FocusFlight home">
+    <a class="sky-brand" href="#flight" aria-label="FocusFlight home" data-locale-aria-label="home-label">
       <img src="/brand/app-icon-ios27.png" alt="" width="38" height="38">
       <span>FocusFlight</span>
     </a>
-    <nav class="sky-nav" aria-label="Main navigation">
+    <nav class="sky-nav" aria-label="Main navigation" data-locale-aria-label="main-navigation">
       <svg class="sky-nav-surface aqua-button-surface" aria-hidden="true" focusable="false">
         <rect class="aqua-contact-shadow" transform="translate(0 1.25)"/>
         <rect class="aqua-face" stroke="#a9b3c3" stroke-width=".65"/>
       </svg>
-      <a class="section-link" href="#showcase">Flight</a>
-      <a class="section-link gift-link" href="#gift">Gift</a>
-      <a class="section-link" href="#runway">Affiliate</a>
+      <a class="section-link" href="#showcase"><!--locale:flight-nav-->Flight<!--/locale--></a>
+      <a class="section-link gift-link" href="#gift"><!--locale:gift-nav-->Gift<!--/locale--></a>
+      <a class="section-link" href="#runway"><!--locale:affiliate-nav-->Affiliate<!--/locale--></a>
       <a class="sky-get-app aqua-button" href="#download">
         <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
           <rect class="aqua-contact-shadow" transform="translate(0 1.25)"/>
           <rect class="aqua-face" stroke="#a9b3c3" stroke-width=".65"/>
         </svg>
-        Get the App
+        <!--locale:get-app-->Get the App<!--/locale-->
       </a>
     </nav>
   </header>
@@ -423,63 +432,63 @@
         </div>
       </div>
       <section class="hero-copy" data-copy-motion="soft-type" lang="en" aria-labelledby="hero-title">
-        <h1 id="hero-title">Fly into Focus.</h1>
+        <h1 id="hero-title"><!--locale:hero-title-->Fly into Focus.<!--/locale--></h1>
 
         <div class="hero-actions">
           <a href="https://apps.apple.com/app/apple-store/id6648771147?pt=127167114&amp;ct=website&amp;mt=8" data-app-store="hero">
-            <img src="/brand/download-on-the-app-store.svg" alt="Download on the App Store" width="120" height="40">
+            <img src="/brand/download-on-the-app-store.svg" alt="Download on the App Store" data-locale-alt="store-badge" width="120" height="40">
           </a>
           <a class="hero-explore aqua-button" href="#showcase">
             <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
               <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
               <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
             </svg>
-            Explore <span aria-hidden="true">→</span>
+            <!--locale:explore-->Explore<!--/locale--> <span aria-hidden="true">→</span>
           </a>
         </div>
       </section>
     </div>
-    <section class="showcase" id="showcase" tabindex="-1" aria-label="Device showcase">
+    <section class="showcase" id="showcase" tabindex="-1" aria-label="Device showcase" data-locale-aria-label="device-showcase">
       <div class="showcase-intro">
-        <p class="showcase-copy" data-copy-motion="soft-type"><strong>FocusFlight</strong> is a focus app that turns each <strong>focus session</strong> into a <strong>flight.</strong></p>
-        <div class="flight-playback contact-material" role="group" aria-label="Flight preview playback">
+        <p class="showcase-copy" data-copy-motion="soft-type"><!--locale:showcase-copy--><strong>FocusFlight</strong> is a focus app that turns each <strong>focus session</strong> into a <strong>flight.</strong><!--/locale--></p>
+        <div class="flight-playback contact-material" role="group" aria-label="Flight preview playback" data-locale-aria-label="preview-playback">
           <div class="flight-segments contact-surface">
-            <input class="flight-scrubber" type="range" min="0" max="100" step="0.1" value="0" aria-label="Preview progress" aria-controls="device-preview" disabled>
-            <div class="flight-segment" role="progressbar" aria-label="Boarding" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <input class="flight-scrubber" type="range" min="0" max="100" step="0.1" value="0" aria-label="Preview progress" data-locale-aria-label="preview-progress" aria-controls="device-preview" disabled>
+            <div class="flight-segment" role="progressbar" aria-label="Boarding" data-locale-aria-label="boarding" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16">
                   <path fill-rule="evenodd" d="M1.76 3.95h7.29c.05.62.48 1.07 1.05 1.07s1-.45 1.05-1.07h2.94c.53 0 .91.38.91.9v6.28c0 .53-.38.92-.91.92h-2.94c-.05-.62-.48-1.07-1.05-1.07s-1 .45-1.05 1.07H1.76c-.53 0-.91-.39-.91-.92V4.85c0-.52.38-.9.91-.9Zm1.22 2.12v1.15h4.47V6.07Zm7.63-.06H9.6v3.98h1.01Z"/>
                 </svg>
-                <span>Boarding</span>
+                <span><!--locale:boarding-->Boarding<!--/locale--></span>
               </span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Takeoff" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="flight-segment" role="progressbar" aria-label="Takeoff" data-locale-aria-label="takeoff" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16" class="flight-plane-icon">
                   <use href="#flight-plane" transform="translate(.1 -.12) rotate(-19 8 8)"/>
                 </svg>
-                <span>Takeoff</span>
+                <span><!--locale:takeoff-->Takeoff<!--/locale--></span>
               </span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Cruise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="flight-segment" role="progressbar" aria-label="Cruise" data-locale-aria-label="cruise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16" class="flight-plane-icon">
                   <use href="#flight-plane" transform="translate(0 -.23)"/>
                 </svg>
-                <span>Cruise</span>
+                <span><!--locale:cruise-->Cruise<!--/locale--></span>
               </span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Window view" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="flight-segment" role="progressbar" aria-label="Window view" data-locale-aria-label="window-view" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16">
                   <path fill-rule="evenodd" d="M8 1.52c2.87 0 4.82 1.88 4.91 4.7.04 1.1-.01 2.51-.1 3.62-.21 2.89-1.95 4.57-4.81 4.57s-4.6-1.68-4.81-4.57c-.09-1.11-.14-2.52-.1-3.62.09-2.82 2.04-4.7 4.91-4.7Z
                     M6.96 5.12h2.08a.55.55 0 0 1 0 1.1H6.96a.55.55 0 0 1 0-1.1Z
                     M4.94 7.72c1.85.2 4.27.2 6.12 0l-.08 2.03c-.1 1.87-1.18 2.94-2.98 2.94s-2.88-1.07-2.98-2.94Z"/>
                 </svg>
-                <span>Window</span>
+                <span><!--locale:window-->Window<!--/locale--></span>
               </span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Sounds: focus music and white noise" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="flight-segment" role="progressbar" aria-label="Sounds: focus music and white noise" data-locale-aria-label="sound-description" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16">
                   <rect x="1.1" y="6.35" width="1.8" height="3.3" rx=".9"/>
@@ -488,15 +497,15 @@
                   <rect x="10.1" y="5.1" width="1.8" height="5.8" rx=".9"/>
                   <rect x="13.1" y="6.35" width="1.8" height="3.3" rx=".9"/>
                 </svg>
-                <span>Sounds</span>
+                <span><!--locale:sounds-->Sounds<!--/locale--></span>
               </span>
             </div>
-            <div class="flight-segment" role="progressbar" aria-label="Arrival" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="flight-segment" role="progressbar" aria-label="Arrival" data-locale-aria-label="arrival" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <span class="flight-segment-label" aria-hidden="true">
                 <svg viewBox="0 0 16 16" class="flight-plane-icon">
                   <use href="#flight-plane" transform="translate(.1 .16) rotate(19 8 8)"/>
                 </svg>
-                <span>Arrival</span>
+                <span><!--locale:arrival-->Arrival<!--/locale--></span>
               </span>
             </div>
           </div>
@@ -512,7 +521,7 @@
               </defs>
               <path class="liquid-face contact-face"/><path class="liquid-ink contact-ink"/>
             </svg>
-            <button class="flight-playback-toggle" type="button" aria-label="Play preview" aria-controls="device-preview" disabled>
+            <button class="flight-playback-toggle" type="button" aria-label="Play preview" data-locale-aria-label="play-preview" data-pause-label="Pause preview" data-locale-data-pause-label="pause-preview" aria-controls="device-preview" disabled>
               <svg class="playback-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5a1 1 0 0 0-1.5.86v11.28a1 1 0 0 0 1.5.86l10-5.64a1 1 0 0 0 0-1.72z"/></svg>
               <svg class="playback-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.3"/><rect x="14" y="5" width="4" height="14" rx="1.3"/></svg>
             </button>
@@ -520,9 +529,9 @@
         </div>
       </div>
       <div class="showcase-stage" data-device="iphone">
-        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" preload="none" muted playsinline></video>
+        <video id="device-preview" data-device="iphone" aria-label="FocusFlight on iPhone" data-locale-aria-label="preview-video" preload="none" muted playsinline></video>
       </div>
-      <div class="showcase-devices" role="group" aria-label="Device">
+      <div class="showcase-devices" role="group" aria-label="Device" data-locale-aria-label="device-picker">
         <svg class="device-liquid" aria-hidden="true" focusable="false">
           <defs>
             <path id="flight-plane" d="M1.58 8.43h4.5L4.63 5.02l.66-.39 4.23 3.8h4.06c.66 0 1.17.16 1.63.52.21.16.27.31.24.46-.08.44-1.05.93-1.91.93H4.85c-.74 0-1.73-.46-2.55-1.01-.39-.26-.66-.48-.78-.62-.08-.1-.06-.17.06-.28ZM.73 6.33l.55-.33 2.33 1.73H1.64Z"/>
@@ -616,13 +625,13 @@
         <div class="porthole">
           <div class="porthole-still" aria-hidden="true"></div>
           <canvas class="porthole-frame" aria-hidden="true"></canvas>
-          <button type="button" class="shade-control" role="slider" aria-label="Window shade opening" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="Fully open"></button>
+          <button type="button" class="shade-control" role="slider" aria-label="Window shade opening" data-locale-aria-label="shade-label" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="Fully open" data-locale-aria-valuetext="shade-open" data-open-label="Fully open" data-locale-data-open-label="shade-open" data-closed-label="Closed" data-locale-data-closed-label="shade-closed" data-percent-label="{percent}% open" data-locale-data-percent-label="shade-percent"></button>
         </div>
       </div>
       <div class="focus-copy" data-copy-motion="soft-type">
-        <h2 id="deep-focus-title">Deep Focus</h2>
+        <h2 id="deep-focus-title"><!--locale:focus-title-->Deep Focus<!--/locale--></h2>
         <div class="focus-description">
-          <p>Turn down the world, turn up your mind. FocusFlight blocks distractions, plays your focus sounds, and keeps you locked in until it's time to land.</p>
+          <p><!--locale:focus-copy-->Turn down the world, turn up your mind. FocusFlight blocks distractions, plays your focus sounds, and keeps you locked in until it's time to land.<!--/locale--></p>
         </div>
       </div>
     </section>
@@ -643,30 +652,30 @@
           <img loading="lazy" decoding="async" class="sketch-star star-high" src="/download-devices/wax-star.webp" alt="" width="128" height="127">
         </div>
         <div class="download-copy">
-          <span class="download-label">Fly into focus today!</span>
+          <span class="download-label"><!--locale:download-label-->Fly into focus today!<!--/locale--></span>
           <h2 id="download-title">FocusFlight</h2>
-          <p>For iPhone, iPad, and Mac.</p>
+          <p><!--locale:devices-->For iPhone, iPad, and Mac.<!--/locale--></p>
           <div class="download-awards">
-            <img loading="lazy" decoding="async" src="/brand/editors-choice.png" alt="App Store Editors’ Choice" width="305" height="88">
-            <img loading="lazy" decoding="async" src="/brand/app-of-the-day.png" alt="App Store App of the Day" width="913" height="263">
+            <img loading="lazy" decoding="async" src="/brand/editors-choice.png" alt="App Store Editors’ Choice" data-locale-alt="editors-choice" width="305" height="88">
+            <img loading="lazy" decoding="async" src="/brand/app-of-the-day.png" alt="App Store App of the Day" data-locale-alt="app-of-the-day" width="913" height="263">
           </div>
           <div class="hero-actions">
             <a href="https://apps.apple.com/app/apple-store/id6648771147?pt=127167114&amp;ct=website&amp;mt=8&amp;platform=iphone" data-app-store="download_iphone">
-              <img src="/brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" width="120" height="40">
+              <img src="/brand/download-on-the-app-store.svg" alt="Download FocusFlight on the App Store" data-locale-alt="download-ios" width="120" height="40">
             </a>
             <a href="https://apps.apple.com/app/apple-store/id6648771147?pt=127167114&amp;ct=website&amp;mt=8&amp;platform=mac" data-app-store="download_mac">
-              <img src="/brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" width="156" height="40">
+              <img src="/brand/download-on-the-mac-app-store.svg" alt="Download FocusFlight on the Mac App Store" data-locale-alt="download-mac" width="156" height="40">
             </a>
           </div>
-          <p class="download-count">2.5M+ Downloads</p>
+          <p class="download-count"><!--locale:download-count-->2.5M+ Downloads<!--/locale--></p>
         </div>
       </div>
     </section>
-    <section class="gift" id="gift" aria-label="Gift" tabindex="-1">
+    <section class="gift" id="gift" aria-label="Gift" data-locale-aria-label="gift-nav" tabindex="-1">
       <div class="gift-night">
         <picture class="gift-studio">
           <source media="(max-aspect-ratio: 4/5)" srcset="/gift/studio-portrait.webp?v=hidden-black-week" width="828" height="1792">
-          <img src="/gift/studio.webp?v=hidden-black-week" alt="An envelope with offer cards" width="1920" height="1200" decoding="async" loading="lazy">
+          <img src="/gift/studio.webp?v=hidden-black-week" alt="An envelope with offer cards" data-locale-alt="gift-envelope" width="1920" height="1200" decoding="async" loading="lazy">
         </picture>
         <div class="gift-letter-poster" aria-hidden="true"></div>
         <picture class="runway-poster" aria-hidden="true">
@@ -677,43 +686,43 @@
       </div>
     </section>
     <section class="gift-letter" id="letter" aria-labelledby="welcome-title" tabindex="-1" inert>
-      <button class="gift-print welcome-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the welcome offer card"></button>
+      <button class="gift-print welcome-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the welcome offer card" data-locale-aria-label="enlarge-welcome"></button>
       <div class="gift-copy">
-        <h2 id="welcome-title">Welcome Offer</h2>
-        <p>New to FocusFlight? Get 20% off after you download and sign up.</p>
-        <p class="gift-details">Offer terms vary by region — see the checkout page for details.</p>
+        <h2 id="welcome-title"><!--locale:welcome-title-->Welcome Offer<!--/locale--></h2>
+        <p><!--locale:welcome-copy-->New to FocusFlight? Get 20% off after you download and sign up.<!--/locale--></p>
+        <p class="gift-details"><!--locale:welcome-terms-->Offer terms vary by region — see the checkout page for details.<!--/locale--></p>
       </div>
     </section>
     <section class="gift-letter" id="black-week" hidden aria-labelledby="black-week-title" tabindex="-1" inert>
-      <button class="gift-print black-week-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the Black Week Flight card"></button>
+      <button class="gift-print black-week-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the Black Week Flight card" data-locale-aria-label="enlarge-black-week"></button>
       <div class="gift-copy">
-        <h2 id="black-week-title">Black Week Flight</h2>
-        <p>Get 50% off annual membership and 30% off lifetime membership.</p>
-        <p class="gift-details">November 27 at 00:00 through December 3 at 23:59</p>
+        <h2 id="black-week-title"><!--locale:black-week-title-->Black Week Flight<!--/locale--></h2>
+        <p><!--locale:black-week-copy-->Get 50% off annual membership and 30% off lifetime membership.<!--/locale--></p>
+        <p class="gift-details"><!--locale:black-week-date-->November 27 at 00:00 through December 3 at 23:59<!--/locale--></p>
       </div>
     </section>
     <section class="gift-letter" id="sharing" aria-labelledby="sharing-title" tabindex="-1" inert>
-      <button class="gift-print sharing-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the Share Your Focus card"></button>
+      <button class="gift-print sharing-print" type="button" aria-haspopup="dialog" aria-controls="gift-reader" aria-label="Enlarge the Share Your Focus card" data-locale-aria-label="enlarge-sharing"></button>
       <div class="gift-copy">
-        <h2 id="sharing-title">Share Your Focus</h2>
-        <p>Share your focus experience to win up to 365 days of membership: post with both hashtags — 10 likes = 30 days, 50 likes = 90 days, 100 likes = 365 days. Submit to <a href="mailto:contact@focus.flights">contact@focus.flights</a>.</p>
+        <h2 id="sharing-title"><!--locale:sharing-title-->Share Your Focus<!--/locale--></h2>
+        <p><!--locale:sharing-copy-->Share your focus experience to win up to 365 days of membership: post with both hashtags — 10 likes = 30 days, 50 likes = 90 days, 100 likes = 365 days. Send your post link to <a href="mailto:contact@focus.flights">contact@focus.flights</a>.<!--/locale--></p>
         <p class="gift-details"><span>#FocusFlight</span> <span>#FocusFlightChallenge</span></p>
       </div>
     </section>
-    <dialog class="gift-reader" id="gift-reader" aria-label="Offer card details">
+    <dialog class="gift-reader" id="gift-reader" aria-label="Offer card details" data-locale-aria-label="offer-details">
       <div class="gift-print" role="img"></div>
-      <button type="button" aria-label="Close">×</button>
+      <button type="button" aria-label="Close" data-locale-aria-label="close">×</button>
     </dialog>
-    <section id="runway" class="runway" lang="en" data-copy-motion="soft-type" tabindex="-1" aria-label="Affiliate and partnerships">
+    <section id="runway" class="runway" lang="en" data-copy-motion="soft-type" tabindex="-1" aria-label="Affiliate and partnerships" data-locale-aria-label="affiliate-label">
       <div class="runway-copy" inert>
         <div class="runway-partners">
           <div>
-            <h2>For creators</h2>
-            <p>Create content about focus, studying, or lifestyle? <span class="runway-sentence">Join our affiliate program now!</span> Earn more than 10,000$!</p>
+            <h2><!--locale:creators-title-->For creators<!--/locale--></h2>
+            <p><!--locale:creators-copy-->Create content about focus, studying, or lifestyle? <span class="runway-sentence">Join our affiliate program now!</span> Earn more than 10,000$!<!--/locale--></p>
           </div>
           <div>
-            <h2>For partners</h2>
-            <p><span class="runway-sentence">Help FocusFlight land in more places.</span> We welcome ideas from airlines, education brands, universities, and companies.</p>
+            <h2><!--locale:partners-title-->For partners<!--/locale--></h2>
+            <p><!--locale:partners-copy--><span class="runway-sentence">Help FocusFlight land in more places.</span> We welcome ideas from airlines, education brands, universities, and companies.<!--/locale--></p>
           </div>
         </div>
         <div class="runway-actions">
@@ -722,26 +731,26 @@
               <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
               <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
             </svg>
-            <span class="runway-action-label">Learn More</span>
+            <span class="runway-action-label"><!--locale:learn-more-->Learn More<!--/locale--></span>
           </a>
           <a class="runway-action aqua-button" href="mailto:contact@focus.flights">
             <svg class="aqua-button-surface" aria-hidden="true" focusable="false">
               <rect fill="#68778b" fill-opacity=".16" transform="translate(0 1.25)"/>
               <rect fill="url(#device-glass-tone)" stroke="#a9b3c3" stroke-opacity=".3" stroke-width=".65" filter="url(#device-aqua)"/>
             </svg>
-            <span class="runway-action-label">Contact us</span>
+            <span class="runway-action-label"><!--locale:contact-->Contact us<!--/locale--></span>
           </a>
         </div>
       </div>
-      <footer id="footer" class="site-footer" role="contentinfo" aria-label="Site footer" inert>
-        <nav class="site-footer-links" aria-label="Support and legal">
-          <a href="/support/">Support</a>
-          <a href="/privacy/">Privacy Policy</a>
-          <a href="/terms/">Terms of Use</a>
+      <footer id="footer" class="site-footer" role="contentinfo" aria-label="Site footer" data-locale-aria-label="footer-label" inert>
+        <nav class="site-footer-links" aria-label="Support and legal" data-locale-aria-label="support-label">
+          <a href="/support/"><!--locale:support-->Support<!--/locale--></a>
+          <a href="/privacy/"><!--locale:privacy-->Privacy Policy<!--/locale--></a>
+          <a href="/terms/"><!--locale:terms-->Terms of Use<!--/locale--></a>
         </nav>
         <small class="site-footer-copyright">© 2026 CementPlanet Ltd.</small>
-        <nav class="site-footer-social" aria-label="Social media">
-          <a href="https://www.xiaohongshu.com/user/profile/608c251a0000000001004a0d" aria-label="Xiaohongshu" target="_blank" rel="noopener">
+        <nav class="site-footer-social" aria-label="Social media" data-locale-aria-label="social-label">
+          <a href="https://www.xiaohongshu.com/user/profile/608c251a0000000001004a0d" aria-label="Xiaohongshu" data-locale-aria-label="xiaohongshu" target="_blank" rel="noopener">
             <span class="site-footer-icon icon-xiaohongshu" aria-hidden="true"></span>
           </a>
           <a href="https://www.instagram.com/focusflight_app/" aria-label="Instagram" target="_blank" rel="noopener">

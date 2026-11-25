@@ -94,6 +94,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
   let progressFrame;
   const playback = stage.closest(".showcase").querySelector(".flight-playback");
   const toggle = playback.querySelector(".flight-playback-toggle");
+  const playLabel = toggle.getAttribute("aria-label");
   const scrubber = playback.querySelector(".flight-scrubber");
   const track = playback.querySelector(".flight-segments");
   let scrubbing = false;
@@ -133,7 +134,7 @@ export function setupDevicePlayback(stage, buttons, reducedMotion, moveOrbit, mo
     toggle.disabled = Boolean(active.loading);
     const playing = !active.video.paused && !active.video.ended;
     toggle.toggleAttribute("data-playing", playing);
-    toggle.setAttribute("aria-label", playing ? "Pause preview" : "Play preview");
+    toggle.setAttribute("aria-label", playing ? toggle.dataset.pauseLabel : playLabel);
     cancelAnimationFrame(progressFrame);
     if ((playing || outgoing.size) && visible && !document.hidden) progressFrame = requestAnimationFrame(updateProgress);
   }

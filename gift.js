@@ -1,5 +1,5 @@
-import { setupStudio, framingOffset } from "./gift/camera.js?v=hidden-black-week";
-import { prepareCopy } from "./motion-copy.js";
+import { setupStudio, framingOffset } from "./gift/camera.js?v=locales";
+import { prepareCopy } from "./motion-copy.js?v=locales";
 
 export function setupGiftDescent(download, gift, slides, runway, windowFlight, ease, cameraTravel) {
   const sequence = gift.parentElement;
@@ -28,7 +28,7 @@ export function setupGiftDescent(download, gift, slides, runway, windowFlight, e
   const render = setupStudio(camera, download, welcome);
   const welcomePrint = new Image();
   function prepareWelcomePrint() {
-    if (welcomePrint.hasAttribute("src")) return;
+    if (document.documentElement.dataset.giftAtlas || welcomePrint.hasAttribute("src")) return;
     welcomePrint.src = new URL("./gift/welcome-print.webp?v=english-cards", import.meta.url);
     void welcomePrint.decode().then(() => {
       sequence.setAttribute("data-welcome-print-ready", "");
