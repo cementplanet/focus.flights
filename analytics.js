@@ -53,7 +53,8 @@ function track() {
       cta_placement: link.dataset.appStore,
       target_platform: url.searchParams.get("platform") ?? "auto",
     };
-    void analyticsReady.then(log => log?.("app_store_click", params));
+    const eventName = params.kol_id ? "kol_app_store_click" : "app_store_click";
+    void analyticsReady.then(log => log?.(eventName, params));
   }
 
   document.addEventListener("click", trackStoreClick, { capture: true });
