@@ -7,7 +7,12 @@ const firebaseConfig = {
   measurementId: "G-4LRMF0HD72",
 };
 
-const isLive = landing.hostname === "focus.flights" || landing.hostname === "www.focus.flights";
+const isLive = [
+  "focusflight.club",
+  "www.focusflight.club",
+  "focus.flights",
+  "www.focus.flights",
+].includes(landing.hostname);
 const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(landing.hostname);
 const debug = isLocal && landing.searchParams.get("analytics_debug") === "1";
 
