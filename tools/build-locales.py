@@ -25,7 +25,7 @@ def render_home(source, language, copy):
         lambda match: f'{match[1]}="{escape(copy[match[3]], quote=True) if copy else match[2]}"',
         html,
     )
-    html = html.replace('lang="en"', f'lang="{language}"')
+    html = html.replace(' lang="en"', f' lang="{language}"')
     html = html.replace(
         'rel="canonical" href="https://focus.flights/"',
         f'rel="canonical" href="https://focus.flights/{language}/"',
